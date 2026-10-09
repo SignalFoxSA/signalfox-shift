@@ -1,9 +1,9 @@
 /* SignalFox Shift V2 — minimal app-shell service worker.
    Caches the app so it starts offline. First visit needs internet. */
-var CACHE = 'sfshift-v2-1';
+var CACHE = 'sfshift-v2-2';
 var ASSETS = [
   './',
-  'shift-v2.html',
+  'index.html',
   'manifest.json',
   'icon-192.png',
   'icon-512.png'
@@ -29,12 +29,14 @@ self.addEventListener('activate', function (e) {
 
 self.addEventListener('fetch', function (e) {
   if (e.request.method !== 'GET') return;
+  try {
+    /* Never intercept API calls — only the app's own files. */
+    if (new URL(e.request.url).origin !== self.location.origin) return;
+  } catch (err) { return; }
   e.respondWith(
     caches.match(e.request).then(function (hit) {
-      return hit || fetch(e.request).then(function (res) {
-        return res;
-      }).catch(function () {
-        return caches.match('shift-v2.html');
+      return hit || fetch(e.request).catch(function () {
+        return caches.match('index.html');
       });
     })
   );

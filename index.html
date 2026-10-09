@@ -1658,8 +1658,8 @@ function toast(msg){
 /* ---------- Supabase auth + cloud sync (V2) ----------
    One row per user in public.app_state (RLS: users see only their own row).
    The whole device state is serialized as JSON into that row's data column. */
-var SB_URL='https://wsayzhawaykvhssrjcokz.supabase.co';
-var SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzYXl6aGF3YXlrdmhzcmpjb2t6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE1MDY4ODQsImV4cCI6MjEwNzA4Mjg4NH0.BDFQYyFBHI5X9qV7A2aCY0Jw-mr-x_ybRFzVD6zFCEY'; /* legacy anon key: public by design, RLS protects the data */
+var SB_URL='https://vrxsqresgxrydepahuwq.supabase.co';
+var SB_ANON='sb_publishable_civbxIsRzE3qqNgxEgMOyw_nMcROcus'; /* publishable key: public by design, RLS protects the data */
 var sb=null, sbUser=null, sbBooted=false, cloudTimer=null;
 
 function sbInit(){
