@@ -2860,7 +2860,8 @@ function expGridEl(E, mode, variant){
     }
     var dc=pr[0]>=0?E.crews[pr[0]]:null, nc=pr[1]>=0?E.crews[pr[1]]:null;
     if(!isNames){
-      var bt=variant==='pdf'?'#ffffff':'#1c1c1e';
+      /* dark text on the bands for both PDF and image — approved 11 Oct */
+      var bt='#1c1c1e';
       h+=open+'">'
         +'<div style="font-size:'+F(14)+'px;font-weight:700;">'+c.date+'</div>'
         +(dc?'<div style="background:'+dc.color+';border-radius:'+F(5)+'px;text-align:center;font-size:'+F(13)+'px;font-weight:800;color:'+bt+';padding:'+P+'px 0;margin-top:'+F(4)+'px;">'+E.dayLabel.toUpperCase()+': '+escapeHtml(dc.name)+'</div>':'')
