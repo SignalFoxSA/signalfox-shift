@@ -273,6 +273,64 @@
   .authrow .btn{margin:0; flex:1;}
   #cloudNote{display:none; position:sticky; top:0; z-index:30; background:#2a2108; border:1px solid #8a6d1f;
     color:#ffd97a; font-size:12px; text-align:center; padding:7px 10px; border-radius:10px; margin:8px 0 0;}
+  /* ---------- calendar-month redesign (Oct 2026): color-block month ---------- */
+  .vswitch{display:flex; gap:8px; margin:10px 0 4px; overflow-x:auto; padding-bottom:4px;}
+  .vchip{flex:none; padding:8px 14px; border-radius:999px; border:1px solid var(--line);
+    background:var(--card); color:var(--text); font-size:14px; font-weight:700; cursor:pointer;}
+  .vchip.sel{border-color:var(--accent); background:#221d10; color:var(--accent);}
+  .monthnav{display:flex; align-items:center; justify-content:space-between; margin:8px 0 2px;}
+  .monthnav b{font-size:17px;}
+  .mnav{width:44px; height:44px; border-radius:12px; border:1px solid var(--line);
+    background:var(--card); color:var(--accent); font-size:26px; font-weight:800; cursor:pointer; line-height:1;}
+  #calMode{margin:10px 0;}
+  .cell{position:relative; min-height:76px;}
+  .cell .band{display:block; border-radius:6px; font-size:11px; font-weight:800; color:#141414;
+    padding:4px 2px; margin-top:4px; line-height:1.25; white-space:nowrap; overflow:hidden; text-align:center;}
+  .cell.out{opacity:.32; cursor:default;}
+  .cell .edot{position:absolute; top:5px; right:6px; width:7px; height:7px; border-radius:50%;
+    background:var(--accent); box-shadow:0 0 4px var(--accent);}
+  .emptycal{text-align:center; padding:34px 18px; color:var(--muted);}
+  .emptycal .btn{margin-top:14px;}
+  /* agenda list */
+  .agrow{display:flex; gap:12px; align-items:flex-start; background:var(--card);
+    border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px; margin-bottom:8px;}
+  .agrow.today{border:2px solid var(--electric);}
+  .agdate{flex:none; width:52px; text-align:center;}
+  .agdate .wd{font-size:11px; font-weight:800; letter-spacing:1px; color:var(--muted);}
+  .agdate .dn{font-size:26px; font-weight:800; color:var(--accent);}
+  .agrow.today .agdate .dn{color:var(--electric);}
+  .agbody{flex:1; font-size:14px; line-height:1.7;}
+  .agbody .dim{color:var(--muted);}
+  .todaytag{display:inline-block; font-size:10px; font-weight:800; letter-spacing:1px;
+    color:#0a0a0f; background:#8fb4ff; border-radius:6px; padding:3px 7px; margin-left:6px; vertical-align:2px;}
+  .jumpbtn{position:sticky; bottom:14px; float:right; margin-top:8px;
+    background:var(--accent); color:#141414; border:none; border-radius:999px;
+    font-weight:800; font-size:14px; padding:10px 18px; cursor:pointer;}
+  /* week detail */
+  .wkback{display:flex; align-items:center; gap:10px; margin:6px 0 10px;}
+  .wkback button{background:none; border:none; color:var(--accent); font-size:15px; font-weight:800; cursor:pointer; padding:8px 4px;}
+  .weeknav{display:flex; align-items:center; justify-content:space-between; margin:2px 0 12px;}
+  .weeknav .mnav{width:52px; height:52px;}
+  .weeklabel{font-size:16px; font-weight:800; text-align:center;}
+  .daycard{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px 16px; margin-bottom:12px;}
+  .daycard.today{border:2px solid var(--electric);}
+  .daycard.picked{border:2px solid var(--accent);}
+  .daycard.today.picked{border:2px solid var(--accent); box-shadow:0 0 10px rgba(255,193,62,.35);}
+  .daycard.out{opacity:.45;}
+  .dhead{display:flex; align-items:baseline; gap:10px; margin-bottom:10px;}
+  .dhead .wd{font-size:12px; font-weight:800; letter-spacing:1px; color:var(--muted);}
+  .dhead .dn{font-size:28px; font-weight:800; color:var(--accent);}
+  .dhead .mn{font-size:14px; color:var(--muted);}
+  .dhead .todaytag{margin-left:auto;}
+  .wshift{background:var(--card2); border-radius:12px; padding:10px 14px; margin-bottom:8px; cursor:pointer;}
+  .wshift:last-child{margin-bottom:0;}
+  .wshift .t{font-size:13px; font-weight:800; margin-bottom:3px; display:flex; align-items:center; gap:8px;}
+  .wshift .n{font-size:16px;}
+  .wshift .h{font-size:12px; color:var(--muted); margin-top:2px;}
+  .cdot{width:12px; height:12px; border-radius:4px; display:inline-block; flex:none;}
+  /* anchor step */
+  .ancprev{background:var(--card2); border:1px solid var(--line); border-radius:var(--radius);
+    padding:12px 14px; margin-top:12px; font-size:14px; line-height:1.8;}
 </style>
 </head>
 <body>
@@ -366,16 +424,6 @@
       <button class="btn" onclick="saveSettingsProfile()">Save</button>
     </div>
     <div class="card">
-      <h3>Defaults</h3>
-      <p class="sub">Used when you start a new roster.</p>
-      <label class="f">Roster length</label>
-      <div class="pills" id="setDur">
-        <div class="pill" data-v="7">7 days</div>
-        <div class="pill" data-v="14">14 days</div>
-        <div class="pill sel" data-v="28">28 days</div>
-      </div>
-    </div>
-    <div class="card">
       <h3>Data</h3>
       <p class="sub">Your rosters sync to your account, and stay on this device too.</p>
       <button class="btn ghost" onclick="exportData()">&#11015; Export backup</button>
@@ -452,34 +500,52 @@
   <div class="view" id="v-newroster">
     <div class="card">
       <h3>New roster</h3>
-      <p class="sub">Built from your base standard &mdash; just pick the vehicle and dates.</p>
+      <p class="sub">Pick the vehicle, rotation and month &mdash; then set who starts on the 1st.</p>
       <label class="f">Vehicle</label>
       <select id="nrVehicle"></select>
       <label class="f">Rotation</label>
       <select id="nrRot"></select>
       <p class="fine" id="nrRotNote" style="margin:-4px 0 8px"></p>
-      <label class="f">Start date</label>
-      <input type="date" id="nrStart">
-      <label class="f">Roster length</label>
-      <div class="pills" id="nrDur">
-        <div class="pill" data-v="7">7 days</div>
-        <div class="pill" data-v="14">14 days</div>
-        <div class="pill sel" data-v="28">28 days</div>
-      </div>
+      <label class="f">Month</label>
+      <input type="month" id="nrMonth">
+      <p class="fine">The roster covers the whole calendar month. The rotation carries on from the previous month automatically.</p>
     </div>
-    <button class="btn" onclick="generateFromBase()">Generate roster</button>
+    <button class="btn" onclick="toAnchorStep()">Continue &rarr;</button>
+  </div>
+
+  <!-- DAY-1 ANCHOR -->
+  <div class="view" id="v-anchor">
+    <div class="card">
+      <h3 id="ancTitle">Who starts on the 1st?</h3>
+      <p class="sub" id="ancSub"></p>
+      <label class="f" id="ancDayLab">&#9728;&#65039; On days</label>
+      <div class="pills" id="ancDay"></div>
+      <label class="f" id="ancNightLab">&#127769; On nights</label>
+      <div class="pills" id="ancNight"></div>
+      <p class="fine" id="ancHint"></p>
+      <div class="ancprev" id="ancPreview"></div>
+    </div>
+    <button class="btn" onclick="generateMonthRoster()">Generate roster</button>
+    <button class="btn ghost" onclick="show('v-newroster')">Back</button>
   </div>
 
   <!-- CALENDAR -->
   <div class="view" id="v-cal">
-    <div class="calhead"><b><span id="calTitle"></span><span class="draftbadge" id="draftBadge" style="display:none">DRAFT</span></b><span id="calRange"></span></div>
-    <div class="pills" id="calViewToggle" style="margin:10px 0;"></div>
-    <div class="crewfilter" id="crewFilter"></div>
-    <div class="summary" id="calSummary"></div>
-    <div class="dow" id="calDow"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
-    <div class="grid" id="calGrid"></div>
-    <div class="pview" id="calPeople" style="display:none"></div>
+    <div class="calhead"><b><span id="calTitle"></span><span class="draftbadge" id="draftBadge" style="display:none">DRAFT</span></b></div>
+    <div class="vswitch" id="calVehicles"></div>
+    <div class="monthnav">
+      <button class="mnav" id="calPrevM" onclick="calMonthNav(-1)" aria-label="Previous month">&#8249;</button>
+      <b id="calMonthLabel"></b>
+      <button class="mnav" id="calNextM" onclick="calMonthNav(1)" aria-label="Next month">&#8250;</button>
+    </div>
+    <div class="pills" id="calMode" style="margin:10px 0;"></div>
     <div class="legend" id="calLegend"></div>
+    <div id="calMonthWrap">
+      <div class="dow"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+      <div class="grid" id="calGrid"></div>
+    </div>
+    <div id="calAgendaWrap" style="display:none"></div>
+    <div id="calWeekWrap" style="display:none"></div>
     <button class="btn" id="saveBtn" onclick="saveRoster()">Save roster</button>
     <button class="btn ghost" onclick="openShare()">&#128241; Share roster</button>
     <button class="btn ghost" onclick="openCrewSheet()">&#9998;&#65039; Edit crews</button>
@@ -523,8 +589,16 @@
 
 <script>
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
-var CREW_COLORS = ['#22c55e','#3b82f6','#f97316','#a855f7']; // A green, B blue, C orange, D purple
+/* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
+var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
+var OLD_CREW_COLORS = ['#22c55e','#3b82f6','#f97316','#a855f7']; /* pre-Oct-2026 palette, migrated on load */
 var OFF_COLOR = '#ef4444';
+function migrateCrewColors(list){
+  (list||[]).forEach(function(c){
+    var ix=OLD_CREW_COLORS.indexOf(String(c.color||'').toLowerCase());
+    if(ix>=0 && ix<4) c.color=CREW_COLORS[ix];
+  });
+}
 
 /* Rotation presets.
    2-2-4: 2 day shifts, 2 night shifts, 4 days off — 8-day cycle.
@@ -844,8 +918,8 @@ var S = {
   draft:null,       // roster being built / viewed
   rosters:[],       // saved roster snapshots: [{id, name, roster}]
   base:null,
-  filter:'ALL',     // calendar crew filter
-  calView:'crew',    // calendar view: 'crew' | 'people'
+  cal:null,         // calendar view context: {vehicleId, y, m, mode:'month'|'agenda', sub:'month'|'week', weekISO}
+  anchor:null,      // new-roster anchor step state
   fromSaved:false,
   preset:'224',     // selected rotation preset
   unitName:'',      // vehicle being built / viewed
@@ -880,11 +954,14 @@ function baseState(presetKey, crewIdx, absDay){
   }
   return p === 0 ? 'OFF' : p;
 }
-/* final cell state, with manual overrides applied */
+/* final cell state, with manual overrides applied.
+   dayIdx is 0-based from the roster's start (for calendar-month rosters: day-of-month minus 1).
+   Calendar-month rosters carry anchorAbs: the absolute engine day of the 1st, so the
+   rotation runs continuously across months. Legacy span rosters have no anchorAbs (=0). */
 function cellState(R, dayIdx, crewIdx){
   var ov = R.overrides[dayIdx+':'+crewIdx];
   if(ov) return ov;
-  return baseState(R.rotation, crewIdx, dayIdx);
+  return baseState(R.rotation, crewIdx, dayIdx+(R.anchorAbs||0));
 }
 
 
@@ -905,12 +982,13 @@ function defaultBase(){ return {name:'My Base', vehicles:[], staff:[], crews:[]}
 function loadBase(){
   try{ S.base=JSON.parse(localStorage.getItem('sfshift_base')||'null'); }catch(e){ S.base=null; }
   if(!S.base || !S.base.vehicles){ S.base=defaultBase(); migrateUnitsToBase(); persistBase(); }
-  /* normalize older saves: coverage + valid rotation */
+  /* normalize older saves: coverage + valid rotation + crew colors */
   S.base.vehicles.forEach(function(v){
     if(v.coverage!==12 && v.coverage!==8) v.coverage=24;
     if(!ROTATIONS[v.rotation] || (ROTATIONS[v.rotation].cov||[24]).indexOf(v.coverage)<0) v.rotation=firstRotForCov(v.coverage);
     if(!v.shiftLen) v.shiftLen=ROTATIONS[v.rotation].hours||12;
   });
+  migrateCrewColors(S.base.crews);
 }
 function firstRotForCov(cov){
   var keys=Object.keys(ROTATIONS);
@@ -1098,194 +1176,524 @@ function nrRotNote(){
     ? 'Base standard: '+base.name+' · '+(base.hours||12)+'h shifts · '+(base.crews||4)+' crews'
     : 'One-off change for this roster — your base keeps '+base.name+'.';
 }
+/* ---------- calendar helpers ---------- */
+var MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
+var MNS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var WDS=['MON','TUE','WED','THU','FRI','SAT','SUN'];
+var WDF=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+function daysInMonth(y,m){ return new Date(y, m+1, 0).getDate(); }
+function vehicleById(id){ return (S.base.vehicles||[]).find(function(v){ return v.id===id; })||null; }
+function vehicleName(id){ var v=vehicleById(id); return v?(v.name||'Vehicle'):'Vehicle'; }
+function ensureCal(){
+  if(!S.cal) S.cal={vehicleId:null, y:0, m:0, mode:'month', sub:'month', weekISO:null};
+  return S.cal;
+}
+/* which roster-day (if any) does a calendar date fall on?
+   month-kind rosters: dayIdx = day-of-month - 1. legacy span rosters: dayIdx from startISO. */
+function calRosterDay(R,y,m,d){
+  var date=new Date(y,m,d);
+  if(R.kind==='month'){
+    if(R.year!==y||R.month!==m) return null;
+    return {dayIdx:d-1, date:date};
+  }
+  if(!R.startISO || !R.days) return null;
+  var di=dayDiff(parseISO(R.startISO), date);
+  if(di<0||di>=R.days) return null;
+  return {dayIdx:di, date:date};
+}
+
+/* ---------- new roster: vehicle -> rotation -> month -> day-1 anchor ----------
+   A roster is calendar-based: vehicle + rotation + calendar month + a day-1 anchor
+   (which crew is on days / nights on the 1st). The rotation then runs continuously;
+   next month's anchor is suggested from where this month ends. */
+function defaultRosterMonth(vid){
+  loadSaved();
+  var latest=null;
+  S.rosters.forEach(function(u){
+    var R=u.roster;
+    if(!R||R.kind!=='month'||R.vehicleId!==vid) return;
+    if(!latest||R.year>latest.year||(R.year===latest.year&&R.month>latest.month)) latest=R;
+  });
+  if(latest){
+    var nm=latest.month+1, ny=latest.year;
+    if(nm>11){ nm=0; ny++; }
+    return {y:ny, m:nm};
+  }
+  var d=new Date();
+  return {y:d.getFullYear(), m:d.getMonth()};
+}
 function toNewRoster(){
   if(!S.base.vehicles.length){ toast('Set up your base first'); openBaseSetup(); return; }
   var sel=document.getElementById('nrVehicle'); sel.innerHTML='';
   S.base.vehicles.forEach(function(v){
     var rot=ROTATIONS[v.rotation];
     var o=document.createElement('option'); o.value=v.id;
-    o.textContent=(v.name||'Vehicle')+' · '+(rot?rot.name:v.rotation);
+    o.textContent=(v.name||'Vehicle')+' \u00b7 '+(rot?rot.name:v.rotation);
     sel.appendChild(o);
   });
-  sel.onchange=nrSyncRotation;
+  sel.onchange=function(){ nrSyncRotation(); nrDefaultMonth(); };
   document.getElementById('nrRot').onchange=nrRotNote;
+  if(S.nrPrefill && S.nrPrefill.vehicleId){
+    sel.value=S.nrPrefill.vehicleId;
+  }
   nrSyncRotation();
-  document.getElementById('nrStart').value=toISO(new Date());
+  nrDefaultMonth();
   show('v-newroster');
 }
-function generateFromBase(){
-  var v=S.base.vehicles.find(function(x){ return x.id===document.getElementById('nrVehicle').value; });
-  if(!v) return;
+function nrDefaultMonth(){
+  var vid=document.getElementById('nrVehicle').value;
+  var dm;
+  if(S.nrPrefill && S.nrPrefill.vehicleId===vid && S.nrPrefill.y!=null){
+    dm={y:S.nrPrefill.y, m:S.nrPrefill.m};
+  } else {
+    dm=defaultRosterMonth(vid);
+  }
+  document.getElementById('nrMonth').value=dm.y+'-'+String(dm.m+1).padStart(2,'0');
+  S.nrPrefill=null;
+}
+/* the "day" slot crews pick from; the "night" slot (may be absent, e.g. 24/72) */
+function anchorDaySlot(rotKey){
+  var s=rotSlots(rotKey);
+  for(var i=0;i<s.length;i++) if(s[i].id==='D') return 'D';
+  return s.length?s[0].id:'D';
+}
+function anchorNightSlot(rotKey){
+  var s=rotSlots(rotKey);
+  for(var i=0;i<s.length;i++) if(s[i].id==='N') return 'N';
+  return null;
+}
+/* smallest absolute engine day >= 0 satisfying the given crew/slot picks (null = don't care) */
+function solveAnchor(rotKey, dayCrew, nightCrew){
+  var rot=ROTATIONS[rotKey]; if(!rot) return 0;
+  var ds=anchorDaySlot(rotKey), ns=anchorNightSlot(rotKey);
+  var cyc=rot.cycle||8;
+  for(var n=0;n<cyc*4;n++){
+    var dok=(dayCrew==null)||baseState(rotKey,dayCrew,n)===ds;
+    var nok=(nightCrew==null)||!ns||baseState(rotKey,nightCrew,n)===ns;
+    if(dok&&nok) return n;
+  }
+  return -1;
+}
+function crewOnSlot(rotKey, slotId, abs){
+  var rot=ROTATIONS[rotKey]; if(!rot) return -1;
+  for(var ci=0; ci<rot.crews; ci++) if(baseState(rotKey,ci,abs)===slotId) return ci;
+  return -1;
+}
+/* suggest the new month's anchor from where the previous month's roster ended */
+function suggestAnchorAbs(vehicleId, rotKey, y, m){
+  loadSaved();
+  var best=null;
+  S.rosters.forEach(function(u){
+    var R=u.roster;
+    if(!R||R.kind!=='month'||R.anchorAbs==null) return;
+    if(R.vehicleId!==vehicleId||R.rotation!==rotKey) return;
+    if(R.year<y||(R.year===y&&R.month<m)){
+      if(!best||R.year>best.year||(R.year===best.year&&R.month>best.month)) best=R;
+    }
+  });
+  if(!best) return null;
+  return best.anchorAbs + daysInMonth(best.year, best.month);
+}
+function toAnchorStep(){
+  var v=vehicleById(document.getElementById('nrVehicle').value);
+  if(!v){ toast('Pick a vehicle'); return; }
   var rotKey=document.getElementById('nrRot').value||v.rotation;
-  var rot=ROTATIONS[rotKey]||ROTATIONS['224'];
-  var startISO=document.getElementById('nrStart').value||toISO(new Date());
-  var days=parseInt(pillVal('nrDur'),10);
+  var mv=document.getElementById('nrMonth').value;
+  if(!mv||mv.length<7){ toast('Pick a month'); return; }
+  var y=parseInt(mv.slice(0,4),10), m=parseInt(mv.slice(5,7),10)-1;
+  var ds=anchorDaySlot(rotKey), ns=anchorNightSlot(rotKey);
+  var sug=suggestAnchorAbs(v.id, rotKey, y, m);
+  var dc=crewOnSlot(rotKey, ds, sug!=null?sug:0);
+  if(dc<0) dc=0;
+  var abs=(sug!=null)?sug:solveAnchor(rotKey, dc, null);
+  if(abs<0) abs=0;
+  var nc=ns?crewOnSlot(rotKey, ns, abs):null;
+  if(ns&&nc<0) nc=null;
+  S.anchor={vehicleId:v.id, rotKey:rotKey, year:y, month:m,
+    daySlot:ds, nightSlot:ns, dayCrew:dc, nightCrew:nc, abs:abs,
+    suggested:(sug!=null), conflict:false};
+  renderAnchor();
+  show('v-anchor');
+}
+function anchorCrews(){
+  var A=S.anchor, v=vehicleById(A.vehicleId), rot=ROTATIONS[A.rotKey]||ROTATIONS['224'];
   var baseCrews=vehicleCrews(v.id).map(function(c){
     return {name:(c.name||'').trim()||'Crew', color:c.color,
       members:c.memberIds.map(staffName).filter(function(n){ return n; })};
   });
-  /* a one-off rotation may need more or fewer crews than the vehicle has */
   var crews=baseCrews.slice(0, rot.crews);
   for(var i=crews.length;i<rot.crews;i++){
     crews.push({name:String.fromCharCode(65+i), color:CREW_COLORS[i%CREW_COLORS.length], members:[]});
   }
+  return crews;
+}
+function renderAnchor(){
+  var A=S.anchor; if(!A) return;
+  var v=vehicleById(A.vehicleId), rot=ROTATIONS[A.rotKey]||{};
+  var crews=anchorCrews();
+  document.getElementById('ancTitle').textContent='Who starts on 1 '+MN[A.month]+'?';
+  document.getElementById('ancSub').textContent=(v?v.name:'Vehicle')+' \u00b7 '+(rot.name||A.rotKey)+' \u00b7 '+MN[A.month]+' '+A.year;
+  function pills(elId, sel, cb){
+    var el=document.getElementById(elId); el.innerHTML='';
+    crews.forEach(function(c,i){
+      var p=document.createElement('div');
+      p.className='pill'+(sel===i?' sel':'');
+      p.innerHTML='<span class="dot" style="background:'+c.color+';display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px;"></span>'+escapeHtml(c.name);
+      p.onclick=(function(idx){ return function(){ cb(idx); }; })(i);
+      el.appendChild(p);
+    });
+  }
+  var dl=document.getElementById('ancDayLab'), nl=document.getElementById('ancNightLab');
+  if(A.nightSlot){
+    dl.innerHTML='\u2600\ufe0f On days'; nl.style.display=''; document.getElementById('ancNight').style.display='';
+    pills('ancDay', A.dayCrew, function(i){ anchorPick('day', i); });
+    pills('ancNight', A.nightCrew, function(i){ anchorPick('night', i); });
+  } else {
+    dl.textContent='On duty'; nl.style.display='none'; document.getElementById('ancNight').style.display='none';
+    pills('ancDay', A.dayCrew, function(i){ anchorPick('day', i); });
+  }
+  var hint=document.getElementById('ancHint');
+  hint.textContent=A.suggested
+    ? 'Suggested from where last month ended \u2014 tap a crew to correct it.'
+    : (A.conflict
+        ? 'That combination can\u2019t happen in this rotation \u2014 the other shift was set to match.'
+        : 'Pick the crew on the first '+(A.nightSlot?'day shift':'shift')+' of the month.');
+  /* day-1 lineup preview */
+  var prev=document.getElementById('ancPreview');
+  var bits=crews.map(function(c,ci){
+    var st=baseState(A.rotKey, ci, A.abs);
+    if(st==='OFF') return null;
+    var sl=slotById(A.rotKey, st);
+    var icon=sl?(sl.icon||''):'';
+    var tm='';
+    try{ tm=' \u00b7 '+slotTime({rotation:A.rotKey, startTime:v.startTime||'06:00', shiftLen:rot.hours||12}, st); }catch(e){}
+    var names=(c.members&&c.members.length)?' \u2014 '+c.members.map(escapeHtml).join(', '):'';
+    return '<div><span class="cdot" style="background:'+c.color+'"></span> '+icon+' <b>Crew '+escapeHtml(c.name)+'</b>'+names+'<span style="color:var(--muted)">'+tm+'</span></div>';
+  }).filter(function(x){ return x; });
+  var off=crews.map(function(c,ci){ return baseState(A.rotKey,ci,A.abs)==='OFF'?escapeHtml(c.name):null; }).filter(function(x){ return x; });
+  prev.innerHTML='<b>1 '+MN[A.month]+':</b><br>'+bits.join('')+
+    (off.length?'<div style="color:var(--muted)">Off: '+off.join(' \u00b7 ')+'</div>':'');
+}
+function anchorPick(which, ci){
+  var A=S.anchor; if(!A) return;
+  if(which==='day') A.dayCrew=ci; else A.nightCrew=ci;
+  var n=solveAnchor(A.rotKey, A.dayCrew, A.nightSlot?A.nightCrew:null);
+  A.conflict=false;
+  if(n<0){
+    /* incompatible day/night combo: keep the just-picked crew, derive the other */
+    A.conflict=true;
+    if(which==='day'){
+      n=solveAnchor(A.rotKey, A.dayCrew, null);
+      A.nightCrew=A.nightSlot?crewOnSlot(A.rotKey, A.nightSlot, n):null;
+    } else {
+      n=solveAnchor(A.rotKey, null, A.nightCrew);
+      A.dayCrew=crewOnSlot(A.rotKey, A.daySlot, n);
+    }
+  }
+  A.abs=(n<0?0:n);
+  A.suggested=false;
+  renderAnchor();
+}
+function generateMonthRoster(){
+  var A=S.anchor; if(!A) return;
+  var v=vehicleById(A.vehicleId); if(!v) return;
+  var rot=ROTATIONS[A.rotKey]||ROTATIONS['224'];
+  var crews=anchorCrews();
+  var dim=daysInMonth(A.year, A.month);
+  var iso=A.year+'-'+String(A.month+1).padStart(2,'0')+'-01';
   S.unitName=v.name||'Vehicle'; S.unitId=null;
-  S.draft={ id:'r'+Date.now(), name:(v.name||'Vehicle')+' roster', startISO:startISO, days:days, crews:crews,
-    shiftLen:rot.hours||12, startTime:v.startTime||'06:00', rotation:rotKey, coverage:v.coverage||24, overrides:{} };
-  S.fromSaved=false; S.filter='ALL';
-  renderCalendar(); show('v-cal');
+  S.draft={ id:'r'+Date.now(), kind:'month', vehicleId:v.id,
+    name:(v.name||'Vehicle')+' \u00b7 '+MN[A.month]+' '+A.year,
+    year:A.year, month:A.month, anchorAbs:A.abs, startISO:iso, days:dim, crews:crews,
+    shiftLen:rot.hours||12, startTime:v.startTime||'06:00', rotation:A.rotKey, coverage:v.coverage||24, overrides:{} };
+  S.fromSaved=false;
+  S.cal={vehicleId:v.id, y:A.year, m:A.month, mode:'month', sub:'month', weekISO:null};
+  renderCalendar();
+  show('v-cal');
 }
 
 function crewChipNames(c){ return (c.members && c.members.length) ? c.members : [c.name]; }
 function memberList(c){ return (c.members && c.members.length) ? ' ('+c.members.map(escapeHtml).join(', ')+')' : ''; }
 
-/* ---------- calendar ---------- */
-function rosterPeople(R){
-  var out=[];
-  R.crews.forEach(function(c,ci){
-    (c.members||[]).forEach(function(nm){
-      if(nm && nm.trim()) out.push({name:nm.trim(), crewIdx:ci, color:c.color});
-    });
-  });
-  return out;
-}
-function renderPeopleGrid(R,start){
-  var wrap=document.getElementById('calPeople');
-  var people=rosterPeople(R);
-  if(!people.length){ wrap.innerHTML='<p class="fine">No people assigned yet — use Edit crews to add names.</p>'; return; }
-  var html='<table class="ptable"><tr><th class="pname"></th>';
-  for(var d=0; d<R.days; d++){ html+='<th>'+addDays(start,d).getDate()+'</th>'; }
-  html+='</tr>';
-  people.forEach(function(p){
-    html+='<tr><td class="pname"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:'+p.color+'"></span>'+escapeHtml(p.name)+'</td>';
-    for(var d=0; d<R.days; d++){
-      var st=cellState(R,d,p.crewIdx);
-      html+='<td><span class="pcell s-'+st+'" data-d="'+d+'" data-c="'+p.crewIdx+'">'+(st==='OFF'?'–':slotShort(R.rotation,st))+'</span></td>';
+/* ---------- calendar: color-block month view (Oct 2026 redesign) ----------
+   v-cal shows one vehicle + one calendar month. resolveCalRoster() picks what to
+   display: the unsaved draft (if it matches the viewed vehicle+month), else the
+   saved roster for that vehicle+month, else null (empty state + new-roster prompt).
+   Tap a day -> week detail view (big readable cards). Month | Agenda toggle.
+   Vehicle switcher chips on top. */
+function resolveCalRoster(){
+  var cal=ensureCal();
+  var vid=cal.vehicleId, y=cal.y, m=cal.m;
+  if(S.draft && !S.fromSaved && S.draft.kind==='month' &&
+     S.draft.vehicleId===vid && S.draft.year===y && S.draft.month===m){
+    return {R:S.draft, saved:false, unitId:null, unitName:S.unitName||S.draft.name};
+  }
+  loadSaved();
+  var vname=vehicleName(vid), best=null, bestUnit=null, bestOv=-1;
+  S.rosters.forEach(function(u){
+    var R=u.roster; if(!R||!Array.isArray(R.crews)) return;
+    var vmatch=(R.vehicleId&&R.vehicleId===vid)||(!R.vehicleId&&u.name===vname);
+    if(!vmatch) return;
+    if(R.kind==='month'){
+      if(R.year===y&&R.month===m){ best=R; bestUnit=u; bestOv=1e9; }
+    }else{
+      var start=parseISO(R.startISO), ov=0, dim=daysInMonth(y,m);
+      for(var d=1;d<=dim;d++){
+        var di=dayDiff(start,new Date(y,m,d));
+        if(di>=0&&di<R.days) ov++;
+      }
+      if(ov>0&&ov>bestOv){ best=R; bestUnit=u; bestOv=ov; }
     }
-    html+='</tr>';
   });
-  wrap.innerHTML=html+'</table>';
-  var cells=wrap.querySelectorAll('.pcell');
+  if(best) return {R:best, saved:true, unitId:bestUnit.id, unitName:bestUnit.name};
+  return null;
+}
+function renderCalendar(){
+  var cal=ensureCal();
+  if(!cal.vehicleId){
+    var v0=(S.base.vehicles||[])[0];
+    if(v0) cal.vehicleId=v0.id;
+  }
+  if(cal.vehicleId && !cal.y){
+    var d=new Date(); cal.y=d.getFullYear(); cal.m=d.getMonth();
+  }
+  var old=document.getElementById('calEmptyPrompt'); if(old) old.remove();
+  var ctx=resolveCalRoster();
+  renderCalChrome(ctx);
+  var wM=document.getElementById('calMonthWrap'),
+      wA=document.getElementById('calAgendaWrap'),
+      wW=document.getElementById('calWeekWrap');
+  wM.style.display='none'; wA.style.display='none'; wW.style.display='none';
+  if(!ctx){
+    wM.style.display=''; renderCalEmpty();
+  }else{
+    S.draft=ctx.saved?JSON.parse(JSON.stringify(ctx.R)):ctx.R;
+    S.fromSaved=ctx.saved; S.unitId=ctx.unitId||null; S.unitName=ctx.unitName;
+    if(cal.sub==='week'){ wW.style.display=''; renderCalWeek(ctx); }
+    else if(cal.mode==='agenda'){ wA.style.display=''; renderCalAgenda(ctx); }
+    else { wM.style.display=''; renderCalMonth(ctx); }
+  }
+  var b=document.getElementById('draftBadge');
+  if(b) b.style.display=(ctx&&!ctx.saved)?'inline-block':'none';
+  document.getElementById('saveBtn').style.display=(ctx&&!ctx.saved)?'block':'none';
+}
+function renderCalChrome(ctx){
+  var cal=ensureCal();
+  document.getElementById('calTitle').textContent=vehicleName(cal.vehicleId);
+  var vs=document.getElementById('calVehicles'); vs.innerHTML='';
+  (S.base.vehicles||[]).forEach(function(v){
+    var c=document.createElement('button'); c.className='vchip'+(v.id===cal.vehicleId?' sel':'');
+    c.textContent=v.name||'Vehicle';
+    c.onclick=(function(id){ return function(){ calSwitchVehicle(id); }; })(v.id);
+    vs.appendChild(c);
+  });
+  document.getElementById('calMonthLabel').textContent=MN[cal.m]+' '+cal.y;
+  var mp=document.getElementById('calMode'); mp.innerHTML='';
+  [['month','Month'],['agenda','Agenda']].forEach(function(o){
+    var p=document.createElement('div'); p.className='pill'+(cal.mode===o[0]?' sel':'');
+    p.textContent=o[1];
+    p.onclick=(function(mm){ return function(){ calSetMode(mm); }; })(o[0]);
+    mp.appendChild(p);
+  });
+  var lg=document.getElementById('calLegend');
+  var crews=ctx?ctx.R.crews:[];
+  if(!crews.length){
+    var v=vehicleById(cal.vehicleId);
+    crews=(v?vehicleCrews(v.id):[]).map(function(c){ return {name:c.name, color:c.color}; });
+  }
+  lg.innerHTML=crews.map(function(c){
+    return '<span><span class="dot" style="background:'+c.color+'"></span>Crew '+escapeHtml(c.name)+'</span>';
+  }).join('');
+}
+function calSlotCrews(R, dayIdx){
+  var slots=rotSlots(R.rotation);
+  var per=slots.map(function(sl){ return {sl:sl, list:[]}; });
+  R.crews.forEach(function(c,ci){
+    var st=cellState(R,dayIdx,ci);
+    if(st==='OFF') return;
+    for(var s=0;s<per.length;s++) if(per[s].sl.id===st) per[s].list.push({c:c, ci:ci});
+  });
+  return per;
+}
+function renderCalMonth(ctx){
+  var cal=ensureCal(), R=ctx.R, y=cal.y, m=cal.m;
+  var grid=document.getElementById('calGrid');
+  var dim=daysInMonth(y,m), lead=(new Date(y,m,1).getDay()+6)%7;
+  var weeks=Math.ceil((lead+dim)/7), html='';
+  for(var k=0;k<lead;k++) html+='<div class="cell out"></div>';
+  for(var d=1;d<=dim;d++){
+    var info=calRosterDay(R,y,m,d);
+    if(!info){
+      html+='<div class="cell out"><div class="dnum">'+d+'</div></div>';
+    }else{
+      var date=info.date;
+      var inner='<div class="dnum">'+d+'</div>';
+      calSlotCrews(R,info.dayIdx).forEach(function(ps){
+        if(!ps.list.length) return;
+        var names=ps.list.map(function(x){ return escapeHtml(x.c.name); }).join('/');
+        inner+='<span class="band" style="background:'+ps.list[0].c.color+'">'+(ps.sl.icon||'')+' '+names+'</span>';
+      });
+      var ed=R.crews.some(function(c,ci){ return R.overrides[info.dayIdx+':'+ci]; });
+      if(ed) inner+='<span class="edot"></span>';
+      html+='<div class="cell'+(isToday(date)?' today':'')+'" data-d="'+d+'" title="Tap for the week view">'+inner+'</div>';
+    }
+  }
+  for(var t=lead+dim;t<weeks*7;t++) html+='<div class="cell out"></div>';
+  grid.innerHTML=html;
+  var cells=grid.querySelectorAll('.cell[data-d]');
   for(var i=0;i<cells.length;i++){
     (function(el){
-      el.onclick=function(){ openSheet(parseInt(el.getAttribute('data-d'),10), parseInt(el.getAttribute('data-c'),10)); };
+      el.onclick=function(){
+        var dd=parseInt(el.getAttribute('data-d'),10);
+        calOpenWeek(y+'-'+String(m+1).padStart(2,'0')+'-'+String(dd).padStart(2,'0'));
+      };
     })(cells[i]);
   }
 }
-function renderCalendar(){
-  var R=S.draft; if(!R) return;
-  var start=parseISO(R.startISO);
-  document.getElementById('calTitle').textContent=S.unitName||R.name;
-  document.getElementById('calRange').textContent=R.name+' · '+fmtShort(start)+' – '+fmtShort(addDays(start,R.days-1));
-
-  // crew / people view toggle
-  var vt=document.getElementById('calViewToggle'); vt.innerHTML='';
-  [['crew','Crews'],['people','People']].forEach(function(o){
-    var p=document.createElement('div'); p.className='pill'+(S.calView===o[0]?' sel':''); p.textContent=o[1];
-    p.onclick=(function(v){ return function(){ S.calView=v; renderCalendar(); }; })(o[0]);
-    vt.appendChild(p);
-  });
-  var isPeople=S.calView==='people';
-  document.getElementById('calGrid').style.display=isPeople?'none':'';
-  document.getElementById('calDow').style.display=isPeople?'none':'';
-  document.getElementById('calPeople').style.display=isPeople?'':'none';
-  document.getElementById('crewFilter').style.display=isPeople?'none':'';
-  if(isPeople){ renderPeopleGrid(R,start); return; }
-
-  // crew filter
-  var cf=document.getElementById('crewFilter'); cf.innerHTML='';
-  var all=document.createElement('div'); all.className='cf'+(S.filter==='ALL'?' sel':'');
-  all.textContent='All crews'; all.onclick=function(){ S.filter='ALL'; renderCalendar(); };
-  cf.appendChild(all);
-  R.crews.forEach(function(c,i){
-    var d=document.createElement('div'); d.className='cf'+(S.filter===i?' sel':'');
-    d.innerHTML='<span class="dot" style="background:'+c.color+'"></span>'+escapeHtml(c.name);
-    d.onclick=(function(idx){ return function(){ S.filter=idx; renderCalendar(); }; })(i);
-    cf.appendChild(d);
-  });
-
-  // summary
-  var sum=document.getElementById('calSummary');
-  var rslots=rotSlots(R.rotation);
-  function slotCountWord(sl){ if(sl.id==='D') return 'day'; if(sl.id==='N') return 'night'; if(sl.id==='X') return '×24h'; return sl.label.toLowerCase(); }
-  if(S.filter==='ALL'){
-    var parts=R.crews.map(function(c,i){
-      var counts=rslots.map(function(){ return 0; });
-      for(var d=0;d<R.days;d++){ var s=cellState(R,d,i); if(s==='OFF') continue;
-        for(var k=0;k<rslots.length;k++) if(rslots[k].id===s) counts[k]++; }
-      var bits=rslots.map(function(sl,k){ if(!counts[k]) return '';
-        return '<b>'+counts[k]+(sl.id==='X'?'×24h':sl.short)+'</b>'; }).filter(function(x){ return x; }).join(' + ');
-      return '<span class="dot" style="background:'+c.color+'"></span>'+escapeHtml(c.name)+memberList(c)+': '+bits;
-    });
-    sum.innerHTML='Shifts per crew<br>'+parts.join(' &nbsp; ');
-  } else {
-    var i=S.filter, on=0, sc=rslots.map(function(){ return 0; });
-    for(var d=0;d<R.days;d++){ var s=cellState(R,d,i); if(s==='OFF') continue; on++;
-      for(var k=0;k<rslots.length;k++) if(rslots[k].id===s) sc[k]++; }
-    var detail=rslots.map(function(sl,k){ if(!sc[k]) return '';
-      return sc[k]+(sl.id==='X'?'×24h':' '+slotCountWord(sl)); }).filter(function(x){ return x; }).join(', ');
-    var hrs=on*R.shiftLen;
-    sum.innerHTML='<span class="dot" style="background:'+R.crews[i].color+'"></span>Crew <b>'+escapeHtml(R.crews[i].name)+'</b>'+memberList(R.crews[i])+
-      ' works <b>'+on+'</b> of '+R.days+' days ('+detail+') &middot; <b>'+hrs+'h</b> total &middot; '+(R.days-on)+' off';
+function renderCalEmpty(){
+  var cal=ensureCal();
+  var grid=document.getElementById('calGrid');
+  var dim=daysInMonth(cal.y,cal.m), lead=(new Date(cal.y,cal.m,1).getDay()+6)%7;
+  var weeks=Math.ceil((lead+dim)/7), html='';
+  for(var k=0;k<lead;k++) html+='<div class="cell out"></div>';
+  for(var d=1;d<=dim;d++){
+    html+='<div class="cell out'+(isToday(new Date(cal.y,cal.m,d))?' today':'')+'"><div class="dnum">'+d+'</div></div>';
   }
-
-  // grid — align first column to Monday
-  var grid=document.getElementById('calGrid'); grid.innerHTML='';
-  var lead=(start.getDay()+6)%7; // Mon=0
-  for(var k=0;k<lead;k++){ var pad=document.createElement('div'); grid.appendChild(pad); }
-  for(var d=0; d<R.days; d++){
-    (function(dayIdx){
-      var date=addDays(start,dayIdx);
-      var cell=document.createElement('div'); cell.className='cell';
-      if(isToday(date)) cell.classList.add('today');
-      var head='<div class="dnum">'+date.getDate()+'</div>';
-      if(S.filter==='ALL'){
-        var shead='<div class="dnum">'+date.getDate()+'</div>';
-        var secHtml='', edAny='';
-        rslots.forEach(function(sl){
-          var chips='';
-          R.crews.forEach(function(c,ci){
-            var st=cellState(R,dayIdx,ci);
-            if(R.overrides[dayIdx+':'+ci]) edAny='<span class="edited">*</span>';
-            if(st===sl.id){
-              chips+=crewChipNames(c).map(function(nm){
-                return '<div class="mini" style="background:'+c.color+'">'+escapeHtml(nm)+'</div>';
-              }).join('');
-            }
-          });
-          secHtml+='<div class="sub2">'+slotHead(R,sl)+'</div><div class="minis">'+(chips||'<div class="mini offm">–</div>')+'</div>';
-        });
-        cell.innerHTML=shead+edAny+secHtml;
-        cell.title='Tap to edit';
-        cell.onclick=function(){ openSheet(dayIdx, null); };
-      } else {
-        var ci=S.filter, st=cellState(R,dayIdx,ci);
-        var ed=R.overrides[dayIdx+':'+ci] ? '<span class="edited">*</span>' : '';
-        if(st==='OFF'){
-          cell.classList.add('off');
-          cell.innerHTML=ed+head+'<div class="dn">OFF</div>';
-        } else {
-          cell.classList.add('work');
-          cell.style.background=R.crews[ci].color;
-          cell.innerHTML=ed+head+'<div class="dn">'+slotShort(R.rotation,st)+'</div><div class="sub2">'+hrsLabel(R,st)+'</div>';
-        }
-        cell.onclick=function(){ openSheet(dayIdx, ci); };
-      }
-      grid.appendChild(cell);
-    })(d);
-  }
-
-  // legend
-  var lg=document.getElementById('calLegend');
-  lg.innerHTML=R.crews.map(function(c){
-    return '<span><span class="dot" style="background:'+c.color+'"></span>'+escapeHtml(c.name)+'</span>';
-  }).join('')+rslots.map(function(sl){
-    return '<span>'+slotHead(R,sl)+'</span>';
-  }).join('')+
-  '<span><span class="dot" style="background:'+OFF_COLOR+'"></span>Off</span><span style="color:var(--accent)">*</span><span>edited</span>';
-
-  document.getElementById('saveBtn').style.display = S.fromSaved ? 'none' : 'block';
+  for(var t=lead+dim;t<weeks*7;t++) html+='<div class="cell out"></div>';
+  grid.innerHTML=html;
+  var wrap=document.getElementById('calMonthWrap');
+  var p=document.createElement('div'); p.className='emptycal'; p.id='calEmptyPrompt';
+  p.innerHTML='No roster for <b>'+escapeHtml(vehicleName(cal.vehicleId))+'</b> in '+MN[cal.m]+' '+cal.y+' yet.';
+  var b=document.createElement('button'); b.className='btn'; b.textContent='+ New roster';
+  b.onclick=function(){
+    S.nrPrefill={vehicleId:cal.vehicleId, y:cal.y, m:cal.m};
+    toNewRoster();
+  };
+  p.appendChild(b); wrap.appendChild(p);
 }
+function renderCalAgenda(ctx){
+  var cal=ensureCal(), R=ctx.R, y=cal.y, m=cal.m;
+  var slots=rotSlots(R.rotation);
+  var wrap=document.getElementById('calAgendaWrap');
+  var dim=daysInMonth(y,m), html='';
+  var WD=['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  for(var d=1;d<=dim;d++){
+    var info=calRosterDay(R,y,m,d);
+    var date=info?info.date:new Date(y,m,d);
+    var isT=isToday(date);
+    var left='<div class="agdate"><div class="wd">'+WD[date.getDay()]+'</div><div class="dn">'+d+'</div></div>';
+    var body;
+    if(!info){
+      body='<div class="agbody"><span class="dim">\u2014</span></div>';
+    }else{
+      var lines=slots.map(function(sl){
+        var on=[];
+        R.crews.forEach(function(c,ci){
+          if(cellState(R,info.dayIdx,ci)===sl.id) on.push({c:c, ci:ci});
+        });
+        if(!on.length) return '';
+        var bit=on.map(function(x){
+          var nm=(x.c.members&&x.c.members.length)?' \u2014 '+x.c.members.map(escapeHtml).join(', '):'';
+          return '<span class="cdot" style="background:'+x.c.color+'"></span> <b>Crew '+escapeHtml(x.c.name)+'</b>'+nm;
+        }).join(' \u00b7 ');
+        return '<div>'+(sl.icon||'')+' '+(sl.label||sl.id)+': '+bit+'</div>';
+      }).filter(function(x){ return x; });
+      body='<div class="agbody">'+(lines.join('')||'<span class="dim">All off</span>')+(isT?'<span class="todaytag">TODAY</span>':'')+'</div>';
+    }
+    html+='<div class="agrow'+(isT?' today':'')+'"'+(isT?' id="agToday"':'')+(info?' data-d="'+d+'"':'')+'>'+left+body+'</div>';
+  }
+  var t=new Date();
+  if(t.getFullYear()===y&&t.getMonth()===m) html+='<button class="jumpbtn">\u2193 Today</button>';
+  wrap.innerHTML=html;
+  var rows=wrap.querySelectorAll('.agrow[data-d]');
+  for(var i=0;i<rows.length;i++){
+    (function(el){
+      el.onclick=function(){
+        var dd=parseInt(el.getAttribute('data-d'),10);
+        calOpenWeek(y+'-'+String(m+1).padStart(2,'0')+'-'+String(dd).padStart(2,'0'));
+      };
+    })(rows[i]);
+  }
+  var jb=wrap.querySelector('.jumpbtn');
+  if(jb) jb.onclick=function(){
+    var el=document.getElementById('agToday');
+    if(el&&el.scrollIntoView) el.scrollIntoView();
+  };
+}
+function renderCalWeek(ctx){
+  var cal=ensureCal(), R=ctx.R;
+  var wk=parseISO(cal.weekISO);
+  var mon=addDays(wk, -((wk.getDay()+6)%7));
+  var wrap=document.getElementById('calWeekWrap');
+  var WD=['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  var html='<div class="wkback"><button class="wkbackbtn">&#8592; Back to month</button></div>';
+  html+='<div class="weeknav"><button class="mnav wprev" aria-label="Previous week">&#8249;</button>'+
+    '<div class="weeklabel">'+fmtShort(mon)+' \u2013 '+fmtShort(addDays(mon,6))+'</div>'+
+    '<button class="mnav wnext" aria-label="Next week">&#8250;</button></div>';
+  for(var i=0;i<7;i++){
+    var date=addDays(mon,i);
+    var info=calRosterDay(R,date.getFullYear(),date.getMonth(),date.getDate());
+    var isT=isToday(date);
+    var isPicked=toISO(date)===cal.weekISO;
+    var head='<div class="dhead"><span class="wd">'+WD[date.getDay()]+'</span>'+
+      '<span class="dn">'+date.getDate()+'</span><span class="mn">'+MNS[date.getMonth()]+'</span>'+
+      (isT?'<span class="todaytag">TODAY</span>':'')+'</div>';
+    if(!info){
+      html+='<div class="daycard out">'+head+'<div style="color:var(--muted);font-size:14px;">No roster coverage</div></div>';
+    }else{
+      var per=calSlotCrews(R,info.dayIdx), body='';
+      per.forEach(function(ps){
+        if(!ps.list.length) return;
+        var nm=ps.list.map(function(x){
+          var mem=(x.c.members&&x.c.members.length)?' \u2014 '+x.c.members.map(escapeHtml).join(', '):'';
+          return 'Crew '+escapeHtml(x.c.name)+mem;
+        }).join(' \u00b7 ');
+        var dot=ps.list.map(function(x){ return '<span class="cdot" style="background:'+x.c.color+'"></span>'; }).join('');
+        var tm=''; try{ tm=slotTime(R, ps.sl.id); }catch(e){}
+        var cis=ps.list.map(function(x){ return x.ci; }).join(',');
+        body+='<div class="wshift" data-day="'+info.dayIdx+'" data-ci="'+cis+'"><div class="t">'+dot+(ps.sl.icon||'')+' '+(ps.sl.label||ps.sl.id)+'</div><div class="n">'+nm+'</div>'+(tm?'<div class="h">'+tm+'</div>':'')+'</div>';
+      });
+      if(!body) body='<div style="color:var(--muted);font-size:14px;">All off</div>';
+      html+='<div class="daycard'+(isT?' today':'')+(isPicked?' picked':'')+'">'+head+body+'</div>';
+    }
+  }
+  wrap.innerHTML=html;
+  var bb=wrap.querySelector('.wkbackbtn'); if(bb) bb.onclick=function(){ calBackToMonth(); };
+  var pv=wrap.querySelector('.wprev'); if(pv) pv.onclick=function(){ calWeekNav(-1); };
+  var nx=wrap.querySelector('.wnext'); if(nx) nx.onclick=function(){ calWeekNav(1); };
+  var sh=wrap.querySelectorAll('.wshift');
+  for(var s=0;s<sh.length;s++){
+    (function(el){
+      el.onclick=function(){
+        var day=parseInt(el.getAttribute('data-day'),10);
+        var list=String(el.getAttribute('data-ci')||'').split(',').filter(function(x){ return x!==''; })
+          .map(function(x){ return {ci:parseInt(x,10)}; });
+        editShiftFromWeek(day, list);
+      };
+    })(sh[s]);
+  }
+}
+function editShiftFromWeek(dayIdx, onList){
+  if(onList.length===1) openSheet(dayIdx, onList[0].ci);
+  else openSheet(dayIdx, null);
+}
+function calMonthNav(dir){
+  var cal=ensureCal();
+  var m=cal.m+dir, y=cal.y;
+  if(m<0){ m=11; y--; } if(m>11){ m=0; y++; }
+  cal.m=m; cal.y=y; cal.sub='month';
+  renderCalendar();
+}
+function calSetMode(mm){ var cal=ensureCal(); cal.mode=mm; cal.sub='month'; renderCalendar(); }
+function calSwitchVehicle(vid){ var cal=ensureCal(); cal.vehicleId=vid; cal.sub='month'; renderCalendar(); }
+function calOpenWeek(iso){ var cal=ensureCal(); cal.weekISO=iso; cal.sub='week'; renderCalendar(); }
+function calBackToMonth(){ var cal=ensureCal(); cal.sub='month'; renderCalendar(); }
+function calWeekNav(dir){
+  var cal=ensureCal();
+  cal.weekISO=toISO(addDays(parseISO(cal.weekISO), dir*7));
+  renderCalendar();
+}
+
 function slotHead(R, sl){
   var name=sl.id==='X'?'24H':sl.id==='D'?'DAY':sl.id==='N'?'NIGHT':'SHIFT '+sl.short;
   var t=sl.id==='X'?'':(' · '+slotTime(R, sl.id));
@@ -1439,6 +1847,7 @@ function loadSaved(){
   S.rosters=S.rosters.filter(function(u){ return u && u.roster && Array.isArray(u.roster.crews); });
   S.rosters.forEach(function(u){
     u.roster.crews.forEach(function(c){ if(!c.members) c.members=[]; });
+    migrateCrewColors(u.roster.crews);
   });
   if(S.rosters.length!==before) persist();
 }
@@ -1466,34 +1875,24 @@ function saveRoster(){
   S.fromSaved=true;
   document.getElementById('saveBtn').style.display='none';
 }
-function renderRosters(){
-  loadSaved();
-  var el=document.getElementById('savedList'); el.innerHTML='';
-  if(!S.rosters.length){
-    el.innerHTML='<p class="fine">No rosters yet.<br>Set up your base, then tap <b>+ New roster</b>.</p>';
-    return;
-  }
-  var h=document.createElement('label'); h.className='f'; h.textContent='My rosters'; el.appendChild(h);
-  S.rosters.forEach(function(u){
-    var R=u.roster, start=parseISO(R.startISO);
-    var staff=R.crews.reduce(function(a,c){ return a+((c.members||[]).length); },0);
-    var d=document.createElement('div'); d.className='rosteritem';
-    d.innerHTML='<div class="ri"><b>'+escapeHtml(u.name)+'</b><span>'+
-      escapeHtml(ROTATIONS[R.rotation]?ROTATIONS[R.rotation].name:R.rotation)+' · '+R.days+' days · '+
-      fmtShort(start)+' – '+fmtShort(addDays(start,R.days-1))+' · '+staff+' staff</span></div>';
-    d.onclick=(function(id){ return function(){ openRoster(id); }; })(u.id);
-    var del=document.createElement('button'); del.className='del'; del.textContent='🗑';
-    del.onclick=(function(id){ return function(e){ e.stopPropagation(); deleteRoster(id); }; })(u.id);
-    d.appendChild(del); el.appendChild(d);
-  });
-}
 function openRoster(id){
   loadSaved();
   var u=S.rosters.find(function(x){ return x.id===id; });
   if(!u) return;
-  S.unitId=u.id; S.unitName=u.name;
-  S.draft=JSON.parse(JSON.stringify(u.roster)); S.fromSaved=true; S.filter='ALL';
-  renderCalendar(); show('v-cal');
+  var R=u.roster;
+  /* stamp the vehicle link on legacy rosters so the switcher can find them */
+  if(!R.vehicleId){
+    var vv=(S.base.vehicles||[]).find(function(x){ return x.name===u.name; });
+    if(vv) R.vehicleId=vv.id;
+  }
+  var vid=R.vehicleId||((S.base.vehicles||[])[0]||{}).id||null;
+  var ym;
+  if(R.kind==='month'){ ym={y:R.year, m:R.month}; }
+  else { var s=parseISO(R.startISO); ym={y:s.getFullYear(), m:s.getMonth()}; }
+  S.cal={vehicleId:vid, y:ym.y, m:ym.m, mode:'month', sub:'month', weekISO:null};
+  S.unitName=u.name;
+  renderCalendar();
+  show('v-cal');
 }
 function deleteRoster(id){
   S.rosters=S.rosters.filter(function(x){ return x.id!==id; });
@@ -1783,7 +2182,6 @@ function collectState(){
   var st={ v:1, mtime:Date.now(), base:S.base||null, rosters:S.rosters||[], customs:customs, profileName:profileName() };
   try{
     st.heroLogo=localStorage.getItem('sfshift_hero_logo');
-    st.defdays=localStorage.getItem('sfshift_defdays')||'28';
   }catch(e){}
   return st;
 }
@@ -1795,7 +2193,6 @@ function applyState(st){
     if(st.customs) localStorage.setItem('sfshift_custom_rot', JSON.stringify(st.customs));
     if(st.heroLogo) localStorage.setItem('sfshift_hero_logo', st.heroLogo);
     else localStorage.removeItem('sfshift_hero_logo');
-    if(st.defdays) localStorage.setItem('sfshift_defdays', st.defdays);
     if(st.profileName) localStorage.setItem('sfshift_profile_name', st.profileName);
     if(st.mtime) localStorage.setItem('sfshift_mtime', String(st.mtime));
   }catch(e){}
@@ -1847,7 +2244,7 @@ function enterApp(){
 
 /* ---------- navigation ---------- */
 var TAB_VIEWS={home:'v-home', rosters:'v-rosters', staff:'v-staff', settings:'v-settings'};
-var BACK_IDS=['v-basesetup','v-newroster','v-cal','v-base','v-rotbuilder'];
+var BACK_IDS=['v-basesetup','v-newroster','v-anchor','v-cal','v-base','v-rotbuilder'];
 function show(id){
   document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
   document.getElementById(id).classList.add('active');
@@ -1869,8 +2266,11 @@ function goBack(){
   var av=document.querySelector('.view.active');
   var active=av&&av.id;
   if(active==='v-rotbuilder'){ openBaseSetup(); return; }
+  if(active==='v-anchor'){ show('v-newroster'); return; }
   if(active==='v-cal'){
-    if(S.draft && !S.fromSaved){ show('v-newroster'); } else { switchTab('rosters'); }
+    var cal=ensureCal();
+    if(cal.sub==='week'){ cal.sub='month'; renderCalendar(); return; }
+    if(S.draft && !S.fromSaved){ show('v-anchor'); } else { switchTab('rosters'); }
     return;
   }
   switchTab('home');
@@ -1919,10 +2319,12 @@ function renderToday(){
 function rosterRow(u){
   var R=u.roster, start=parseISO(R.startISO);
   var staff=R.crews.reduce(function(a,c){ return a+((c.members||[]).length); },0);
+  var span=(R.kind==='month')
+    ? escapeHtml(MN[R.month]+' '+R.year)
+    : (R.days+' days &middot; '+fmtShort(start)+' &ndash; '+fmtShort(addDays(start,R.days-1)));
   var d=document.createElement('div'); d.className='rosteritem';
   d.innerHTML='<div class="ri"><b>'+escapeHtml(u.name)+'</b><span>'+
-    escapeHtml(ROTATIONS[R.rotation]?ROTATIONS[R.rotation].name:R.rotation)+' &middot; '+R.days+' days &middot; '+
-    fmtShort(start)+' &ndash; '+fmtShort(addDays(start,R.days-1))+' &middot; '+staff+' staff</span></div>';
+    escapeHtml(ROTATIONS[R.rotation]?ROTATIONS[R.rotation].name:R.rotation)+' &middot; '+span+' &middot; '+staff+' staff</span></div>';
   d.onclick=(function(id){ return function(){ openRoster(id); }; })(u.id);
   var del=document.createElement('button'); del.className='del'; del.textContent='\uD83D\uDDD1';
   del.onclick=(function(id){ return function(e){ e.stopPropagation(); deleteRoster(id); }; })(u.id);
@@ -1999,10 +2401,6 @@ function renderSettings(){
   document.getElementById('setName').value=profileName();
   document.getElementById('setEmail').value=(sbUser && sbUser.email)||'';
   document.getElementById('setBase').value=(S.base&&S.base.name)||'';
-  var days='28'; try{ days=localStorage.getItem('sfshift_defdays')||'28'; }catch(e){}
-  document.querySelectorAll('#setDur .pill').forEach(function(p){
-    p.classList.toggle('sel', p.getAttribute('data-v')===days);
-  });
 }
 function saveSettingsProfile(){
   var name=document.getElementById('setName').value.trim();
@@ -2012,14 +2410,6 @@ function saveSettingsProfile(){
   persistBase(); renderHome();
   toast('Saved');
 }
-function applyDefDays(){
-  var days='28'; try{ days=localStorage.getItem('sfshift_defdays')||'28'; }catch(e){}
-  document.querySelectorAll('#nrDur .pill').forEach(function(p){
-    p.classList.toggle('sel', p.getAttribute('data-v')===days);
-  });
-}
-var _toNewRoster=toNewRoster;
-toNewRoster=function(){ _toNewRoster(); applyDefDays(); };
 
 /* ---------- data: export / import / clear ---------- */
 function exportData(){
@@ -2046,7 +2436,7 @@ function importData(file){
 }
 function clearData(){
   if(!confirm('Delete ALL bases, rosters and staff \u2014 on this device and in your cloud account?')) return;
-  ['sfshift_base','sfshift_units','sfshift_rosters','sfshift_hero_logo','sfshift_defdays','sfshift_profile_name','sfshift_mtime'].forEach(function(k){
+  ['sfshift_base','sfshift_units','sfshift_rosters','sfshift_hero_logo','sfshift_profile_name','sfshift_mtime'].forEach(function(k){
     try{ localStorage.removeItem(k); }catch(e){}
   });
   if(sb && sbUser){ try{ sb.from('app_state').delete().eq('user_id', sbUser.id).then(function(){}).catch(function(){}); }catch(e){} }
@@ -2097,17 +2487,7 @@ function openShare(){
   document.getElementById('sheetWrap').classList.add('open');
 }
 
-/* ---------- draft badge on unsaved rosters ---------- */
-var _renderCalendar=renderCalendar;
-renderCalendar=function(){
-  _renderCalendar();
-  var b=document.getElementById('draftBadge');
-  if(b) b.style.display=(S.draft && !S.fromSaved)?'inline-block':'none';
-};
-
 /* ---------- init ---------- */
-wirePills('nrDur',function(){});
-wirePills('setDur',function(v){ try{ localStorage.setItem('sfshift_defdays',v); }catch(e){} queueCloudSave(); });
 loadCustomRotations();
 loadBase(); loadSaved();
 try{
