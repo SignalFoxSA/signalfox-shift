@@ -65,6 +65,7 @@
   .vrow label{font-size:12px; color:var(--muted); font-weight:600;}
   .srow{display:flex; gap:8px; margin-top:8px; align-items:center;}
   .srow input{flex:1; min-width:0;}
+  .srow select.qsel{flex:none; width:96px; padding:12px 6px;}
   .srow .rm{background:none; border:none; color:var(--red); font-size:16px; cursor:pointer; padding:6px; flex:none;}
   .vsect{margin:14px 0 4px; font-size:13px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.5px;}
   .mrow select{flex:1; min-width:0;}
@@ -711,6 +712,7 @@
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
+var QUALS = ['BLS','ILS','ALS']; /* staff qualifications — captured per person; pairing rules come later */
 var OLD_CREW_COLORS = ['#22c55e','#3b82f6','#f97316','#a855f7']; /* pre-Oct-2026 palette, migrated on load */
 var OFF_COLOR = '#ef4444';
 function migrateCrewColors(list){
@@ -1236,7 +1238,8 @@ function staffOptions(sel, current){
   var o0=document.createElement('option'); o0.value=''; o0.textContent='— unassigned —'; sel.appendChild(o0);
   S.base.staff.forEach(function(s){
     if(!(s.name||'').trim()) return;
-    var o=document.createElement('option'); o.value=s.id; o.textContent=s.name; sel.appendChild(o);
+    var o=document.createElement('option'); o.value=s.id;
+    o.textContent=s.name+(s.qual?' ('+s.qual+')':''); sel.appendChild(o);
   });
   sel.value=current||'';
 }
@@ -2731,9 +2734,16 @@ function renderStaffTab(){
     var row=document.createElement('div'); row.className='srow';
     var inp=document.createElement('input'); inp.type='text'; inp.maxLength=24; inp.value=s.name; inp.placeholder='Staff name';
     inp.oninput=function(){ s.name=this.value; persistBase(); };
+    var q=document.createElement('select'); q.className='qsel'; q.title='Qualification';
+    q.setAttribute('aria-label','Qualification for '+(s.name||'staff member'));
+    var q0=document.createElement('option'); q0.value=''; q0.textContent='Qual.';
+    q.appendChild(q0);
+    QUALS.forEach(function(ql){ var o=document.createElement('option'); o.value=ql; o.textContent=ql; q.appendChild(o); });
+    q.value=s.qual||'';
+    q.onchange=function(){ s.qual=this.value; persistBase(); };
     var rm=document.createElement('button'); rm.className='rm'; rm.textContent='\u2715'; rm.title='Remove';
     rm.onclick=function(){ staffDel(si); };
-    row.appendChild(inp); row.appendChild(rm);
+    row.appendChild(inp); row.appendChild(q); row.appendChild(rm);
     var a=crewAssignment(s.id);
     if(a){ var sub=document.createElement('div'); sub.className='staffsub'; sub.textContent=a; row.appendChild(sub); }
     wrap.appendChild(row);
