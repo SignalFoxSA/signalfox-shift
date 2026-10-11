@@ -522,6 +522,10 @@
       <div class="pills" id="ancDay"></div>
       <label class="f" id="ancNightLab">&#127769; On nights</label>
       <div class="pills" id="ancNight"></div>
+      <label class="f" id="ancWeekLab" style="display:none">That week is a&hellip;</label>
+      <div class="pills" id="ancWeek" style="display:none"></div>
+      <label class="f" id="ancBlockLab" style="display:none">The 1st is their:</label>
+      <div class="pills" id="ancBlock" style="display:none"></div>
       <p class="fine" id="ancHint"></p>
       <div class="ancprev" id="ancPreview"></div>
     </div>
@@ -612,7 +616,7 @@ function migrateCrewColors(list){
 var ROTATIONS = {
   '224': { name:'2-2-4', cycle:8, crews:4, hours:12, offsets:[0,2,4,6],
     pattern:['D','D','N','N',0,0,0,0] },
-  'lsw': { name:'Long / short week', cycle:14, crews:4, hours:12, fortnightFlip:true,
+  'lsw': { name:'Long / short week', cycle:14, crews:4, hours:12, fortnightFlip:true, weekAnchored:true,
     patterns:[
       ['D','D',0,0,'N','N','N',0,0,'D','D',0,0,0], // A
       ['N','N',0,0,'D','D','D',0,0,'N','N',0,0,0], // B
@@ -670,7 +674,7 @@ var ROTATIONS = {
       [0,0,0,0,0,0,0,'N','N','N','N','N','N','N']
     ] },
   /* partial-day coverage presets (one shift per day) */
-  'lsw12': { name:'Long/short week (days)', cycle:14, crews:2, hours:12, cov:[12,8],
+  'lsw12': { name:'Long/short week (days)', cycle:14, crews:2, hours:12, cov:[12,8], weekAnchored:true,
     patterns:[
       ['D','D',0,0,'D','D','D', 0,0,'D','D',0,0,0],
       [0,0,'D','D',0,0,0, 'D','D',0,0,'D','D','D']
@@ -1262,17 +1266,27 @@ function anchorNightSlot(rotKey){
   for(var i=0;i<s.length;i++) if(s[i].id==='N') return 'N';
   return null;
 }
-/* smallest absolute engine day >= 0 satisfying the given crew/slot picks (null = don't care) */
-function solveAnchor(rotKey, dayCrew, nightCrew){
-  var rot=ROTATIONS[rotKey]; if(!rot) return 0;
+/* all absolute engine days in [0,cycle) satisfying the given crew/slot picks (null = don't care).
+   More than one match means the 1st is ambiguous within a work block (e.g. 2-2-4:
+   "A on days" is true on both days of A's 2-day block) — the user then picks which
+   day of the block the 1st is. */
+function anchorMatches(rotKey, dayCrew, nightCrew){
+  var rot=ROTATIONS[rotKey]; if(!rot) return [0];
   var ds=anchorDaySlot(rotKey), ns=anchorNightSlot(rotKey);
-  var cyc=rot.cycle||8;
-  for(var n=0;n<cyc*4;n++){
+  var cyc=rot.cycle||8, out=[];
+  for(var n=0;n<cyc;n++){
     var dok=(dayCrew==null)||baseState(rotKey,dayCrew,n)===ds;
     var nok=(nightCrew==null)||!ns||baseState(rotKey,nightCrew,n)===ns;
-    if(dok&&nok) return n;
+    if(dok&&nok) out.push(n);
   }
-  return -1;
+  return out;
+}
+/* weekday of a date with Monday=0 .. Sunday=6 */
+function weekdayMon0(y,m,d){ return (new Date(y,m,d).getDay()+6)%7; }
+/* smallest absolute engine day >= 0 satisfying the given crew/slot picks (null = don't care) */
+function solveAnchor(rotKey, dayCrew, nightCrew){
+  var ms=anchorMatches(rotKey, dayCrew, nightCrew);
+  return ms.length?ms[0]:-1;
 }
 function crewOnSlot(rotKey, slotId, abs){
   var rot=ROTATIONS[rotKey]; if(!rot) return -1;
@@ -1301,17 +1315,32 @@ function toAnchorStep(){
   var mv=document.getElementById('nrMonth').value;
   if(!mv||mv.length<7){ toast('Pick a month'); return; }
   var y=parseInt(mv.slice(0,4),10), m=parseInt(mv.slice(5,7),10)-1;
-  var ds=anchorDaySlot(rotKey), ns=anchorNightSlot(rotKey);
+  var rot=ROTATIONS[rotKey]||ROTATIONS['224'];
   var sug=suggestAnchorAbs(v.id, rotKey, y, m);
+  if(rot.weekAnchored){
+    /* Weekday-locked rotation (e.g. long/short week): the pattern is pinned to
+       Monday–Sunday, so the anchor is which week holds the 1st (long or short),
+       not which crews are on. Pattern position 0 = Monday. */
+    var wd=weekdayMon0(y,m,1), weekLong, abs;
+    if(sug!=null){ abs=sug; weekLong=(sug%rot.cycle)<7; }
+    else { weekLong=true; abs=wd; }
+    S.anchor={vehicleId:v.id, rotKey:rotKey, year:y, month:m, weekAnchored:true,
+      weekLong:weekLong, abs:abs, suggested:(sug!=null), conflict:false};
+    renderAnchor();
+    show('v-anchor');
+    return;
+  }
+  var ds=anchorDaySlot(rotKey), ns=anchorNightSlot(rotKey);
   var dc=crewOnSlot(rotKey, ds, sug!=null?sug:0);
   if(dc<0) dc=0;
-  var abs=(sug!=null)?sug:solveAnchor(rotKey, dc, null);
+  var ms=anchorMatches(rotKey, dc, null);
+  var abs=(sug!=null)?sug:(ms.length?ms[0]:0);
   if(abs<0) abs=0;
   var nc=ns?crewOnSlot(rotKey, ns, abs):null;
   if(ns&&nc<0) nc=null;
   S.anchor={vehicleId:v.id, rotKey:rotKey, year:y, month:m,
     daySlot:ds, nightSlot:ns, dayCrew:dc, nightCrew:nc, abs:abs,
-    suggested:(sug!=null), conflict:false};
+    blockOpts:ms, blockDay:0, suggested:(sug!=null), conflict:false};
   renderAnchor();
   show('v-anchor');
 }
@@ -1331,8 +1360,37 @@ function renderAnchor(){
   var A=S.anchor; if(!A) return;
   var v=vehicleById(A.vehicleId), rot=ROTATIONS[A.rotKey]||{};
   var crews=anchorCrews();
-  document.getElementById('ancTitle').textContent='Who starts on 1 '+MN[A.month]+'?';
-  document.getElementById('ancSub').textContent=(v?v.name:'Vehicle')+' \u00b7 '+(rot.name||A.rotKey)+' \u00b7 '+MN[A.month]+' '+A.year;
+  var dl=document.getElementById('ancDayLab'), nl=document.getElementById('ancNightLab');
+  var bl=document.getElementById('ancBlockLab'), be=document.getElementById('ancBlock');
+  var wl=document.getElementById('ancWeekLab'), we=document.getElementById('ancWeek');
+  if(rot.weekAnchored||A.weekAnchored){
+    /* weekday-locked rotation: pattern is pinned to Mon–Sun, so the only
+       question is whether the week holding the 1st is long or short */
+    var wd=weekdayMon0(A.year,A.month,1);
+    var mon=new Date(A.year,A.month,1-wd), sun=new Date(A.year,A.month,1-wd+6);
+    document.getElementById('ancTitle').textContent='Which week holds 1 '+MN[A.month]+'?';
+    document.getElementById('ancSub').textContent=(v?v.name:'Vehicle')+' \u00b7 '+(rot.name||A.rotKey)+
+      ' \u00b7 Mon '+mon.getDate()+' '+MN[mon.getMonth()]+' \u2013 Sun '+sun.getDate()+' '+MN[sun.getMonth()];
+    dl.style.display='none'; document.getElementById('ancDay').style.display='none';
+    nl.style.display='none'; document.getElementById('ancNight').style.display='none';
+    bl.style.display='none'; be.style.display='none';
+    wl.style.display=''; we.style.display='';
+    we.innerHTML='';
+    [['Long week',true],['Short week',false]].forEach(function(opt){
+      var p=document.createElement('div');
+      p.className='pill'+(A.weekLong===opt[1]?' sel':'');
+      p.textContent=opt[0];
+      p.onclick=(function(val){ return function(){ anchorWeekPick(val); }; })(opt[1]);
+      we.appendChild(p);
+    });
+    document.getElementById('ancHint').textContent=A.suggested
+      ? 'Suggested from where last month ended \u2014 tap to correct it.'
+      : 'Is that week a long week (Mon,Tue,Fri\u2013Sun) or a short week (Wed,Thu)?';
+  } else {
+    document.getElementById('ancTitle').textContent='Who starts on 1 '+MN[A.month]+'?';
+    document.getElementById('ancSub').textContent=(v?v.name:'Vehicle')+' \u00b7 '+(rot.name||A.rotKey)+' \u00b7 '+MN[A.month]+' '+A.year;
+    wl.style.display='none'; we.style.display='none';
+    dl.style.display=''; document.getElementById('ancDay').style.display='';
   function pills(elId, sel, cb){
     var el=document.getElementById(elId); el.innerHTML='';
     crews.forEach(function(c,i){
@@ -1343,7 +1401,6 @@ function renderAnchor(){
       el.appendChild(p);
     });
   }
-  var dl=document.getElementById('ancDayLab'), nl=document.getElementById('ancNightLab');
   if(A.nightSlot){
     dl.innerHTML='\u2600\ufe0f On days'; nl.style.display=''; document.getElementById('ancNight').style.display='';
     pills('ancDay', A.dayCrew, function(i){ anchorPick('day', i); });
@@ -1352,12 +1409,28 @@ function renderAnchor(){
     dl.textContent='On duty'; nl.style.display='none'; document.getElementById('ancNight').style.display='none';
     pills('ancDay', A.dayCrew, function(i){ anchorPick('day', i); });
   }
+  /* the 1st can fall on any day of a multi-day work block — ask which */
+  var showBlock=A.blockOpts&&A.blockOpts.length>1&&!A.suggested;
+  bl.style.display=showBlock?'':'none'; be.style.display=showBlock?'':'none';
+  if(showBlock){
+    bl.textContent='The 1st is their:';
+    be.innerHTML='';
+    var ord=['1st','2nd','3rd','4th','5th','6th','7th','8th'];
+    A.blockOpts.forEach(function(n,i){
+      var p=document.createElement('div');
+      p.className='pill'+(A.blockDay===i?' sel':'');
+      p.textContent=(ord[i]||((i+1)+'th'))+' day';
+      p.onclick=(function(idx){ return function(){ anchorBlockPick(idx); }; })(i);
+      be.appendChild(p);
+    });
+  }
   var hint=document.getElementById('ancHint');
   hint.textContent=A.suggested
     ? 'Suggested from where last month ended \u2014 tap a crew to correct it.'
     : (A.conflict
         ? 'That combination can\u2019t happen in this rotation \u2014 the other shift was set to match.'
         : 'Pick the crew on the first '+(A.nightSlot?'day shift':'shift')+' of the month.');
+  }
   /* day-1 lineup preview */
   var prev=document.getElementById('ancPreview');
   var bits=crews.map(function(c,ci){
@@ -1377,20 +1450,35 @@ function renderAnchor(){
 function anchorPick(which, ci){
   var A=S.anchor; if(!A) return;
   if(which==='day') A.dayCrew=ci; else A.nightCrew=ci;
-  var n=solveAnchor(A.rotKey, A.dayCrew, A.nightSlot?A.nightCrew:null);
+  var ms=anchorMatches(A.rotKey, A.dayCrew, A.nightSlot?A.nightCrew:null);
   A.conflict=false;
-  if(n<0){
+  if(!ms.length){
     /* incompatible day/night combo: keep the just-picked crew, derive the other */
     A.conflict=true;
     if(which==='day'){
-      n=solveAnchor(A.rotKey, A.dayCrew, null);
-      A.nightCrew=A.nightSlot?crewOnSlot(A.rotKey, A.nightSlot, n):null;
+      ms=anchorMatches(A.rotKey, A.dayCrew, null);
+      A.nightCrew=A.nightSlot?crewOnSlot(A.rotKey, A.nightSlot, ms[0]):null;
     } else {
-      n=solveAnchor(A.rotKey, null, A.nightCrew);
-      A.dayCrew=crewOnSlot(A.rotKey, A.daySlot, n);
+      ms=anchorMatches(A.rotKey, null, A.nightCrew);
+      A.dayCrew=crewOnSlot(A.rotKey, A.daySlot, ms[0]);
     }
   }
-  A.abs=(n<0?0:n);
+  if(!ms.length) ms=[0];
+  A.blockOpts=ms; A.blockDay=0; A.abs=ms[0];
+  A.suggested=false;
+  renderAnchor();
+}
+/* the 1st can fall on any day of a multi-day work block (2-2-4: day 1 or 2) */
+function anchorBlockPick(i){
+  var A=S.anchor; if(!A||!A.blockOpts||i>=A.blockOpts.length) return;
+  A.blockDay=i; A.abs=A.blockOpts[i]; A.suggested=false;
+  renderAnchor();
+}
+/* weekday-locked rotation: which week (long/short) holds the 1st */
+function anchorWeekPick(isLong){
+  var A=S.anchor; if(!A) return;
+  A.weekLong=isLong;
+  A.abs=weekdayMon0(A.year,A.month,1)+(isLong?0:7);
   A.suggested=false;
   renderAnchor();
 }
