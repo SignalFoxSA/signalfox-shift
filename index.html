@@ -328,6 +328,11 @@
   .wshift .n{font-size:16px;}
   .wshift .h{font-size:12px; color:var(--muted); margin-top:2px;}
   .cdot{width:12px; height:12px; border-radius:4px; display:inline-block; flex:none;}
+  .cdotbtn{cursor:pointer; border:none; padding:0;}
+  .cdotbtn:focus{outline:2px solid var(--accent); outline-offset:2px;}
+  .cswatches{display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 2px;}
+  .csw{width:34px; height:34px; border-radius:50%; border:2px solid rgba(255,255,255,.18); cursor:pointer; padding:0;}
+  .csw.sel{border-color:#fff; box-shadow:0 0 0 2px var(--accent);}
   /* six-month overview */
   .sixgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
   .sixmini{background:var(--card2);border:2px solid transparent;border-radius:12px;padding:8px;cursor:pointer;}
@@ -1246,10 +1251,17 @@ function renderBsCrews(){
     vehicleCrews(v.id).forEach(function(c){
       var card=document.createElement('div'); card.className='crewcard';
       var head=document.createElement('div'); head.className='chead';
-      var dot=document.createElement('span'); dot.className='cdot'; dot.style.background=c.color;
+      var dot=crewColorDot(c.color, bsColorOpen===c.id, (function(cc){
+        return function(){ bsColorOpen=(bsColorOpen===cc.id?null:cc.id); renderBsCrews(); };
+      })(c));
       var nm=document.createElement('input'); nm.type='text'; nm.maxLength=14; nm.value=c.name;
       nm.oninput=function(){ c.name=this.value; persistBase(); };
       head.appendChild(dot); head.appendChild(nm); card.appendChild(head);
+      if(bsColorOpen===c.id){
+        card.appendChild(colorSwatches(c.color, (function(cc){
+          return function(col){ cc.color=col; persistBase(); bsColorOpen=null; renderBsCrews(); };
+        })(c)));
+      }
       c.memberIds.forEach(function(sid,mi){
         var row=document.createElement('div'); row.className='mrow';
         var sel=document.createElement('select'); staffOptions(sel, sid);
@@ -1270,6 +1282,28 @@ function renderBsCrews(){
   });
 }
 
+
+/* ---------- crew color picker ---------- */
+/* Standard colors are auto-assigned; tapping a crew's dot lets the user pick any of them. */
+var bsColorOpen=null, ceColorOpen=-1;
+function colorSwatches(current, onPick){
+  var row=document.createElement('div'); row.className='cswatches';
+  CREW_COLORS.forEach(function(col){
+    var s=document.createElement('button');
+    s.className='csw'+(String(col).toLowerCase()===String(current).toLowerCase()?' sel':'');
+    s.style.background=col; s.title=col; s.setAttribute('aria-label','Crew color '+col);
+    s.onclick=function(){ onPick(col); };
+    row.appendChild(s);
+  });
+  return row;
+}
+function crewColorDot(current, isOpen, onToggle){
+  var dot=document.createElement('button');
+  dot.className='cdot cdotbtn'; dot.style.background=current;
+  dot.title='Change crew color'; dot.setAttribute('aria-label','Change crew color');
+  dot.onclick=onToggle;
+  return dot;
+}
 
 /* ---------- new roster (from base standard) ---------- */
 function nrSyncRotation(){
@@ -2100,11 +2134,18 @@ function renderCrewEditSheet(){
   S.crewEdit.forEach(function(c,i){
     var card=document.createElement('div'); card.className='crewcard';
     var head=document.createElement('div'); head.className='chead';
-    var dot=document.createElement('span'); dot.className='cdot'; dot.style.background=c.color;
+    var dot=crewColorDot(c.color, ceColorOpen===i, (function(idx){
+      return function(){ ceColorOpen=(ceColorOpen===idx?-1:idx); renderCrewEditSheet(); };
+    })(i));
     var nm=document.createElement('input');
     nm.type='text'; nm.maxLength=14; nm.value=c.name;
     nm.oninput=(function(idx){ return function(){ S.crewEdit[idx].name=this.value; }; })(i);
     head.appendChild(dot); head.appendChild(nm); card.appendChild(head);
+    if(ceColorOpen===i){
+      card.appendChild(colorSwatches(c.color, (function(idx){
+        return function(col){ S.crewEdit[idx].color=col; ceColorOpen=-1; renderCrewEditSheet(); };
+      })(i)));
+    }
     c.members.forEach(function(m,j){
       var row=document.createElement('div'); row.className='mrow';
       var inp=document.createElement('input');
