@@ -331,7 +331,54 @@
   /* anchor step */
   .ancprev{background:var(--card2); border:1px solid var(--line); border-radius:var(--radius);
     padding:12px 14px; margin-top:12px; font-size:14px; line-height:1.8;}
+  /* export bottom sheet */
+  #expOverlay{position:fixed; inset:0; background:rgba(0,0,0,.45); opacity:0; pointer-events:none;
+    transition:opacity .25s; z-index:60;}
+  #expOverlay.open{opacity:1; pointer-events:auto;}
+  #expSheet{position:fixed; left:50%; bottom:0; width:100%; max-width:430px; z-index:61;
+    background:#fff; color:#1c1c1e; border-radius:22px 22px 0 0;
+    padding:10px 18px calc(20px + env(safe-area-inset-bottom));
+    transform:translate(-50%,105%); transition:transform .3s cubic-bezier(.2,.9,.3,1);
+    overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;}
+  #expSheet.open{transform:translate(-50%,0);}
+  #expSheet .grab{width:42px; height:5px; border-radius:3px; background:#ddd; margin:6px auto 10px;}
+  #expSheet .sheet-head{display:flex; align-items:center; justify-content:space-between;}
+  #expSheet .sheet-title{font-size:19px; font-weight:800;}
+  #expSheet .sheet-close{border:none; background:#f1f0ed; width:32px; height:32px; border-radius:50%;
+    font-size:16px; color:#6e6e73; cursor:pointer;}
+  #expSheet .sheet-sub{font-size:13px; color:#6e6e73; margin:2px 0 10px;}
+  #expSheet .seg{display:flex; background:#f1f0ed; border-radius:12px; padding:4px; margin-bottom:10px;}
+  #expSheet .seg button{flex:1; border:none; background:transparent; border-radius:9px; padding:10px;
+    font-size:14px; font-weight:700; color:#6e6e73; cursor:pointer;}
+  #expSheet .seg button.active{background:#1c1c1e; color:#fff;}
+  #expSheet .fmt{display:flex; align-items:center; gap:12px; width:100%; text-align:left; background:#fff;
+    border:1px solid #e7e5e0; border-radius:14px; padding:11px 14px; margin-bottom:8px;
+    cursor:pointer; font-family:inherit; color:#1c1c1e;}
+  #expSheet .fmt:active{background:#f7f6f3;}
+  #expSheet .fmt .dot{width:40px; height:40px; border-radius:12px; flex:none; display:flex;
+    align-items:center; justify-content:center; font-weight:800; font-size:15px; color:#1c1c1e;}
+  #expSheet .fmt .tx{flex:1; min-width:0;}
+  #expSheet .fmt .nm{display:block; font-size:15px; font-weight:700;}
+  #expSheet .fmt .ds{display:block; font-size:12.5px; color:#6e6e73; margin-top:2px; line-height:1.35;}
+  #expSheet .fmt .go{font-size:18px; color:#c9c7c2; flex:none;}
+  #expSheet .fmt .spin{width:20px; height:20px; flex:none; border:3px solid #eee; border-top-color:#FFC13E;
+    border-radius:50%; animation:expsp 0.8s linear infinite; display:none;}
+  #expSheet .fmt.busy .spin{display:block;} #expSheet .fmt.busy .go{display:none;}
+  @keyframes expsp{to{transform:rotate(360deg);}}
+  #expSheet .success{text-align:center; padding:26px 10px 10px;}
+  #expSheet .check{width:64px; height:64px; border-radius:50%; background:#FFC13E; color:#1c1c1e;
+    font-size:32px; font-weight:800; display:flex; align-items:center; justify-content:center;
+    margin:0 auto 14px;}
+  #expSheet .m1{font-size:18px; font-weight:800;}
+  #expSheet .m2{font-size:13.5px; color:#6e6e73; margin:8px 0 18px; line-height:1.5;}
+  #expSheet .done-btn{border:none; border-radius:12px; background:#1c1c1e; color:#fff; font-size:15px;
+    font-weight:700; padding:13px 34px; cursor:pointer;}
+  #expSheet .fine{font-size:12.5px; color:#888; margin:10px 0 0; line-height:1.45;}
+  #expRenderRoot{position:fixed; left:-10000px; top:0;}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 <div id="app">
@@ -551,7 +598,7 @@
     <div id="calAgendaWrap" style="display:none"></div>
     <div id="calWeekWrap" style="display:none"></div>
     <button class="btn" id="saveBtn" onclick="saveRoster()">Save roster</button>
-    <button class="btn ghost" onclick="openShare()">&#128241; Share roster</button>
+    <button class="btn ghost" onclick="openExportSheet()">&#8681; Export roster</button>
     <button class="btn ghost" onclick="openCrewSheet()">&#9998;&#65039; Edit crews</button>
     <button class="btn ghost" onclick="goBack()">Back</button>
   </div>
@@ -589,6 +636,55 @@
     <button class="btn ghost" onclick="closeSheet()">Cancel</button>
   </div>
 </div>
+<div id="expOverlay"></div>
+<div id="expSheet" role="dialog" aria-label="Export roster">
+  <div class="grab"></div>
+  <div id="expSheetMain">
+    <div class="sheet-head">
+      <div class="sheet-title">Export roster</div>
+      <button class="sheet-close" id="expClose" aria-label="Close">&#10005;</button>
+    </div>
+    <div class="sheet-sub" id="expSub"></div>
+    <div class="seg" id="expModeSeg">
+      <button id="expModeShifts" class="active">Shifts</button>
+      <button id="expModeNames">Names</button>
+    </div>
+    <div id="expFmtList">
+      <button class="fmt" data-fmt="xlsx">
+        <span class="dot" style="background:#dff0d8">XLS</span>
+        <span class="tx"><span class="nm">Excel spreadsheet (.xlsx)</span>
+        <span class="ds">A spreadsheet you can edit, filter and print.</span></span>
+        <span class="go">&#8250;</span><span class="spin"></span>
+      </button>
+      <button class="fmt" data-fmt="pdf">
+        <span class="dot" style="background:#fde2e2">PDF</span>
+        <span class="tx"><span class="nm">PDF document</span>
+        <span class="ds">A tidy one-page roster for the notice board.</span></span>
+        <span class="go">&#8250;</span><span class="spin"></span>
+      </button>
+      <button class="fmt" data-fmt="image">
+        <span class="dot" style="background:#e2ecfd">PNG</span>
+        <span class="tx"><span class="nm">WhatsApp image (.png)</span>
+        <span class="ds">A picture of the roster, ready to send in a chat.</span></span>
+        <span class="go">&#8250;</span><span class="spin"></span>
+      </button>
+      <button class="fmt" data-fmt="text">
+        <span class="dot" style="background:#fff3d6">TXT</span>
+        <span class="tx"><span class="nm">WhatsApp text (.txt)</span>
+        <span class="ds">The roster as text — copies to your clipboard for WhatsApp.</span></span>
+        <span class="go">&#8250;</span><span class="spin"></span>
+      </button>
+    </div>
+    <p class="fine">Files generate right on your device — nothing is uploaded anywhere.</p>
+  </div>
+  <div id="expSheetDone" class="success" style="display:none">
+    <div class="check">&#10003;</div>
+    <div class="m1" id="expDoneTitle">Done.</div>
+    <div class="m2" id="expDoneSub"></div>
+    <button class="done-btn" id="expDoneBtn">Done</button>
+  </div>
+</div>
+<div id="expRenderRoot"></div>
 <div id="toast"></div>
 
 <script>
@@ -2380,10 +2476,13 @@ function renderToday(){
   var wrap=document.getElementById('todayCard'); if(!wrap) return;
   var today=toISO(new Date());
   document.getElementById('todayDate').textContent=fmtLong(new Date());
-  var rows=[];
+  var rows=[], seenVehicle={};
   S.rosters.forEach(function(u){
     var R=u.roster, di=dayDiff(parseISO(R.startISO), parseISO(today));
     if(di<0 || di>=R.days) return;
+    var vk=R.vehicleId||('n:'+u.name);
+    if(seenVehicle[vk]) return; /* one row per vehicle — newest first */
+    seenVehicle[vk]=1;
     var slots=rotSlots(R.rotation);
     var buckets=slots.map(function(){ return []; });
     R.crews.forEach(function(c,ci){
@@ -2574,6 +2673,351 @@ function openShare(){
   mk('\uD83D\uDDA8 Print', function(){ closeSheet(); setTimeout(function(){ window.print(); },300); });
   document.getElementById('sheetWrap').classList.add('open');
 }
+
+/* ================= export roster (Excel / PDF / WhatsApp image / WhatsApp text) =================
+   Bottom sheet + in-browser file generation, ported from the approved export-menu demo.
+   Locked formats: day/night label first ("Day: A", never "A day" outside the spreadsheet),
+   no sun/moon emojis in PDFs, images or text (spreadsheet keeps "A day" / "D night \uD83C\uDF19"). */
+function expMix(a,b,t){
+  function ch(h){ return parseInt(h,16); }
+  function hx(n){ n=Math.max(0,Math.min(255,Math.round(n))); var s=n.toString(16).toUpperCase(); return s.length<2?'0'+s:s; }
+  return '#'+hx(ch(a.substr(1,2))*(1-t)+ch(b.substr(1,2))*t)
+            +hx(ch(a.substr(3,2))*(1-t)+ch(b.substr(3,2))*t)
+            +hx(ch(a.substr(5,2))*(1-t)+ch(b.substr(5,2))*t);
+}
+/* Build export data from the currently viewed calendar roster. */
+function expData(){
+  var cal=ensureCal();
+  if(!cal.vehicleId||cal.y==null) return null;
+  var ctx=resolveCalRoster();
+  if(!ctx||!ctx.R) return null;
+  var R=ctx.R, y=cal.y, m=cal.m;
+  var v=vehicleById(R.vehicleId)||{};
+  var vname=v.name||ctx.unitName||R.name||'Roster';
+  var rot=ROTATIONS[R.rotation]||ROTATIONS['224'];
+  var dim=daysInMonth(y,m);
+  var hasNight=rotSlots(R.rotation).some(function(s){ return s.id==='N'; });
+  var crews=R.crews.map(function(c,ci){
+    var col=c.color||CREW_COLORS[ci%CREW_COLORS.length]||'#999999';
+    var nm=(c.members||[]).map(staffName).filter(function(n){ return n; });
+    var label=(c.name||'').trim()||String.fromCharCode(65+ci);
+    return {name:label, color:col,
+      tintXLSX:'FF'+expMix(col,'#ffffff',0.90).replace('#',''),
+      tintNames:expMix(col,'#ffffff',0.86),
+      dark:expMix(col,'#000000',0.45),
+      names:nm.length?nm:[label]};
+  });
+  var pairs=[];
+  for(var d=1;d<=dim;d++){
+    var info=calRosterDay(R,y,m,d);
+    if(!info){ pairs.push(null); continue; }
+    var per=calSlotCrews(R,info.dayIdx), dc=-1, nc=-1;
+    per.forEach(function(ps){
+      if(!ps.list.length) return;
+      if(ps.sl.id==='D') dc=ps.list[0].ci;
+      else if(ps.sl.id==='N') nc=ps.list[0].ci;
+      else if(ps.sl.id==='X') dc=ps.list[0].ci;
+    });
+    pairs.push([dc,nc]);
+  }
+  var title=vname+' \u2014 '+MN[m]+' '+y, sub;
+  try{
+    var stT={rotation:R.rotation, startTime:v.startTime||'06:00', shiftLen:rot.hours||12};
+    sub=rot.name+' rotation \u00b7 '+(hasNight
+      ? ('Day '+slotTime(stT,'D')+' \u00b7 Night '+slotTime(stT,'N'))
+      : '24h shifts');
+  }catch(e){ sub=rot.name+' rotation'; }
+  var slug=(vname+'-'+MN[m]+'-'+y).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+  return {y:y, m:m, dim:dim, title:title, sub:sub,
+    subXlsx:sub.replace(/ rotation/,''),
+    footer:'Generated with SignalFox Shift',
+    crews:crews, pairs:pairs, hasNight:hasNight,
+    dayLabel:hasNight?'Day':'On duty',
+    slug:slug, rotName:rot.name};
+}
+function expMonthCells(y,m){
+  var cells=[], dim=daysInMonth(y,m), lead=(new Date(y,m,1).getDay()+6)%7;
+  var py=m===0?y-1:y, pm=m===0?11:m-1, prevDim=daysInMonth(py,pm);
+  for(var k=0;k<lead;k++) cells.push({date:prevDim-lead+1+k, inMonth:false});
+  for(var d=1;d<=dim;d++) cells.push({date:d, inMonth:true});
+  var trail=(7-((lead+dim)%7))%7;
+  for(var t=1;t<=trail;t++) cells.push({date:t, inMonth:false});
+  return cells;
+}
+function expWeekdayShort(y,m,d){
+  return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(y,m,d).getDay()];
+}
+/* ---- WhatsApp text (locked format) ---- */
+function expBuildText(E, mode){
+  var L=[], isNames=(mode==='names');
+  L.push('*'+E.title+'*'+(isNames?' ('+E.rotName+')':''), E.sub, '');
+  for(var d=1; d<=E.dim; d++){
+    var pr=E.pairs[d-1]; if(!pr) continue;
+    var dl=E.dayLabel+': '+(pr[0]>=0?E.crews[pr[0]].name:'\u2014');
+    if(isNames&&pr[0]>=0) dl=E.dayLabel+': '+E.crews[pr[0]].names.join(', ');
+    var line=expWeekdayShort(E.y,E.m,d)+' '+d+': '+dl;
+    if(E.hasNight){
+      var nl='Night: '+(pr[1]>=0?E.crews[pr[1]].name:'\u2014');
+      if(isNames&&pr[1]>=0) nl='Night: '+E.crews[pr[1]].names.join(', ');
+      line+=' \u00b7 '+nl;
+    }
+    L.push(line);
+  }
+  L.push('', '*Crews*');
+  E.crews.forEach(function(c){ L.push(c.name+' \u2014 '+c.names.join(', ')); });
+  L.push('', '_'+E.footer+'_');
+  return L.join('\n');
+}
+/* ---- Excel (SheetJS; spreadsheet keeps "A day" / "D night \uD83C\uDF19") ---- */
+function expBuildWorkbook(E, mode){
+  var isNames=(mode==='names');
+  var cells=expMonthCells(E.y,E.m), weeks=Math.ceil(cells.length/7);
+  var rows=[];
+  for(var r=0;r<3+weeks+2+E.crews.length+2;r++) rows.push(['','','','','','','']);
+  var ws=XLSX.utils.aoa_to_sheet(rows);
+  function set(addr,v,s){ ws[addr].v=v; ws[addr].t='s'; if(s) ws[addr].s=s; }
+  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:6}},{s:{r:1,c:0},e:{r:1,c:6}}];
+  set('A1',E.title,{font:{bold:true,sz:16,color:{rgb:'FF222222'}}});
+  set('A2',E.subXlsx,{font:{sz:11,color:{rgb:'FF666666'}}});
+  var bdr={top:{style:'thin',color:{rgb:'FFBFBFBF'}},bottom:{style:'thin',color:{rgb:'FFBFBFBF'}},
+           left:{style:'thin',color:{rgb:'FFBFBFBF'}},right:{style:'thin',color:{rgb:'FFBFBFBF'}}};
+  ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(function(d,i){
+    set(String.fromCharCode(65+i)+'3',d,
+      {font:{bold:true,sz:11},alignment:{horizontal:'center',vertical:'center'},
+       fill:{patternType:'solid',fgColor:{rgb:isNames?'FFD9D9D9':'FFE8E8E8'}},
+       border:isNames?bdr:undefined});
+  });
+  cells.forEach(function(c,idx){
+    var r=3+Math.floor(idx/7), col=idx%7, addr=String.fromCharCode(65+col)+(r+1);
+    var pr=c.inMonth?E.pairs[c.date-1]:null;
+    if(!pr){
+      set(addr,String(c.date),{font:{sz:11,color:{rgb:'FF999999'}},
+        fill:{patternType:'solid',fgColor:{rgb:'FFF2F2F2'}},
+        border:isNames?bdr:undefined});
+      return;
+    }
+    var dc=pr[0]>=0?E.crews[pr[0]]:null, nc=pr[1]>=0?E.crews[pr[1]]:null;
+    var tint=dc?dc.tintXLSX:'FFFFFFFF';
+    var v, fill={patternType:'solid',fgColor:{rgb:tint}};
+    if(isNames){
+      v=c.date+'\n'+E.dayLabel+'\n'+(dc?dc.names.join(', '):'\u2014');
+      if(E.hasNight) v+='\nNight\n'+(nc?nc.names.join(', '):'\u2014');
+      if(dc) fill={patternType:'solid',fgColor:{rgb:'FF'+dc.tintNames.replace('#','')}};
+    }else{
+      v=c.date+'\n'+(dc?dc.name+' '+(E.hasNight?'day':'on duty'):'\u2014');
+      if(E.hasNight) v+='\n'+(nc?nc.name+' night \uD83C\uDF19':'');
+    }
+    set(addr,v,{font:{sz:11},alignment:{horizontal:'left',vertical:'top',wrapText:true},
+      fill:fill, border:isNames?bdr:undefined});
+  });
+  var legRow=3+weeks+1;
+  E.crews.forEach(function(c,i){
+    set('B'+(legRow+i),'Crew '+c.name+' \u2014 '+c.names.join(', '),
+      {font:{sz:11,color:{rgb:'FF222222'}}});
+    ws['!merges'].push({s:{r:legRow+i-1,c:1},e:{r:legRow+i-1,c:6}});
+  });
+  var fRow=legRow+E.crews.length;
+  set('A'+fRow,E.footer,{font:{sz:10,color:{rgb:'FF999999'}}});
+  ws['!merges'].push({s:{r:fRow-1,c:0},e:{r:fRow-1,c:6}});
+  ws['!cols']=Array(7).fill({wch:isNames?26:15});
+  ws['!rows']=[];
+  for(var rr=3;rr<3+weeks;rr++) ws['!rows'][rr]={hpt:isNames?86:45};
+  ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:fRow-1,c:6}});
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, isNames?'Roster':(MN[E.m]+' '+E.y).slice(0,31));
+  return wb;
+}
+/* ---- PDF / WhatsApp image grid ---- */
+function expGridEl(E, mode, variant){
+  var isNames=(mode==='names');
+  var W=variant==='png'?1080:(isNames?1050:780);
+  var pad=Math.round(W*0.038), IW=W-pad*2;
+  var cw=Math.floor(IW/7), cwLast=IW-6*cw, k=W/780;
+  function F(n){ return Math.round(n*k); }
+  var FF="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;";
+  var P=F(5);
+  var h='<div style="width:'+W+'px;background:#ffffff;color:#1c1c1e;'+FF+'padding:'+pad+'px;box-sizing:border-box;">'
+    +'<div style="font-size:'+F(30)+'px;font-weight:800;letter-spacing:-0.5px;">'+escapeHtml(E.title)+'</div>'
+    +'<div style="font-size:'+F(14)+'px;color:#666;margin:'+F(4)+'px 0 '+F(14)+'px;">'+escapeHtml(E.sub)+'</div>'
+    +'<div style="margin-bottom:'+F(14)+'px;font-size:0;">';
+  E.crews.forEach(function(c){
+    h+='<span style="display:inline-block;font-size:'+F(14)+'px;margin:0 '+F(26)+'px '+F(8)+'px 0;">'
+      +'<span style="display:inline-block;width:'+F(34)+'px;height:'+F(14)+'px;border-radius:'+F(7)+'px;background:'+c.color+';vertical-align:middle;margin-right:'+F(8)+'px;"></span>'
+      +'Crew '+escapeHtml(c.name)+' \u2014 '+escapeHtml(c.names.join(', '))+'</span>';
+  });
+  h+='</div><div style="font-size:0;border-left:1px solid #ddd;border-top:1px solid #ddd;">';
+  ['MON','TUE','WED','THU','FRI','SAT','SUN'].forEach(function(d){
+    h+='<span style="display:inline-block;box-sizing:border-box;width:'+cw+'px;font-size:'+F(11)+'px;font-weight:700;color:#888;text-align:center;padding:'+F(6)+'px 0;border-right:1px solid #ddd;border-bottom:1px solid #ddd;">'+d+'</span>';
+  });
+  var cellH=F(isNames?100:92);
+  expMonthCells(E.y,E.m).forEach(function(c,idx){
+    var w=(idx%7===6)?cwLast:cw;
+    var open='<span style="display:inline-block;box-sizing:border-box;vertical-align:top;width:'+w+'px;min-height:'+cellH+'px;border-right:1px solid #ddd;border-bottom:1px solid #ddd;padding:'+P+'px;';
+    var pr=c.inMonth?E.pairs[c.date-1]:null;
+    if(!pr){
+      h+=open+'background:#f7f7f7;"><div style="font-size:'+F(14)+'px;font-weight:700;color:#bbb;">'+c.date+'</div></span>';
+      return;
+    }
+    var dc=pr[0]>=0?E.crews[pr[0]]:null, nc=pr[1]>=0?E.crews[pr[1]]:null;
+    if(!isNames){
+      var bt=variant==='pdf'?'#ffffff':'#1c1c1e';
+      h+=open+'">'
+        +'<div style="font-size:'+F(14)+'px;font-weight:700;">'+c.date+'</div>'
+        +(dc?'<div style="background:'+dc.color+';border-radius:'+F(5)+'px;text-align:center;font-size:'+F(13)+'px;font-weight:800;color:'+bt+';padding:'+P+'px 0;margin-top:'+F(4)+'px;">'+E.dayLabel.toUpperCase()+': '+escapeHtml(dc.name)+'</div>':'')
+        +(E.hasNight&&nc?'<div style="background:'+nc.color+';border-radius:'+F(5)+'px;text-align:center;font-size:'+F(13)+'px;font-weight:800;color:'+bt+';padding:'+P+'px 0;margin-top:'+F(4)+'px;">NIGHT: '+escapeHtml(nc.name)+'</div>':'')
+        +'</span>';
+    }else{
+      h+=open+'background:'+(dc?dc.tintNames:'transparent')+';">'
+        +'<div style="font-size:'+F(14)+'px;font-weight:700;">'+c.date+'</div>'
+        +(dc?'<div style="font-size:'+F(12.5)+'px;margin-top:'+F(3)+'px;"><b>'+E.dayLabel+':</b> <span style="color:'+dc.dark+';">'+escapeHtml(dc.names.join(', '))+'</span></div>':'')
+        +(E.hasNight&&nc?'<div style="font-size:'+F(12.5)+'px;margin-top:'+F(2)+'px;"><b>Night:</b> <span style="color:'+nc.dark+';">'+escapeHtml(nc.names.join(', '))+'</span></div>':'')
+        +'</span>';
+    }
+  });
+  h+='</div><div style="margin-top:'+F(12)+'px;font-size:'+F(11)+'px;color:#999;">'+escapeHtml(E.footer)+'</div></div>';
+  var div=document.createElement('div'); div.innerHTML=h;
+  return div.firstChild;
+}
+async function expRenderGridCanvas(E, mode, variant){
+  var holder=document.getElementById('expRenderRoot');
+  var el=expGridEl(E, mode, variant); holder.appendChild(el);
+  try{ await document.fonts.ready; }catch(e){}
+  var canvas=await html2canvas(el,{backgroundColor:'#ffffff',scale:variant==='png'?1:2,logging:false});
+  el.remove();
+  return canvas;
+}
+async function expGeneratePDF(E, mode){
+  var isNames=(mode==='names');
+  var canvas=await expRenderGridCanvas(E, mode, 'pdf');
+  var pdf=new window.jspdf.jsPDF({unit:'mm',format:'a4',orientation:isNames?'landscape':'portrait'});
+  var pw=pdf.internal.pageSize.getWidth(), ph=pdf.internal.pageSize.getHeight();
+  var iw=pw-20, ih=canvas.height*iw/canvas.width;
+  if(ih>ph-20){ var s=(ph-20)/ih; iw*=s; ih*=s; }
+  pdf.addImage(canvas.toDataURL('image/png'),'PNG',(pw-iw)/2,10,iw,ih);
+  return new Blob([pdf.output('arraybuffer')],{type:'application/pdf'});
+}
+async function expGenerateImage(E, mode){
+  var canvas=await expRenderGridCanvas(E, mode, 'png');
+  return await new Promise(function(res){ canvas.toBlob(res,'image/png'); });
+}
+/* ---- delivery: system share sheet on mobile, download fallback ---- */
+function expFname(E, mode, kind){
+  var base=E.slug+(mode==='names'?'-names':'');
+  return base+(kind==='xlsx'?'.xlsx':kind==='pdf'?'.pdf':kind==='png'?'-whatsapp.png':'-whatsapp.txt');
+}
+async function expDeliver(blob, filename, mime){
+  var file=new File([blob],filename,{type:mime||blob.type});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file],title:filename}); return 'shared'; }
+    catch(e){ if(e&&e.name==='AbortError') return 'cancelled'; }
+  }
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); },8000);
+  return 'downloaded';
+}
+function expLibsReady(fmt){
+  if(fmt==='xlsx') return typeof XLSX!=='undefined';
+  if(fmt==='pdf') return typeof html2canvas!=='undefined'&&typeof jspdf!=='undefined';
+  if(fmt==='image') return typeof html2canvas!=='undefined';
+  return true;
+}
+/* ---- bottom sheet wiring ---- */
+var expMode='shifts';
+function expSetMode(m){
+  expMode=m;
+  document.getElementById('expModeShifts').classList.toggle('active',m==='shifts');
+  document.getElementById('expModeNames').classList.toggle('active',m==='names');
+}
+function expFitSheet(){
+  var sh=document.getElementById('expSheet');
+  sh.style.maxHeight=Math.round(window.innerHeight*0.88)+'px';
+}
+function openExportSheet(){
+  var E=expData();
+  if(!E){ toast('Open a roster first'); return; }
+  S.exp=E;
+  document.getElementById('expSub').textContent=E.title;
+  expSetMode('shifts');
+  var seg=document.getElementById('expModeSeg');
+  seg.querySelector('#expModeShifts').textContent=E.hasNight?'Shifts '+E.crews.map(function(c){return c.name;}).join('/'):'On duty';
+  document.getElementById('expSheetMain').style.display='block';
+  document.getElementById('expSheetDone').style.display='none';
+  expFitSheet();
+  document.getElementById('expSheet').classList.add('open');
+  document.getElementById('expOverlay').classList.add('open');
+}
+function closeExportSheet(){
+  document.getElementById('expSheet').classList.remove('open');
+  document.getElementById('expOverlay').classList.remove('open');
+  setTimeout(function(){
+    document.getElementById('expSheetDone').style.display='none';
+    document.getElementById('expSheetMain').style.display='block';
+  },300);
+}
+function expShowSuccess(title,sub){
+  document.getElementById('expDoneTitle').textContent=title;
+  document.getElementById('expDoneSub').textContent=sub;
+  document.getElementById('expSheetMain').style.display='none';
+  document.getElementById('expSheetDone').style.display='block';
+}
+async function expGenerateFormat(fmt){
+  var E=S.exp; if(!E) return;
+  var btn=document.querySelector('#expFmtList .fmt[data-fmt="'+fmt+'"]');
+  if(btn) btn.classList.add('busy');
+  try{
+    if(!expLibsReady(fmt)) throw new Error('libs-missing');
+    var isNames=(expMode==='names');
+    var what=isNames?'Names':(E.hasNight?'Shifts':'On duty');
+    if(fmt==='xlsx'){
+      var wb=expBuildWorkbook(E, expMode);
+      var arr=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+      var r=await expDeliver(new Blob([arr],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),
+        expFname(E,expMode,'xlsx'));
+      expShowSuccess(r==='shared'?'Done \u2014 file shared.':'Done \u2014 file downloaded.',
+        what+' spreadsheet (.xlsx) for '+MN[E.m]+' '+E.y+'.');
+    }else if(fmt==='pdf'){
+      var r2=await expDeliver(await expGeneratePDF(E,expMode),expFname(E,expMode,'pdf'),'application/pdf');
+      expShowSuccess(r2==='shared'?'Done \u2014 file shared.':'Done \u2014 file downloaded.',
+        what+' roster as a one-page PDF.');
+    }else if(fmt==='image'){
+      var r3=await expDeliver(await expGenerateImage(E,expMode),expFname(E,expMode,'png'),'image/png');
+      expShowSuccess(r3==='shared'?'Done \u2014 file shared.':'Done \u2014 file downloaded.',
+        what+' roster as a picture, ready for WhatsApp.');
+    }else if(fmt==='text'){
+      var txt=expBuildText(E,expMode);
+      try{ await navigator.clipboard.writeText(txt); }
+      catch(e){
+        var ta=document.createElement('textarea'); ta.value=txt;
+        document.body.appendChild(ta); ta.select();
+        try{ document.execCommand('copy'); }catch(_){} ta.remove();
+      }
+      await expDeliver(new Blob([txt],{type:'text/plain'}),expFname(E,expMode,'txt'),'text/plain');
+      expShowSuccess('Copied \u2014 paste it into WhatsApp.',
+        'The roster text is on your clipboard, and a .txt file downloaded too.');
+    }
+  }catch(e){
+    expShowSuccess('Could not make the file.',
+      'Your viewer may have blocked it. Open the app in Chrome with internet on, then try again.');
+  }finally{ if(btn) btn.classList.remove('busy'); }
+}
+(function expWire(){
+  function on(id,ev,fn){ var el=document.getElementById(id); if(el&&el.addEventListener) el.addEventListener(ev,fn); }
+  on('expClose','click',closeExportSheet);
+  on('expOverlay','click',closeExportSheet);
+  on('expDoneBtn','click',closeExportSheet);
+  on('expModeShifts','click',function(){ expSetMode('shifts'); });
+  on('expModeNames','click',function(){ expSetMode('names'); });
+  var fmtBtns=document.querySelectorAll('#expFmtList .fmt');
+  if(fmtBtns&&fmtBtns.forEach) fmtBtns.forEach(function(b){
+    b.addEventListener('click',function(){ expGenerateFormat(b.getAttribute('data-fmt')); });
+  });
+  if(window.addEventListener) window.addEventListener('resize',function(){
+    if(document.getElementById('expSheet').classList.contains('open')) expFitSheet();
+  });
+  if(document.addEventListener) document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeExportSheet(); });
+})();
 
 /* ---------- init ---------- */
 loadCustomRotations();

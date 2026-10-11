@@ -1,6 +1,6 @@
 /* SignalFox Shift V2 — minimal app-shell service worker.
    Caches the app so it starts offline. First visit needs internet. */
-var CACHE = 'sfshift-v2-4';
+var CACHE = 'sfshift-v2-5';
 var ASSETS = [
   './',
   'index.html',
