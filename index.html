@@ -403,6 +403,7 @@
   .sixmini .smc .dnum{font-size:7px;font-weight:700;text-align:center;line-height:1.3;color:var(--text);}
   .sixmini .smini{height:10px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;line-height:1;border-radius:2px;margin-top:1px;}
   .sixmini .smc.out{visibility:hidden;}
+  .sixmini .smc.today{outline:2px solid var(--accent); outline-offset:-2px;}
   .sixmini .sempty{font-size:10px;color:var(--muted);text-align:center;padding:12px 0;}
   .sixnav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
   .sixnav b{font-size:14px;}
@@ -788,7 +789,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1325';
+var BUILD='20261012-1330';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2010,7 +2011,8 @@ function renderCalSix(){
           var c=ps.list[0].c;
           blocks.push({color:c.color||'#888888', label:c.name||''});
         });
-        html+='<div class="smc"><div class="dnum">'+dd+'</div>'+blocks.map(function(b){
+        var isT=isToday(new Date(y,m,dd));
+        html+='<div class="smc'+(isT?' today':'')+'"><div class="dnum">'+dd+'</div>'+blocks.map(function(b){
           return '<span class="smini" style="background:'+b.color+';color:'+textOnBand(b.color)+'">'+escapeHtml(b.label)+'</span>';
         }).join('')+'</div>';
       }
