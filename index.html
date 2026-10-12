@@ -806,7 +806,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1423';
+var BUILD='20261012-1428';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2381,13 +2381,16 @@ function renderDayEdit(){
     html+='<div class="dshift"><div class="dh"><span class="t">'+escapeHtml(ed.sl.name)+'</span>'+
       (tm?'<span class="c">'+escapeHtml(tm)+'</span>':'')+'</div><div id="deMem'+si+'">';
     ed.members.forEach(function(nm, mi){
-      html+='<span class="mchip">'+escapeHtml(nm)+'<button type="button" onclick="dayEditRemove('+si+','+mi+')" aria-label="Remove">×</button></span>';
+      html+='<span class="mchip">'+escapeHtml(dispMember(nm))+'<button type="button" onclick="dayEditRemove('+si+','+mi+')" aria-label="Remove">×</button></span>';
     });
     html+='</div><div style="display:flex;gap:8px;margin-top:8px;">'+
-      '<input id="deAdd'+si+'" list="staffList" placeholder="Add staff member…" style="flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;">'+
+      '<select id="deAddSel'+si+'" style="flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card2);color:var(--text);" onchange="dayEditSelChg('+si+')">'+
+      '<option value="">— Pick staff —</option>'+
+      staffNames.map(function(n){ return '<option value="'+escapeHtml(n)+'">'+escapeHtml(n)+'</option>'; }).join('')+
+      '<option value="__new__">+ Type new name…</option></select>'+
+      '<input id="deAddNew'+si+'" placeholder="New name…" style="flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;display:none;">'+
       '<button class="btn ghost" type="button" onclick="dayEditAdd('+si+')">Add</button></div></div>';
   });
-  html+='<datalist id="staffList">'+staffNames.map(function(n){ return '<option value="'+escapeHtml(n)+'">'; }).join('')+'</datalist>';
   html+='<div class="scopeRow">'+
     '<label><input type="radio" name="deScope" value="once"'+(dayCtx.scope==='once'?' checked':'')+' onchange="dayCtx.scope=\'once\'"> Only this day<br><span style="color:var(--muted);font-size:12px;">Once-off change</span></label>'+
     '<label><input type="radio" name="deScope" value="now"'+(dayCtx.scope==='now'?' checked':'')+' onchange="dayCtx.scope=\'now\'"> From now on<br><span style="color:var(--muted);font-size:12px;">Permanent crew change</span></label></div>';
@@ -2396,13 +2399,22 @@ function renderDayEdit(){
     '<div class="btnrow"><button class="btn ghost" onclick="dayCtx.edit=false;renderDaySheet()">Back</button>'+
     '<button class="btn" onclick="saveDayEdit()">Save</button></div>';
 }
+function dayEditSelChg(si){
+  var sel=document.getElementById('deAddSel'+si);
+  var inp=document.getElementById('deAddNew'+si);
+  if(sel.value==='__new__'){ inp.style.display=''; inp.focus(); }
+  else { inp.style.display='none'; }
+}
 function dayEditRemove(si, mi){
   dayCtx.editData[si].members.splice(mi,1);
   renderDayEdit();
 }
 function dayEditAdd(si){
-  var inp=document.getElementById('deAdd'+si);
-  var nm=(inp.value||'').trim();
+  var sel=document.getElementById('deAddSel'+si);
+  var inp=document.getElementById('deAddNew'+si);
+  var nm='';
+  if(sel.value==='__new__') nm=(inp.value||'').trim();
+  else nm=sel.value;
   if(!nm) return;
   if(dayCtx.editData[si].members.indexOf(nm)<0) dayCtx.editData[si].members.push(nm);
   renderDayEdit();
