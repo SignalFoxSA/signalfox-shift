@@ -337,12 +337,12 @@
   .cell{position:relative; min-height:76px;}
   .cell .band{display:block; border-radius:7px; font-weight:800;
     padding:4px 2px; margin-top:4px; line-height:1.2; text-align:center; overflow:hidden;}
-  .cell .band .bs{display:block; font-size:8px; font-weight:700; opacity:.75; line-height:1.2;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .cell .band .bs{display:block; font-size:8px; font-weight:700; opacity:.75; line-height:1.25;
+    overflow-wrap:break-word;}
   .cell .band .bc{display:block; font-size:12px; font-weight:800; line-height:1.25; margin-top:1px;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .cell .band .bm{display:block; font-size:8px; font-weight:600; opacity:.8; line-height:1.25; margin-top:1px;
-    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+    overflow-wrap:break-word;}
+  .cell .band .bm{display:block; font-size:8px; font-weight:600; opacity:.8; line-height:1.3; margin-top:1px;
+    overflow-wrap:break-word;}
   .cell.out{opacity:.32; cursor:default;}
   .cell .edot{position:absolute; top:5px; right:6px; width:7px; height:7px; border-radius:50%;
     background:var(--accent); box-shadow:0 0 4px var(--accent);}
@@ -786,7 +786,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1250';
+var BUILD='20261012-1252';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
