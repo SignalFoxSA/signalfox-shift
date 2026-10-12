@@ -789,7 +789,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1330';
+var BUILD='20261012-1334';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -1920,8 +1920,9 @@ function renderCalMonth(ctx){
           '<span class="bc">'+crews+'</span>'+memLine+'</span>';
       });
       var ed=R.crews.some(function(c,ci){ return R.overrides[info.dayIdx+':'+ci]; });
-      if(ed) inner+='<span class="edot"></span>';
-      html+='<div class="cell'+(isToday(date)?' today':'')+'" data-d="'+d+'" title="Tap for the week view">'+inner+'</div>';
+      var med=R.memberOverrides&&info.date&&R.memberOverrides[isoDate(info.date)];
+      if(ed||med) inner+='<span class="edot"></span>';
+      html+='<div class="cell'+(isToday(date)?' today':'')+'" data-d="'+d+'" title="Tap to view day">'+inner+'</div>';
     }
   }
   for(var t=lead+dim;t<weeks*7;t++) html+='<div class="cell out"></div>';
@@ -2151,7 +2152,7 @@ function renderCalWeek(ctx){
         var tm=''; try{ tm=slotTime(R, ps.sl.id); }catch(e){}
         var cis=ps.list.map(function(x){ return x.ci; }).join(',');
         var acc=(ps.list[0]&&ps.list[0].c.color)||'#888888';
-        body+='<div class="wshift" data-day="'+info.dayIdx+'" data-ci="'+cis+'" style="border-left:5px solid '+acc+'"><div class="t">'+dot+escapeHtml(slotDisplayLabel(ps.sl))+'</div><div class="n">'+nm+'</div>'+(tm?'<div class="h">'+tm+'</div>':'')+'</div>';
+        body+='<div class="wshift" data-date="'+wDateISO+'" style="border-left:5px solid '+acc+'"><div class="t">'+dot+escapeHtml(slotDisplayLabel(ps.sl))+'</div><div class="n">'+nm+'</div>'+(tm?'<div class="h">'+tm+'</div>':'')+'</div>';
       });
       if(!body) body='<div style="color:var(--muted);font-size:14px;">All off</div>';
       html+='<div class="daycard'+(isT?' today':'')+(isPicked?' picked':'')+'">'+head+body+'</div>';
@@ -2165,10 +2166,8 @@ function renderCalWeek(ctx){
   for(var s=0;s<sh.length;s++){
     (function(el){
       el.onclick=function(){
-        var day=parseInt(el.getAttribute('data-day'),10);
-        var list=String(el.getAttribute('data-ci')||'').split(',').filter(function(x){ return x!==''; })
-          .map(function(x){ return {ci:parseInt(x,10)}; });
-        editShiftFromWeek(day, list);
+        var iso=el.getAttribute('data-date');
+        if(iso) openDaySheet(iso);
       };
     })(sh[s]);
   }
