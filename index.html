@@ -315,8 +315,12 @@
     background:var(--card); color:var(--accent); font-size:26px; font-weight:800; cursor:pointer; line-height:1;}
   #calMode{margin:10px 0;}
   .cell{position:relative; min-height:76px;}
-  .cell .band{display:block; border-radius:6px; font-size:12px; font-weight:800; color:#141414;
-    padding:6px 4px; margin-top:4px; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center;}
+  .cell .band{display:block; border-radius:8px; font-weight:800; color:#141414;
+    padding:6px 4px; margin-top:5px; line-height:1.3; text-align:center; overflow:hidden;}
+  .cell .band .bs{display:block; font-size:10px; font-weight:700; opacity:.72; line-height:1.25;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .cell .band .bc{display:block; font-size:14px; font-weight:800; line-height:1.35;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .cell.out{opacity:.32; cursor:default;}
   .cell .edot{position:absolute; top:5px; right:6px; width:7px; height:7px; border-radius:50%;
     background:var(--accent); box-shadow:0 0 4px var(--accent);}
@@ -750,7 +754,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1131';
+var BUILD='20261012-1206';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -1854,8 +1858,10 @@ function renderCalMonth(ctx){
       var inner='<div class="dnum">'+d+(hd?'<span class="hdot" title="'+escapeHtml(hd)+'"></span>':'')+'</div>';
       calSlotCrews(R,info.dayIdx).forEach(function(ps){
         if(!ps.list.length) return;
-        var names=ps.list.map(function(x){ return escapeHtml(x.c.name); }).join('/');
-        inner+='<span class="band" style="background:'+(ps.sl.color||'#888')+'">'+escapeHtml(ps.sl.name)+': '+names+'</span>';
+        var names=ps.list.map(function(x){ return escapeHtml(x.c.name); }).join(' / ');
+        inner+='<span class="band" style="background:'+(ps.sl.color||'#888')+'">'+
+          '<span class="bs">'+escapeHtml(ps.sl.name)+'</span>'+
+          '<span class="bc">'+names+'</span></span>';
       });
       var ed=R.crews.some(function(c,ci){ return R.overrides[info.dayIdx+':'+ci]; });
       if(ed) inner+='<span class="edot"></span>';
@@ -1943,16 +1949,14 @@ function renderCalSix(){
       for(var dd=1;dd<=dim;dd++){
         var info=calRosterDay(R,y,m,dd);
         if(!info){ html+='<div class="smc"></div>'; continue; }
-        var per=calSlotCrews(R,info.dayIdx), dc=null, nc=null;
+        var per=calSlotCrews(R,info.dayIdx), dots=[];
         per.forEach(function(ps){
           if(!ps.list.length) return;
-          if(ps.sl.id==='D'||ps.sl.id==='X') dc=ps.list[0].c.color;
-          else if(ps.sl.id==='N') nc=ps.list[0].c.color;
+          dots.push(ps.sl.color||'#888');
         });
-        html+='<div class="smc">'
-          +(dc?'<i style="background:'+dc+'"></i>':'')
-          +(nc?'<i style="background:'+nc+'"></i>':'')
-          +'</div>';
+        html+='<div class="smc">'+dots.map(function(c){
+          return '<i style="background:'+c+'"></i>';
+        }).join('')+'</div>';
       }
       html+='</div>';
     }
