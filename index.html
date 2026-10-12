@@ -184,6 +184,7 @@
   .shiftrow input[type=time]{flex:none; width:96px; padding:10px 4px; font-size:14px;}
   .shiftrow .tdash{color:var(--muted); flex:none;}
   .shiftrow .rm{background:none; border:none; color:var(--red); font-size:16px; cursor:pointer; padding:6px; flex:none;}
+  .shiftrow .cdotbtn{width:30px; height:30px; border-radius:50%; border:2px solid rgba(255,255,255,.25); flex:none;}
   .grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
   .cell{
     border-radius:10px; min-height:70px; padding:5px 4px; cursor:pointer; position:relative;
@@ -754,7 +755,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1206';
+var BUILD='20261012-1211';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -1858,10 +1859,13 @@ function renderCalMonth(ctx){
       var inner='<div class="dnum">'+d+(hd?'<span class="hdot" title="'+escapeHtml(hd)+'"></span>':'')+'</div>';
       calSlotCrews(R,info.dayIdx).forEach(function(ps){
         if(!ps.list.length) return;
-        var names=ps.list.map(function(x){ return escapeHtml(x.c.name); }).join(' / ');
+        var tm=''; try{ tm=slotTime(R, ps.sl.id); }catch(e){}
+        var crews=ps.list.map(function(x){
+          var c=x.c, mem=(c.members&&c.members.length)?' — '+c.members.map(escapeHtml).join(', '):'';
+          return '<span class="bc">Crew '+escapeHtml(c.name)+mem+'</span>';
+        }).join('');
         inner+='<span class="band" style="background:'+(ps.sl.color||'#888')+'">'+
-          '<span class="bs">'+escapeHtml(ps.sl.name)+'</span>'+
-          '<span class="bc">'+names+'</span></span>';
+          '<span class="bs">'+escapeHtml(ps.sl.name)+(tm?' · '+tm:'')+'</span>'+crews+'</span>';
       });
       var ed=R.crews.some(function(c,ci){ return R.overrides[info.dayIdx+':'+ci]; });
       if(ed) inner+='<span class="edot"></span>';
