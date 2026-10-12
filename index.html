@@ -806,7 +806,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1453';
+var BUILD='20261012-1511';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2786,67 +2786,110 @@ function baseDoAddStaff(rosterId, shiftId, personName){
   toast(personName+' added to shift');
 }
 /* Shift swap: Person A swaps with Person B on a different shift */
+/* Shift swap v2: pick person, then pick their specific shift/day (Softworks-style) */
 function baseSwap(rosterId, shiftIdA, personA){
   var u=(S.rosters||[]).find(function(x){ return x.id===rosterId; });
   if(!u) return;
-  var R=u.roster, dateISO=S.baseDateISO;
-  var dt=parseISO(dateISO), di=dayDiff(parseISO(R.startISO), dt);
-  var per=calSlotCrews(R,di);
-  var cands=[];
-  per.forEach(function(ps){
-    if(ps.sl.id===shiftIdA||!ps.list.length) return;
-    ps.list.forEach(function(x){
-      effShiftMembers(R, dateISO, ps.sl.id, x.c).forEach(function(nm){
-        if(nm===OPEN_MARK||nm===personA) return;
-        cands.push({name:nm, shift:ps.sl.id, shiftName:ps.sl.name});
-      });
-    });
-  });
+  var dateA=S.baseDateISO;
+  /* all staff except personA */
+  var cands=(S.base.staff||[]).filter(function(s){ return s.name&&s.name!==personA; })
+    .map(function(s){ return {name:s.name, qual:qualName(s.qual)}; });
+  cands.sort(function(a,b){ return a.name.localeCompare(b.name); });
   var panel=document.getElementById('baseCoverPanel');
   var h='<div class="card" style="border:2px solid var(--accent);">'
     +'<h3>Swap '+escapeHtml(personA)+'</h3>'
-    +'<p class="sub">Who should they swap with?</p>';
+    +'<p class="sub">Who are they swapping with?</p>';
   if(!cands.length){
-    h+='<p class="fine">No one else working today to swap with.</p>';
+    h+='<p class="fine">No other staff members.</p>';
   }else{
     cands.forEach(function(cnd){
-      h+='<div class="avail" onclick="baseDoSwap(\''+rosterId+'\',\''+shiftIdA+'\',\''+escapeHtml(personA).replace(/'/g,"\\'")+'\',\''+cnd.shift+'\',\''+escapeHtml(cnd.name).replace(/'/g,"\\'")+'\')">'
+      h+='<div class="avail" onclick="baseSwapPickShift(\''+rosterId+'\',\''+shiftIdA+'\',\''+escapeHtml(personA).replace(/'/g,"\\'")+'\',\''+escapeHtml(dateA)+'\',\''+escapeHtml(cnd.name).replace(/'/g,"\\'")+'\')">'
         +'<span><span class="nm">'+escapeHtml(cnd.name)+'</span> '
-        +'<span class="meta">'+escapeHtml(cnd.shiftName)+'</span></span>'
-        +'<button class="pick">Swap</button></div>';
+        +'<span class="meta">'+(cnd.qual?escapeHtml(cnd.qual):'')+'</span></span>'
+        +'<span class="meta">→</span></div>';
     });
   }
   h+='<div class="btnrow"><button class="btn ghost" onclick="document.getElementById(\'baseCoverPanel\').innerHTML=\'\'">Cancel</button></div></div>';
   panel.innerHTML=h;
   panel.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
-function baseDoSwap(rosterId, shiftIdA, personA, shiftIdB, personB){
+function baseSwapPickShift(rosterId, shiftIdA, personA, dateA, personB){
   var u=(S.rosters||[]).find(function(x){ return x.id===rosterId; });
   if(!u) return;
-  var R=u.roster, dateISO=S.baseDateISO;
+  var R=u.roster;
+  /* find personB's shifts for the next 30 days */
+  var shifts=[];
+  var d=parseISO(dateA);
+  for(var i=0;i<30;i++){
+    var iso=toISO(d);
+    var di=dayDiff(parseISO(R.startISO), d);
+    if(di>=0&&di<R.days){
+      var per=calSlotCrews(R,di);
+      per.forEach(function(ps){
+        if(!ps.list.length) return;
+        ps.list.forEach(function(x){
+          var mems=effShiftMembers(R, iso, ps.sl.id, x.c);
+          if(mems.indexOf(personB)>=0){
+            /* don't offer the exact same shift they're already on */
+            if(!(iso===dateA&&ps.sl.id===shiftIdA)){
+              shifts.push({date:iso, shiftId:ps.sl.id, shiftName:ps.sl.name});
+            }
+          }
+        });
+      });
+    }
+    d.setDate(d.getDate()+1);
+  }
+  var panel=document.getElementById('baseCoverPanel');
+  var h='<div class="card" style="border:2px solid var(--accent);">'
+    +'<h3>Swap with '+escapeHtml(personB)+'</h3>'
+    +'<p class="sub">Which of their shifts?</p>';
+  if(!shifts.length){
+    h+='<p class="fine">'+escapeHtml(personB)+' has no upcoming shifts in the next 30 days.</p>';
+  }else{
+    shifts.forEach(function(s){
+      var dt=parseISO(s.date);
+      var lbl=dt.toLocaleDateString('en-ZA',{weekday:'short', day:'numeric', month:'short'});
+      h+='<div class="avail" onclick="baseDoSwap2(\''+rosterId+'\',\''+shiftIdA+'\',\''+escapeHtml(personA).replace(/'/g,"\\'")+'\',\''+escapeHtml(dateA)+'\',\''+s.shiftId+'\',\''+escapeHtml(personB).replace(/'/g,"\\'")+'\',\''+s.date+'\')">'
+        +'<span><span class="nm">'+escapeHtml(lbl)+'</span> '
+        +'<span class="meta">'+escapeHtml(s.shiftName)+'</span></span>'
+        +'<button class="pick">Swap</button></div>';
+    });
+  }
+  h+='<div class="btnrow"><button class="btn ghost" onclick="baseSwap(\''+rosterId+'\',\''+shiftIdA+'\',\''+escapeHtml(personA).replace(/'/g,"\\'")+'\')">← Back</button></div></div>';
+  panel.innerHTML=h;
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function baseDoSwap2(rosterId, shiftIdA, personA, dateA, shiftIdB, personB, dateB){
+  var u=(S.rosters||[]).find(function(x){ return x.id===rosterId; });
+  if(!u) return;
+  var R=u.roster;
   if(!R.memberOverrides) R.memberOverrides={};
-  if(!R.memberOverrides[dateISO]) R.memberOverrides[dateISO]={};
-  var dt=parseISO(dateISO), di=dayDiff(parseISO(R.startISO), dt);
-  var per=calSlotCrews(R,di);
-  [ [shiftIdA, personA, personB], [shiftIdB, personB, personA] ].forEach(function(sw){
-    var sid=sw[0], from=sw[1], to=sw[2];
+  /* swap A->B on dateA/shiftA, and B->A on dateB/shiftB */
+  [ [dateA, shiftIdA, personA, personB], [dateB, shiftIdB, personB, personA] ].forEach(function(sw){
+    var diso=sw[0], sid=sw[1], from=sw[2], to=sw[3];
+    var di=dayDiff(parseISO(R.startISO), parseISO(diso));
+    if(di<0||di>=R.days) return;
+    var per=calSlotCrews(R,di);
     for(var i=0;i<per.length;i++){
       if(per[i].sl.id===sid&&per[i].list.length){
-        var mems=effShiftMembers(R, dateISO, sid, per[i].list[0].c);
+        var mems=effShiftMembers(R, diso, sid, per[i].list[0].c);
         var idx=mems.indexOf(from);
         if(idx>=0) mems[idx]=to;
-        R.memberOverrides[dateISO][sid]=mems;
+        if(!R.memberOverrides[diso]) R.memberOverrides[diso]={};
+        R.memberOverrides[diso][sid]=mems;
         break;
       }
     }
   });
   if(!R.leaveLog) R.leaveLog=[];
-  R.leaveLog.push({date:dateISO, shift:shiftIdA, person:personA, type:'Swap', cover:personB, ts:Date.now()});
+  R.leaveLog.push({date:dateA, shift:shiftIdA, person:personA, type:'Swap', cover:personB+' ('+dateB+')', ts:Date.now()});
   persist();
   document.getElementById('baseCoverPanel').innerHTML='';
   renderBase();
   toast(personA+' ↔ '+personB+' swapped');
 }
+
 /* Long-term leave: person + date range */
 function baseLongLeave(){
   var panel=document.getElementById('baseCoverPanel');
