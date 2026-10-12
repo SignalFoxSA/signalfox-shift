@@ -806,7 +806,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1412';
+var BUILD='20261012-1416';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2711,7 +2711,7 @@ function baseApplyLongLeave(){
           changed=true; affected++;
         }
       });
-      if(changed) syncUnit();
+      if(changed) persist();
     });
     d.setDate(d.getDate()+1);
   }
@@ -2810,7 +2810,7 @@ function basePickCover(rosterId, shiftId, sickName, coverName, leaveType){
   }
   if(!R.leaveLog) R.leaveLog=[];
   R.leaveLog.push({date:dateISO, shift:shiftId, person:sickName, type:leaveType||'Leave', cover:(coverName===OPEN_MARK?'OPEN':coverName), ts:Date.now()});
-  syncUnit();
+  persist();
   document.getElementById('baseCoverPanel').innerHTML='';
   renderBase();
   if(coverName===OPEN_MARK) toast('Open shift — tap to fill later');
