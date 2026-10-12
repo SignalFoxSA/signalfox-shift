@@ -335,13 +335,13 @@
     background:var(--card); color:var(--accent); font-size:26px; font-weight:800; cursor:pointer; line-height:1;}
   #calMode{margin:10px 0;}
   .cell{position:relative; min-height:76px;}
-  .cell .band{display:block; border-radius:8px; font-weight:800;
-    padding:5px 3px; margin-top:5px; line-height:1.25; text-align:center; overflow:hidden;}
-  .cell .band .bs{display:block; font-size:10px; font-weight:700; opacity:.75; line-height:1.2;
+  .cell .band{display:block; border-radius:7px; font-weight:800;
+    padding:4px 2px; margin-top:4px; line-height:1.2; text-align:center; overflow:hidden;}
+  .cell .band .bs{display:block; font-size:8px; font-weight:700; opacity:.75; line-height:1.2;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .cell .band .bc{display:block; font-size:15px; font-weight:800; line-height:1.3; margin-top:1px;
+  .cell .band .bc{display:block; font-size:12px; font-weight:800; line-height:1.25; margin-top:1px;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .cell .band .bm{display:block; font-size:9px; font-weight:600; opacity:.8; line-height:1.3; margin-top:1px;
+  .cell .band .bm{display:block; font-size:8px; font-weight:600; opacity:.8; line-height:1.25; margin-top:1px;
     display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
   .cell.out{opacity:.32; cursor:default;}
   .cell .edot{position:absolute; top:5px; right:6px; width:7px; height:7px; border-radius:50%;
@@ -786,7 +786,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1247';
+var BUILD='20261012-1250';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -1913,7 +1913,7 @@ function renderCalMonth(ctx){
         var band=shiftStandardColor(sIdx);
         inner+='<span class="band" style="background:'+band+';color:'+textOnBand(band)+'">'+
           '<span class="bs">'+escapeHtml(shiftBandShort(ps.sl.name))+(tm?' '+tm:'')+'</span>'+
-          '<span class="bc">Crew '+crews+'</span>'+memLine+'</span>';
+          '<span class="bc">'+crews+'</span>'+memLine+'</span>';
       });
       var ed=R.crews.some(function(c,ci){ return R.overrides[info.dayIdx+':'+ci]; });
       if(ed) inner+='<span class="edot"></span>';
