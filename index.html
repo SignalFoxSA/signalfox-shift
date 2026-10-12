@@ -400,7 +400,7 @@
   .sixmini .mgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
   .sixmini .dow{font-size:7px;color:var(--muted);text-align:center;}
   .sixmini .smc{aspect-ratio:1;border-radius:3px;overflow:hidden;display:flex;flex-direction:column;background:#26262e;}
-  .sixmini .smc i{flex:1;display:block;}
+  .sixmini .smini{flex:1;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:800;line-height:1;}
   .sixmini .smc.out{visibility:hidden;}
   .sixmini .sempty{font-size:10px;color:var(--muted);text-align:center;padding:12px 0;}
   .sixnav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
@@ -787,7 +787,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1310';
+var BUILD='20261012-1321';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2003,13 +2003,14 @@ function renderCalSix(){
       for(var dd=1;dd<=dim;dd++){
         var info=calRosterDay(R,y,m,dd);
         if(!info){ html+='<div class="smc"></div>'; continue; }
-        var per=calSlotCrews(R,info.dayIdx), dots=[], nP=per.length;
-        per.forEach(function(ps, sIdx){
+        var per=calSlotCrews(R,info.dayIdx), blocks=[];
+        per.forEach(function(ps){
           if(!ps.list.length) return;
-          dots.push((ps.list[0]&&ps.list[0].c.color)||'#888888');
+          var c=ps.list[0].c;
+          blocks.push({color:c.color||'#888888', label:c.name||''});
         });
-        html+='<div class="smc">'+dots.map(function(c){
-          return '<i style="background:'+c+'"></i>';
+        html+='<div class="smc">'+blocks.map(function(b){
+          return '<span class="smini" style="background:'+b.color+';color:'+textOnBand(b.color)+'">'+escapeHtml(b.label)+'</span>';
         }).join('')+'</div>';
       }
       html+='</div>';
