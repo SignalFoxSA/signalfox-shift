@@ -520,12 +520,9 @@
       <label class="f">Public holidays</label>
       <select id="setHolidays"></select>
       <p class="fine">Marks public holidays on the calendar. Fetched once per year when you're online.</p>
-      <label class="f">Day shift called</label>
-      <input type="text" id="setShiftD" maxlength="30">
-      <label class="f">Night shift called</label>
-      <input type="text" id="setShiftN" maxlength="30">
-      <label class="f">24-hour shift called</label>
-      <input type="text" id="setShiftX" maxlength="30">
+      <label class="f">Shift names</label>
+      <p class="fine" style="margin:-4px 0 8px">What each shift is called — shown on rosters and exports.</p>
+      <div id="setShiftNames"></div>
     </div>
     <div class="card">
       <h3>Data</h3>
@@ -589,6 +586,11 @@
       <label class="f">One crew's pattern</label>
       <p class="fine" id="rbTapHint" style="margin:-4px 0 8px"></p>
       <div id="rbGrid" class="rbgrid"></div>
+      <div id="rbNamesWrap" style="display:none">
+        <label class="f">Shift names</label>
+        <p class="fine" style="margin:-4px 0 8px">What each shift is called — shown on rosters and exports.</p>
+        <div id="rbNames"></div>
+      </div>
       <p class="fine" id="rbWarn" style="display:none;color:var(--orange);font-weight:700"></p>
       <p class="fine" id="rbHint"></p>
     </div>
@@ -932,9 +934,34 @@ function slotById(key, id){
 }
 
 /* ---------- custom rotation builder: design your own ---------- */
-var RB={ coverage:24, shiftLen:12, cycle:8, crews:4, pattern:[] };
+var RB={ coverage:24, shiftLen:12, cycle:8, crews:4, pattern:[], slotNames:{} };
 /* slots are always derived fresh from coverage+shiftLen — no sync needed */
 function rbCurrentSlots(){ return slotsFor(RB.coverage, RB.shiftLen); }
+/* slots that need per-rotation names (D/N/X use the workplace shift names) */
+function rbCustomSlots(){ return rbCurrentSlots().filter(function(s){ return ['D','N','X'].indexOf(s.id)<0; }); }
+function rbDefaultSlotNames(){
+  var names={}, customs=rbCustomSlots();
+  customs.forEach(function(s,i){
+    names[s.id]=(customs.length===3?['Morning','Afternoon','Night'][i]:s.label);
+  });
+  return names;
+}
+function rbRenderNames(){
+  var wrap=document.getElementById('rbNamesWrap'), box=document.getElementById('rbNames');
+  var customs=rbCustomSlots();
+  if(!customs.length){ wrap.style.display='none'; box.innerHTML=''; return; }
+  wrap.style.display='';
+  box.innerHTML='';
+  customs.forEach(function(s){
+    var lab=document.createElement('label'); lab.className='f'; lab.textContent='Shift '+(s.short||s.id);
+    var inp=document.createElement('input');
+    inp.type='text'; inp.maxLength=24;
+    inp.value=(RB.slotNames&&RB.slotNames[s.id])||'';
+    inp.placeholder=s.label;
+    inp.oninput=(function(id){ return function(){ RB.slotNames[id]=this.value; }; })(s.id);
+    box.appendChild(lab); box.appendChild(inp);
+  });
+}
 function rbStates(){
   return [0].concat(rbCurrentSlots().map(function(s){ return s.id; }));
 }
@@ -956,7 +983,8 @@ function rbResize(){
   RB.pattern.length=RB.cycle;
 }
 function openRotBuilder(){
-  RB={ coverage:24, shiftLen:12, cycle:8, crews:4, pattern:['D','D','N','N',0,0,0,0] };
+  RB={ coverage:24, shiftLen:12, cycle:8, crews:4, pattern:['D','D','N','N',0,0,0,0], slotNames:{} };
+  RB.slotNames=rbDefaultSlotNames();
   document.getElementById('rbName').value='';
   rbRenderAll();
   show('v-rotbuilder');
@@ -967,10 +995,10 @@ function rbRenderAll(){
     var lens=rbLenOptions();
     if(!lens.some(function(o){ return o[0]===RB.shiftLen; })) RB.shiftLen=lens[0][0];
     /* coverage or shift length changes the state set — reset pattern */
-    RB.pattern=[]; rbResize(); rbRenderAll();
+    RB.pattern=[]; RB.slotNames=rbDefaultSlotNames(); rbResize(); rbRenderAll();
   });
   rbPillRow('rbLen', rbLenOptions(), RB.shiftLen, function(v){
-    RB.shiftLen=v; RB.pattern=[]; rbResize(); rbRenderAll();
+    RB.shiftLen=v; RB.pattern=[]; RB.slotNames=rbDefaultSlotNames(); rbResize(); rbRenderAll();
   });
   rbPillRow('rbCycle', [[7,'7 days'],[8,'8 days'],[14,'14 days'],[28,'28 days']], RB.cycle, function(v){
     RB.cycle=v; rbResize(); rbRenderGrid(); rbRenderPreview();
@@ -978,7 +1006,7 @@ function rbRenderAll(){
   rbPillRow('rbCrews', [[2,'2'],[3,'3'],[4,'4']], RB.crews, function(v){
     RB.crews=v; rbRenderAll();
   });
-  rbRenderGrid(); rbRenderPreview();
+  rbRenderNames(); rbRenderGrid(); rbRenderPreview();
 }
 function rbSlotShort(id){
   if(id===0) return 'OFF';
@@ -1065,7 +1093,10 @@ function rbSave(){
   ROTATIONS[key]={
     name:name, cov:RB.coverage===24?[24]:[12,8], hours:RB.shiftLen,
     cycle:RB.cycle, crews:RB.crews, pattern:RB.pattern.slice(), offsets:rbOffsets(),
-    slots:rbCurrentSlots().map(function(s){ return {id:s.id, short:s.short, label:s.label, icon:s.icon}; }),
+    slots:rbCurrentSlots().map(function(s){
+      var nm=RB.slotNames&&RB.slotNames[s.id]?RB.slotNames[s.id].trim():'';
+      return {id:s.id, short:s.short, label:nm||s.label, icon:s.icon};
+    }),
     custom:true, note:'Designed by you'
   };
   persistCustomRotations();
@@ -2070,7 +2101,7 @@ function renderCalWeek(ctx){
         var dot=ps.list.map(function(x){ return '<span class="cdot" style="background:'+x.c.color+'"></span>'; }).join('');
         var tm=''; try{ tm=slotTime(R, ps.sl.id); }catch(e){}
         var cis=ps.list.map(function(x){ return x.ci; }).join(',');
-        body+='<div class="wshift" data-day="'+info.dayIdx+'" data-ci="'+cis+'"><div class="t">'+dot+(ps.sl.icon||'')+' '+(ps.sl.label||ps.sl.id)+'</div><div class="n">'+nm+'</div>'+(tm?'<div class="h">'+tm+'</div>':'')+'</div>';
+        body+='<div class="wshift" data-day="'+info.dayIdx+'" data-ci="'+cis+'"><div class="t">'+dot+(ps.sl.icon||'')+' '+escapeHtml(slotDisplayLabel(ps.sl))+'</div><div class="n">'+nm+'</div>'+(tm?'<div class="h">'+tm+'</div>':'')+'</div>';
       });
       if(!body) body='<div style="color:var(--muted);font-size:14px;">All off</div>';
       html+='<div class="daycard'+(isT?' today':'')+(isPicked?' picked':'')+'">'+head+body+'</div>';
@@ -2896,6 +2927,14 @@ function fmtTime(hhmm){
 }
 /* custom shift names (full label, e.g. "Day shift") */
 function shiftLabel(id){ var s=appSettings().shiftNames||{}; return s[id]||defaultSettings().shiftNames[id]||id; }
+/* shift label for display: workplace names for D/N/X, the rotation's own label otherwise */
+function slotDisplayLabel(sl){
+  if(!sl) return '';
+  if(sl.id==='D') return shiftLabel('D');
+  if(sl.id==='N') return shiftLabel('N');
+  if(sl.id==='X') return shiftLabel('X');
+  return sl.label||sl.id;
+}
 /* short label for export bands, e.g. "Day" */
 function shiftShort(id){ return String(shiftLabel(id)).replace(/\s+shift$/i,''); }
 
@@ -2935,6 +2974,14 @@ function ensureHolidays(y){
 }
 function holISO(y,m,d){ return y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
 
+/* which of D/N/X the workplace's teams actually use */
+function usedShiftIds(){
+  var used={};
+  (S.base.vehicles||[]).forEach(function(v){
+    rotSlots(v.rotation).forEach(function(sl){ used[sl.id]=1; });
+  });
+  return used;
+}
 function renderSettings(){
   document.getElementById('setName').value=profileName();
   document.getElementById('setEmail').value=(sbUser && sbUser.email)||'';
@@ -2952,16 +2999,30 @@ function renderSettings(){
   }).join('');
   hs.value=st.holidays||'';
   hs.onchange=function(){ st.holidays=this.value; persistBase(); renderCalendar(); };
-  [['setShiftD','D'],['setShiftN','N'],['setShiftX','X']].forEach(function(pair){
-    var inp=document.getElementById(pair[0]), key=pair[1];
-    inp.value=st.shiftNames[key];
-    inp.placeholder=defaultSettings().shiftNames[key];
-    inp.onchange=function(){
-      var v=this.value.trim();
-      st.shiftNames[key]=v||defaultSettings().shiftNames[key];
-      persistBase(); renderCalendar(); toast('Shift names updated');
-    };
-  });
+  /* shift names: only show the shifts this workplace actually uses */
+  var used=usedShiftIds(), hasTeams=(S.base.vehicles||[]).length>0;
+  var snBox=document.getElementById('setShiftNames');
+  var snDefs=[['D','Day shift',''],['N','Night shift',''],
+    ['X','24-hour shift','For rotations where one crew works a full 24 hours (e.g. 24 on, 72 off).']
+  ].filter(function(def){ return !hasTeams||used[def[0]]; });
+  function escQ(s){ return escapeHtml(s).replace(/"/g,'&quot;'); }
+  snBox.innerHTML=snDefs.map(function(def){
+    return '<label class="f">'+def[1]+'</label>'+
+      '<input type="text" maxlength="30" data-shift="'+def[0]+'" value="'+escQ(st.shiftNames[def[0]])+
+      '" placeholder="'+escQ(defaultSettings().shiftNames[def[0]])+'">'+
+      (def[2]?'<p class="fine" style="margin:-4px 0 8px">'+def[2]+'</p>':'');
+  }).join('');
+  var snInps=snBox.querySelectorAll('input');
+  for(var sni=0;sni<snInps.length;sni++){
+    (function(inp){
+      var id=inp.getAttribute('data-shift');
+      inp.onchange=function(){
+        var v=this.value.trim();
+        st.shiftNames[id]=v||defaultSettings().shiftNames[id];
+        persistBase(); renderCalendar(); toast('Shift names updated');
+      };
+    })(snInps[sni]);
+  }
 }
 function setPills(elId, opts, cur, cb){
   var el=document.getElementById(elId); if(!el) return;
@@ -3076,6 +3137,14 @@ function expMix(a,b,t){
             +hx(ch(a.substr(5,2))*(1-t)+ch(b.substr(5,2))*t);
 }
 /* Build export data from the currently viewed calendar roster. */
+function expShiftList(R){
+  return rotSlots(R.rotation).map(function(sl){
+    if(sl.id==='D') return {id:'D', name:shiftShort('D'), band:shiftShort('D')};
+    if(sl.id==='N') return {id:'N', name:shiftShort('N'), band:shiftShort('N')};
+    if(sl.id==='X') return {id:'X', name:shiftLabel('X'), band:shiftShort('X')};
+    return {id:sl.id, name:sl.label, band:sl.label};
+  });
+}
 function expData(){
   var cal=ensureCal();
   if(!cal.vehicleId||cal.y==null) return null;
@@ -3087,6 +3156,11 @@ function expData(){
   var rot=ROTATIONS[R.rotation]||ROTATIONS['224'];
   var dim=daysInMonth(y,m);
   var hasNight=rotSlots(R.rotation).some(function(s){ return s.id==='N'; });
+  /* ordered shift list for this rotation: D/N/X use the workplace names,
+     custom slots (e.g. 8-hour Morning/Afternoon/Night) use their own labels */
+  var rslots=rotSlots(R.rotation);
+  var shifts=expShiftList(R);
+  var nsh=shifts.length;
   var crews=R.crews.map(function(c,ci){
     var col=c.color||CREW_COLORS[ci%CREW_COLORS.length]||'#999999';
     var nm=(c.members||[]).map(staffName).filter(function(n){ return n; });
@@ -3101,27 +3175,28 @@ function expData(){
   for(var d=1;d<=dim;d++){
     var info=calRosterDay(R,y,m,d);
     if(!info){ pairs.push(null); continue; }
-    var per=calSlotCrews(R,info.dayIdx), dc=-1, nc=-1;
-    per.forEach(function(ps){
-      if(!ps.list.length) return;
-      if(ps.sl.id==='D') dc=ps.list[0].ci;
-      else if(ps.sl.id==='N') nc=ps.list[0].ci;
-      else if(ps.sl.id==='X') dc=ps.list[0].ci;
+    var per=calSlotCrews(R,info.dayIdx), row=[];
+    rslots.forEach(function(sl){
+      var ci=-1;
+      for(var i=0;i<per.length;i++){
+        if(per[i].sl.id===sl.id && per[i].list.length){ ci=per[i].list[0].ci; break; }
+      }
+      row.push(ci);
     });
-    pairs.push([dc,nc]);
+    pairs.push(row);
   }
   var title=vname+' \u2014 '+MN[m]+' '+y, sub;
   try{
     var stT={rotation:R.rotation, startTime:v.startTime||'06:00', shiftLen:rot.hours||12};
-    sub=rot.name+' rotation \u00b7 '+(hasNight
-      ? (shiftShort('D')+' '+slotTime(stT,'D')+' \u00b7 '+shiftShort('N')+' '+slotTime(stT,'N'))
-      : '24h shifts');
+    sub=rot.name+' rotation \u00b7 '+((nsh===1&&shifts[0].id==='X')
+      ? '24h shifts'
+      : shifts.map(function(s){ return s.band+' '+slotTime(stT,s.id); }).join(' \u00b7 '));
   }catch(e){ sub=rot.name+' rotation'; }
   var slug=(vname+'-'+MN[m]+'-'+y).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
   return {y:y, m:m, dim:dim, title:title, sub:sub,
     subXlsx:sub.replace(/ rotation/,''),
     footer:'Generated with SignalFox Shift',
-    crews:crews, pairs:pairs, hasNight:hasNight,
+    crews:crews, pairs:pairs, hasNight:hasNight, shifts:shifts, nsh:nsh,
     dayLabel:hasNight?shiftShort('D'):'On duty',
     slug:slug, rotName:rot.name};
 }
@@ -3143,15 +3218,12 @@ function expBuildText(E, mode){
   L.push('*'+E.title+'*'+(isNames?' ('+E.rotName+')':''), E.sub, '');
   for(var d=1; d<=E.dim; d++){
     var pr=E.pairs[d-1]; if(!pr) continue;
-    var dl=E.dayLabel+': '+(pr[0]>=0?E.crews[pr[0]].name:'\u2014');
-    if(isNames&&pr[0]>=0) dl=E.dayLabel+': '+E.crews[pr[0]].names.join(', ');
-    var line=expWeekdayShort(E.y,E.m,d)+' '+d+': '+dl;
-    if(E.hasNight){
-      var nl='Night: '+(pr[1]>=0?E.crews[pr[1]].name:'\u2014');
-      if(isNames&&pr[1]>=0) nl='Night: '+E.crews[pr[1]].names.join(', ');
-      line+=' \u00b7 '+nl;
-    }
-    L.push(line);
+    var bits=[];
+    E.shifts.forEach(function(s,i){
+      var crew=pr[i]>=0?E.crews[pr[i]]:null;
+      bits.push(s.band+': '+(crew?(isNames?crew.names.join(', '):crew.name):'\u2014'));
+    });
+    L.push(expWeekdayShort(E.y,E.m,d)+' '+d+': '+(bits.join(' \u00b7 ')||'All off'));
   }
   L.push('', '*Crews*');
   E.crews.forEach(function(c){ L.push(c.name+' \u2014 '+c.names.join(', ')); });
@@ -3186,16 +3258,25 @@ function expBuildWorkbook(E, mode){
         border:isNames?bdr:undefined});
       return;
     }
-    var dc=pr[0]>=0?E.crews[pr[0]]:null, nc=pr[1]>=0?E.crews[pr[1]]:null;
-    var tint=dc?dc.tintXLSX:'FFFFFFFF';
+    var firstCrew=null;
+    E.shifts.forEach(function(s,i){ if(!firstCrew&&pr[i]>=0) firstCrew=E.crews[pr[i]]; });
+    var tint=firstCrew?firstCrew.tintXLSX:'FFFFFFFF';
     var v, fill={patternType:'solid',fgColor:{rgb:tint}};
     if(isNames){
-      v=c.date+'\n'+E.dayLabel+'\n'+(dc?dc.names.join(', '):'\u2014');
-      if(E.hasNight) v+='\nNight\n'+(nc?nc.names.join(', '):'\u2014');
-      if(dc) fill={patternType:'solid',fgColor:{rgb:'FF'+dc.tintNames.replace('#','')}};
+      v=String(c.date);
+      E.shifts.forEach(function(s,i){
+        v+='\n'+s.name+'\n'+(pr[i]>=0?E.crews[pr[i]].names.join(', '):'\u2014');
+      });
+      if(firstCrew) fill={patternType:'solid',fgColor:{rgb:'FF'+firstCrew.tintNames.replace('#','')}};
     }else{
-      v=c.date+'\n'+(dc?dc.name+' '+(E.hasNight?'day':'on duty'):'\u2014');
-      if(E.hasNight) v+='\n'+(nc?nc.name+' night \uD83C\uDF19':'');
+      /* spreadsheet letter version keeps "A day" / "D night 🌙" */
+      v=String(c.date);
+      E.shifts.forEach(function(s,i){
+        var suf=s.id==='D'?(E.hasNight?'day':'on duty')
+              :s.id==='N'?'night \uD83C\uDF19'
+              :s.id==='X'?'on duty':s.band.toLowerCase();
+        v+='\n'+(pr[i]>=0?E.crews[pr[i]].name+' '+suf:'\u2014');
+      });
     }
     set(addr,v,{font:{sz:11},alignment:{horizontal:'left',vertical:'top',wrapText:true},
       fill:fill, border:isNames?bdr:undefined});
@@ -3211,7 +3292,7 @@ function expBuildWorkbook(E, mode){
   ws['!merges'].push({s:{r:fRow-1,c:0},e:{r:fRow-1,c:6}});
   ws['!cols']=Array(7).fill({wch:isNames?26:15});
   ws['!rows']=[];
-  for(var rr=3;rr<3+weeks;rr++) ws['!rows'][rr]={hpt:isNames?86:45};
+  for(var rr=3;rr<3+weeks;rr++) ws['!rows'][rr]={hpt:isNames?(26+30*E.nsh):(15+15*E.nsh)};
   ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:fRow-1,c:6}});
   var wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, isNames?'Roster':(MN[E.m]+' '+E.y).slice(0,31));
@@ -3239,7 +3320,7 @@ function expGridEl(E, mode, variant){
   dowOrder().map(function(d){ return d.toUpperCase(); }).forEach(function(d){
     h+='<span style="display:inline-block;box-sizing:border-box;width:'+cw+'px;font-size:'+F(11)+'px;font-weight:700;color:#888;text-align:center;padding:'+F(6)+'px 0;border-right:1px solid #ddd;border-bottom:1px solid #ddd;">'+d+'</span>';
   });
-  var cellH=F(isNames?100:92);
+  var cellH=F(isNames?(40+30*E.nsh):(32+30*E.nsh));
   expMonthCells(E.y,E.m).forEach(function(c,idx){
     var w=(idx%7===6)?cwLast:cw;
     var open='<span style="display:inline-block;box-sizing:border-box;vertical-align:top;width:'+w+'px;min-height:'+cellH+'px;border-right:1px solid #ddd;border-bottom:1px solid #ddd;padding:'+P+'px;';
@@ -3248,20 +3329,28 @@ function expGridEl(E, mode, variant){
       h+=open+'background:#f7f7f7;"><div style="font-size:'+F(14)+'px;font-weight:700;color:#bbb;">'+c.date+'</div></span>';
       return;
     }
-    var dc=pr[0]>=0?E.crews[pr[0]]:null, nc=pr[1]>=0?E.crews[pr[1]]:null;
+    var firstCrew=null;
+    E.shifts.forEach(function(s,i){ if(!firstCrew&&pr[i]>=0) firstCrew=E.crews[pr[i]]; });
     if(!isNames){
       /* dark text on the bands for both PDF and image — approved 11 Oct */
-      var bt='#1c1c1e';
+      var bt='#1c1c1e', bands='';
+      E.shifts.forEach(function(s,i){
+        if(pr[i]<0) return;
+        bands+='<div style="background:'+E.crews[pr[i]].color+';border-radius:'+F(5)+'px;text-align:center;font-size:'+F(13)+'px;font-weight:800;color:'+bt+';padding:'+P+'px 0;margin-top:'+F(4)+'px;">'+escapeHtml(s.band.toUpperCase())+': '+escapeHtml(E.crews[pr[i]].name)+'</div>';
+      });
       h+=open+'">'
         +'<div style="font-size:'+F(14)+'px;font-weight:700;">'+c.date+'</div>'
-        +(dc?'<div style="background:'+dc.color+';border-radius:'+F(5)+'px;text-align:center;font-size:'+F(13)+'px;font-weight:800;color:'+bt+';padding:'+P+'px 0;margin-top:'+F(4)+'px;">'+E.dayLabel.toUpperCase()+': '+escapeHtml(dc.name)+'</div>':'')
-        +(E.hasNight&&nc?'<div style="background:'+nc.color+';border-radius:'+F(5)+'px;text-align:center;font-size:'+F(13)+'px;font-weight:800;color:'+bt+';padding:'+P+'px 0;margin-top:'+F(4)+'px;">'+escapeHtml(shiftShort('N').toUpperCase())+': '+escapeHtml(nc.name)+'</div>':'')
+        +bands
         +'</span>';
     }else{
-      h+=open+'background:'+(dc?dc.tintNames:'transparent')+';">'
+      var rows='';
+      E.shifts.forEach(function(s,i){
+        if(pr[i]<0) return;
+        rows+='<div style="font-size:'+F(12.5)+'px;margin-top:'+F(3)+'px;"><b>'+escapeHtml(s.name)+':</b> <span style="color:'+E.crews[pr[i]].dark+';">'+escapeHtml(E.crews[pr[i]].names.join(', '))+'</span></div>';
+      });
+      h+=open+'background:'+(firstCrew?firstCrew.tintNames:'transparent')+';">'
         +'<div style="font-size:'+F(14)+'px;font-weight:700;">'+c.date+'</div>'
-        +(dc?'<div style="font-size:'+F(12.5)+'px;margin-top:'+F(3)+'px;"><b>'+E.dayLabel+':</b> <span style="color:'+dc.dark+';">'+escapeHtml(dc.names.join(', '))+'</span></div>':'')
-        +(E.hasNight&&nc?'<div style="font-size:'+F(12.5)+'px;margin-top:'+F(2)+'px;"><b>'+escapeHtml(shiftShort('N'))+':</b> <span style="color:'+nc.dark+';">'+escapeHtml(nc.names.join(', '))+'</span></div>':'')
+        +rows
         +'</span>';
     }
   });
