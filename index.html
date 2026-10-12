@@ -184,7 +184,6 @@
   .shiftrow input[type=time]{flex:none; width:96px; padding:10px 4px; font-size:14px;}
   .shiftrow .tdash{color:var(--muted); flex:none;}
   .shiftrow .rm{background:none; border:none; color:var(--red); font-size:16px; cursor:pointer; padding:6px; flex:none;}
-  .shiftrow .cdotbtn{width:30px; height:30px; border-radius:50%; border:2px solid rgba(255,255,255,.25); flex:none;}
   .grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
   .cell{
     border-radius:10px; min-height:70px; padding:5px 4px; cursor:pointer; position:relative;
@@ -316,7 +315,7 @@
     background:var(--card); color:var(--accent); font-size:26px; font-weight:800; cursor:pointer; line-height:1;}
   #calMode{margin:10px 0;}
   .cell{position:relative; min-height:76px;}
-  .cell .band{display:block; border-radius:8px; font-weight:800; color:#141414;
+  .cell .band{display:block; border-radius:8px; font-weight:800;
     padding:5px 3px; margin-top:5px; line-height:1.25; text-align:center; overflow:hidden;}
   .cell .band .bs{display:block; font-size:10px; font-weight:700; opacity:.75; line-height:1.2;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
@@ -755,7 +754,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1218';
+var BUILD='20261012-1223';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -1827,12 +1826,7 @@ function renderCalChrome(ctx){
   }
   lg.innerHTML=crews.map(function(c){
     return '<span><span class="dot" style="background:'+c.color+'"></span>Crew '+escapeHtml(c.name)+'</span>';
-  }).join('')+(function(){
-    if(!ctx||!ctx.R) return '';
-    return rotSlots(ctx.R.rotation).map(function(s){
-      return '<span><span class="dot" style="background:'+(s.color||'#888')+'"></span>'+escapeHtml(s.name)+'</span>';
-    }).join('');
-  })();
+  }).join('');
 }
 function calSlotCrews(R, dayIdx){
   var slots=rotSlots(R.rotation);
@@ -1866,11 +1860,13 @@ function renderCalMonth(ctx){
       var date=info.date;
       var hd=hol?hol[holISO(y,m,d)]:null;
       var inner='<div class="dnum">'+d+(hd?'<span class="hdot" title="'+escapeHtml(hd)+'"></span>':'')+'</div>';
-      calSlotCrews(R,info.dayIdx).forEach(function(ps){
+      var slots=rotSlots(R.rotation), nSlots=slots.length;
+      calSlotCrews(R,info.dayIdx).forEach(function(ps, sIdx){
         if(!ps.list.length) return;
         var tm=''; try{ tm=shortShiftTime(ps.sl); }catch(e){}
         var crews=ps.list.map(function(x){ return escapeHtml(x.c.name); }).join(' / ');
-        inner+='<span class="band" style="background:'+(ps.sl.color||'#888')+'">'+
+        var band=crewShiftColor(ps.list[0].c.color, sIdx, nSlots);
+        inner+='<span class="band" style="background:'+band+';color:'+textOnBand(band)+'">'+
           '<span class="bs">'+escapeHtml(shiftBandShort(ps.sl.name))+(tm?' '+tm:'')+'</span>'+
           '<span class="bc">'+crews+'</span></span>';
       });
@@ -1960,10 +1956,10 @@ function renderCalSix(){
       for(var dd=1;dd<=dim;dd++){
         var info=calRosterDay(R,y,m,dd);
         if(!info){ html+='<div class="smc"></div>'; continue; }
-        var per=calSlotCrews(R,info.dayIdx), dots=[];
-        per.forEach(function(ps){
+        var per=calSlotCrews(R,info.dayIdx), dots=[], nP=per.length;
+        per.forEach(function(ps, sIdx){
           if(!ps.list.length) return;
-          dots.push(ps.sl.color||'#888');
+          dots.push(crewShiftColor(ps.list[0].c.color, sIdx, nP));
         });
         html+='<div class="smc">'+dots.map(function(c){
           return '<i style="background:'+c+'"></i>';
@@ -2039,7 +2035,7 @@ function renderCalAgenda(ctx){
           var nm=(x.c.members&&x.c.members.length)?' \u2014 '+x.c.members.map(escapeHtml).join(', '):'';
           return '<span class="cdot" style="background:'+x.c.color+'"></span> <b>Crew '+escapeHtml(x.c.name)+'</b>'+nm;
         }).join(' \u00b7 ');
-        return '<div><span class="cdot" style="background:'+(sl.color||'#888')+';display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;"></span>'+escapeHtml(sl.name||sl.id)+': '+bit+'</div>';
+        return '<div><b>'+escapeHtml(sl.name||sl.id)+':</b> '+bit+'</div>';
       }).filter(function(x){ return x; });
       body='<div class="agbody">'+(lines.join('')||'<span class="dim">All off</span>')+(isT?'<span class="todaytag">TODAY</span>':'')+'</div>';
     }
@@ -2089,8 +2085,8 @@ function renderCalWeek(ctx){
     if(!info){
       html+='<div class="daycard out">'+head+'<div style="color:var(--muted);font-size:14px;">No roster coverage</div></div>';
     }else{
-      var per=calSlotCrews(R,info.dayIdx), body='';
-      per.forEach(function(ps){
+      var per=calSlotCrews(R,info.dayIdx), body='', nSl=rotSlots(R.rotation).length;
+      per.forEach(function(ps, sIdx){
         if(!ps.list.length) return;
         var nm=ps.list.map(function(x){
           var mem=(x.c.members&&x.c.members.length)?' \u2014 '+x.c.members.map(escapeHtml).join(', '):'';
@@ -2099,7 +2095,8 @@ function renderCalWeek(ctx){
         var dot=ps.list.map(function(x){ return '<span class="cdot" style="background:'+x.c.color+'"></span>'; }).join('');
         var tm=''; try{ tm=slotTime(R, ps.sl.id); }catch(e){}
         var cis=ps.list.map(function(x){ return x.ci; }).join(',');
-        body+='<div class="wshift" data-day="'+info.dayIdx+'" data-ci="'+cis+'" style="border-left:5px solid '+(ps.sl.color||'#888')+'"><div class="t">'+dot+escapeHtml(slotDisplayLabel(ps.sl))+'</div><div class="n">'+nm+'</div>'+(tm?'<div class="h">'+tm+'</div>':'')+'</div>';
+        var acc=crewShiftColor(ps.list[0].c.color, sIdx, nSl);
+        body+='<div class="wshift" data-day="'+info.dayIdx+'" data-ci="'+cis+'" style="border-left:5px solid '+acc+'"><div class="t">'+dot+escapeHtml(slotDisplayLabel(ps.sl))+'</div><div class="n">'+nm+'</div>'+(tm?'<div class="h">'+tm+'</div>':'')+'</div>';
       });
       if(!body) body='<div style="color:var(--muted);font-size:14px;">All off</div>';
       html+='<div class="daycard'+(isT?' today':'')+(isPicked?' picked':'')+'">'+head+body+'</div>';
@@ -2396,8 +2393,7 @@ function renderBase(){
       });
       slots.forEach(function(sl,k){
         var srow=document.createElement('div'); srow.className='urow';
-        var lab='<span class="cdot" style="background:'+(sl.color||'#888')+';display:inline-block;"></span>';
-        srow.innerHTML='<span class="ulab">'+lab+'</span><span>'+(buckets[k].join('<br>')||'<span style="color:var(--muted)">–</span>')+'</span>';
+        srow.innerHTML='<span class="ulab"><b>'+escapeHtml(sl.name||sl.id)+'</b></span><span>'+(buckets[k].join('<br>')||'<span style="color:var(--muted)">–</span>')+'</span>';
         card.appendChild(srow);
       });
     }
@@ -2719,8 +2715,7 @@ function renderToday(){
       slots.forEach(function(sl,k){ if(st===sl.id) buckets[k].push(bit); });
     });
     var line=slots.map(function(sl,k){
-      var dot='<span class="cdot" style="background:'+(sl.color||'#888')+';display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;"></span>';
-      return dot+(buckets[k].join(' &middot; ')||'&mdash;');
+      return '<b>'+escapeHtml(sl.name||sl.id)+':</b> '+(buckets[k].join(' &middot; ')||'&mdash;');
     }).join('<br>');
     rows.push('<div class="urow"><span class="ulab">&#8226;</span><span><b>'+escapeHtml(u.name)+'</b><br>'+line+'</span></div>');
   });
@@ -2884,6 +2879,32 @@ function staffDel(si){
 }
 
 /* ---------- settings ---------- */
+/* ---------- shift display colors ----------
+   Band color always comes from the CREW. The shift only changes the shade:
+   first shift (day) = lighter, last shift (night) = darker. */
+function hexRgb(hex){
+  var h=String(hex||'').replace('#','');
+  if(h.length===3) h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+  return [parseInt(h.slice(0,2),16)||0, parseInt(h.slice(2,4),16)||0, parseInt(h.slice(4,6),16)||0];
+}
+function mixHex(hex, target, amt){
+  var c=hexRgb(hex), t=hexRgb(target);
+  function ch(i){ var v=Math.round(c[i]+(t[i]-c[i])*amt); v=Math.max(0,Math.min(255,v)); var s=v.toString(16); return s.length<2?'0'+s:s; }
+  return '#'+ch(0)+ch(1)+ch(2);
+}
+/* crew color shaded by shift position: 0 (day) lightest … last (night) darkest */
+function crewShiftColor(crewColor, shiftIdx, shiftCount){
+  if(!crewColor) crewColor='#888888';
+  if(shiftCount<=1) return crewColor;
+  var t=Math.max(0,Math.min(1,shiftIdx/(shiftCount-1)));
+  if(t<0.5) return mixHex(crewColor,'#ffffff',0.45*(1-t*2));
+  return mixHex(crewColor,'#000000',0.35*((t-0.5)*2));
+}
+/* readable text color on a band */
+function textOnBand(hex){
+  var c=hexRgb(hex), lum=(0.299*c[0]+0.587*c[1]+0.114*c[2])/255;
+  return lum>0.55?'#141414':'#ffffff';
+}
 /* ---------- workplace shifts ----------
    The workplace defines its shifts: name + start/end time. Add as many as
    the day needs — the count you define IS the shifts per 24 hours.
@@ -3049,28 +3070,19 @@ function renderSettings(){
   hs.onchange=function(){ st.holidays=this.value; persistBase(); renderCalendar(); };
   renderShifts();
 }
-/* workplace shift manager: name + hours per shift, as many as the day needs */
-var shiftColorOpen=null;
+/* workplace shift manager: name + hours per shift, as many as the day needs.
+   (Band colors come from the crew, shaded by shift — shifts don't need colors.) */
 function renderShifts(){
   var wrap=document.getElementById('shiftList'); if(!wrap) return;
   function escQ(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   wrap.innerHTML=wpShifts().map(function(s){
-    var col=s.color||SHIFT_COLORS[0];
-    var html='<div class="shiftrow">'+
-      '<button class="cdot cdotbtn" type="button" style="background:'+col+'" title="Change shift color" aria-label="Change shift color" data-cdot="'+s.id+'"></button>'+
+    return '<div class="shiftrow">'+
       '<input type="text" maxlength="24" value="'+escQ(s.name)+'" placeholder="Shift name" aria-label="Shift name" data-shift="'+s.id+'" data-f="name">'+
       '<input type="time" value="'+escQ(s.start||'06:00')+'" aria-label="Shift start" data-shift="'+s.id+'" data-f="start">'+
       '<span class="tdash">\u2013</span>'+
       '<input type="time" value="'+escQ(s.end||'18:00')+'" aria-label="Shift end" data-shift="'+s.id+'" data-f="end">'+
       '<button class="rm" type="button" title="Remove shift" data-del="'+s.id+'">\u2715</button>'+
       '</div>';
-    if(shiftColorOpen===s.id){
-      html+='<div class="cswatches" style="margin:6px 0 2px 34px;">'+SHIFT_COLORS.map(function(c){
-        return '<button type="button" class="csw'+(String(c).toLowerCase()===String(col).toLowerCase()?' sel':'')+
-          '" style="background:'+c+'" title="'+c+'" aria-label="Shift color '+c+'" data-pick="'+s.id+'|'+c+'"></button>';
-      }).join('')+'</div>';
-    }
-    return html;
   }).join('');
   var inps=wrap.querySelectorAll('input');
   for(var i=0;i<inps.length;i++){
@@ -3083,27 +3095,6 @@ function renderShifts(){
         persistBase(); renderShifts(); renderCalendar();
       };
     })(inps[i]);
-  }
-  var dots=wrap.querySelectorAll('button[data-cdot]');
-  for(var k=0;k<dots.length;k++){
-    (function(btn){
-      btn.onclick=function(){
-        var id=btn.getAttribute('data-cdot');
-        shiftColorOpen=(shiftColorOpen===id?null:id);
-        renderShifts();
-      };
-    })(dots[k]);
-  }
-  var picks=wrap.querySelectorAll('button[data-pick]');
-  for(var q=0;q<picks.length;q++){
-    (function(btn){
-      btn.onclick=function(){
-        var parts=btn.getAttribute('data-pick').split('|');
-        var s=wpShift(parts[0]); if(!s) return;
-        s.color=parts[1]; shiftColorOpen=null;
-        persistBase(); renderShifts(); renderCalendar();
-      };
-    })(picks[q]);
   }
   var dels=wrap.querySelectorAll('button[data-del]');
   for(var j=0;j<dels.length;j++){
@@ -3439,11 +3430,12 @@ function expGridEl(E, mode, variant){
     var firstCrew=null;
     E.shifts.forEach(function(s,i){ if(!firstCrew&&pr[i]>=0) firstCrew=E.crews[pr[i]]; });
     if(!isNames){
-      /* dark text on the bands for both PDF and image — approved 11 Oct */
-      var bt='#1c1c1e', bands='';
+      /* dark or light text for readability — approved 11 Oct */
+      var bands='';
       E.shifts.forEach(function(s,i){
         if(pr[i]<0) return;
-        bands+='<div style="background:'+s.color+';border-radius:'+F(5)+'px;text-align:center;font-size:'+F(13)+'px;font-weight:800;color:'+bt+';padding:'+P+'px 0;margin-top:'+F(4)+'px;">'+escapeHtml(s.band.toUpperCase())+': '+escapeHtml(E.crews[pr[i]].name)+'</div>';
+        var band=crewShiftColor(E.crews[pr[i]].color, i, E.shifts.length), bt=textOnBand(band);
+        bands+='<div style="background:'+band+';border-radius:'+F(5)+'px;text-align:center;font-size:'+F(13)+'px;font-weight:800;color:'+bt+';padding:'+P+'px 0;margin-top:'+F(4)+'px;">'+escapeHtml(s.band.toUpperCase())+': '+escapeHtml(E.crews[pr[i]].name)+'</div>';
       });
       h+=open+'">'
         +'<div style="font-size:'+F(14)+'px;font-weight:700;">'+c.date+'</div>'
