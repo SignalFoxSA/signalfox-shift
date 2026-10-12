@@ -803,7 +803,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1401';
+var BUILD='20261012-1405';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2613,7 +2613,7 @@ function renderBase(){
           var q=qualName(staffQualIdByName(nm));
           return '<div class="person"><span><span class="nm">'+escapeHtml(nm)+'</span>'
             +(q?'<span class="q">'+escapeHtml(q)+'</span>':'')+'</span>'
-            +'<button class="sickbtn" onclick="event.stopPropagation();baseSick(\''+u.id+'\',\''+st+'\',\''+escapeHtml(nm).replace(/'/g,"\\'")+'\')">Sick</button></div>';
+            +'<button class="sickbtn" onclick="event.stopPropagation();baseLeave(\''+u.id+'\',\''+st+'\',\''+escapeHtml(nm).replace(/'/g,"\\'")+'\')">Leave</button></div>';
         }).join('');
         var line='<div style="margin:6px 0;"><b>Crew '+escapeHtml(c.name)+'</b>'+plist+'</div>';
         slots.forEach(function(sl,k){ if(st===sl.id) buckets[k].push(line); });
@@ -2631,7 +2631,21 @@ function renderBase(){
   document.getElementById('baseCoverPanel').innerHTML='';
 }
 /* Sick cover from Who's on duty */
-function baseSick(rosterId, shiftId, personName){
+var LEAVE_TYPES=['Sick leave','Annual leave','Family responsibility','Study leave','Maternity / Paternity','Unpaid leave','Other'];
+function baseLeave(rosterId, shiftId, personName){
+  var panel=document.getElementById('baseCoverPanel');
+  var h='<div class="card" style="border:2px solid var(--accent);">'
+    +'<h3>'+escapeHtml(personName)+' — type of leave</h3>'
+    +'<p class="sub">What kind of leave is this?</p>';
+  LEAVE_TYPES.forEach(function(t){
+    h+='<div class="avail" onclick="baseSick(\''+rosterId+'\',\''+shiftId+'\',\''+escapeHtml(personName).replace(/'/g,"\\'")+'\',\''+escapeHtml(t)+'\')">'
+      +'<span class="nm">'+escapeHtml(t)+'</span><span class="meta">→</span></div>';
+  });
+  h+='<div class="btnrow"><button class="btn ghost" onclick="document.getElementById(\'baseCoverPanel\').innerHTML=\'\'">Cancel</button></div></div>';
+  panel.innerHTML=h;
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function baseSick(rosterId, shiftId, personName, leaveType){
   var u=(S.rosters||[]).find(function(x){ return x.id===rosterId; });
   if(!u) return;
   var R=u.roster, dateISO=S.baseDateISO;
@@ -2674,14 +2688,14 @@ function baseSick(rosterId, shiftId, personName){
   var qn=qualName(sickQ);
   var h='<div class="card" style="border:2px solid var(--accent);">'
     +'<h3>Cover for '+escapeHtml(personName)+(qn?' ('+escapeHtml(qn)+')':'')+'</h3>'
-    +'<p class="sub">Same qualification first, then higher. Lower qualifications are not shown.</p>';
+    +'<p class="sub">'+escapeHtml(leaveType||'Leave')+' — same qualification first, then higher. Lower qualifications are not shown.</p>';
   if(!cands.length){
     h+='<p class="fine">No suitable cover available — everyone is working or lower-qualified.</p>';
   }else{
     cands.forEach(function(cnd){
       var q=qualName(cnd.qual);
       var tag=cnd.rank===sickRank?'Same':'Higher';
-      h+='<div class="avail" onclick="basePickCover(\''+rosterId+'\',\''+shiftId+'\',\''+escapeHtml(personName).replace(/'/g,"\\'")+'\',\''+escapeHtml(cnd.name).replace(/'/g,"\\'")+'\')">'
+      h+='<div class="avail" onclick="basePickCover(\''+rosterId+'\',\''+shiftId+'\',\''+escapeHtml(personName).replace(/'/g,"\\'")+'\',\''+escapeHtml(cnd.name).replace(/'/g,"\\'")+'\',\''+escapeHtml(leaveType||'Leave')+'\')">'
         +'<span><span class="nm">'+escapeHtml(cnd.name)+'</span> '
         +'<span class="meta">'+(q?escapeHtml(q)+' · ':'')+tag+'</span></span>'
         +'<button class="pick">Pick</button></div>';
@@ -2691,7 +2705,7 @@ function baseSick(rosterId, shiftId, personName){
   panel.innerHTML=h;
   panel.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
-function basePickCover(rosterId, shiftId, sickName, coverName){
+function basePickCover(rosterId, shiftId, sickName, coverName, leaveType){
   var u=(S.rosters||[]).find(function(x){ return x.id===rosterId; });
   if(!u) return;
   var R=u.roster, dateISO=S.baseDateISO;
@@ -2709,10 +2723,13 @@ function basePickCover(rosterId, shiftId, sickName, coverName){
       break;
     }
   }
+  /* log the leave */
+  if(!R.leaveLog) R.leaveLog=[];
+  R.leaveLog.push({date:dateISO, shift:shiftId, person:sickName, type:leaveType||'Leave', cover:coverName, ts:Date.now()});
   syncUnit();
   document.getElementById('baseCoverPanel').innerHTML='';
   renderBase();
-  toast(coverName+' covers for '+sickName);
+  toast(coverName+' covers for '+sickName+' ('+(leaveType||'leave')+')');
 }
 
 
