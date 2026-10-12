@@ -806,7 +806,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1416';
+var BUILD='20261012-1423';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2798,11 +2798,9 @@ function basePickCover(rosterId, shiftId, sickName, coverName, leaveType){
         if(idx>=0) mems[idx]=OPEN_MARK;
         else if(mems.indexOf(OPEN_MARK)<0) mems.push(OPEN_MARK);
       }else{
+        /* replacing a person (or filling one open slot): swap exactly one entry */
         if(idx>=0) mems[idx]=coverName;
         else if(mems.indexOf(coverName)<0) mems.push(coverName);
-        /* if filling an open slot, remove the marker */
-        var oi=mems.indexOf(OPEN_MARK);
-        if(sickName===OPEN_MARK&&oi>=0) mems.splice(oi,1);
       }
       R.memberOverrides[dateISO][shiftId]=mems;
       break;
@@ -3396,8 +3394,8 @@ var SHIFT_COLORS=['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#63E6BE','#
   '#2EC4B6','#E71D36','#FF9F1C','#9B5DE5','#00BBF9','#80ED99','#F15BB5','#FEE440'];
 function defaultShifts(){
   return [
-    {id:'s1', name:'Day shift', start:'06:00', end:'18:00', color:'#FFC13E'},
-    {id:'s2', name:'Night shift', start:'18:00', end:'06:00', color:'#4DABF7'}
+    {id:'s1', name:'Day shift', start:'06:00', end:'18:00', color:'#FFC13E', size:2},
+    {id:'s2', name:'Night shift', start:'18:00', end:'06:00', color:'#4DABF7', size:2}
   ];
 }
 function wpShifts(){
@@ -3409,6 +3407,10 @@ function wpShift(id){
   var ss=wpShifts();
   for(var i=0;i<ss.length;i++) if(ss[i].id===id) return ss[i];
   return null;
+}
+function shiftSize(shiftId){
+  var s=wpShift(shiftId);
+  return s&&s.size?parseInt(s.size,10):null;
 }
 /* resolve a pattern state to a shift definition.
    'D' = first shift, 'N' = second shift, 'X' = first 24h shift (start==end) else first;
@@ -3565,6 +3567,7 @@ function renderShifts(){
       '<input type="time" value="'+escQ(s.start||'06:00')+'" aria-label="Shift start" data-shift="'+s.id+'" data-f="start">'+
       '<span class="tdash">\u2013</span>'+
       '<input type="time" value="'+escQ(s.end||'18:00')+'" aria-label="Shift end" data-shift="'+s.id+'" data-f="end">'+
+      '<input type="number" min="1" max="50" value="'+(s.size||'')+'" placeholder="Size" aria-label="People per shift" title="How many people should work this shift" data-shift="'+s.id+'" data-f="size" style="width:56px;">'+
       '<button class="rm" type="button" title="Remove shift" data-del="'+s.id+'">\u2715</button>'+
       '</div>';
   }).join('');
@@ -3575,6 +3578,7 @@ function renderShifts(){
         var s=wpShift(inp.getAttribute('data-shift')); if(!s) return;
         var f=inp.getAttribute('data-f'), v=inp.value;
         if(f==='name'){ if(v.trim()) s.name=v.trim(); }
+        else if(f==='size'){ s.size=v?Math.max(1,parseInt(v,10)||1):null; }
         else if(v){ s[f]=v; }
         persistBase(); renderShifts(); renderCalendar();
       };
