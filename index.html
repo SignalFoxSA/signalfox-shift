@@ -817,7 +817,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1735';
+var BUILD='20261012-1740';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2370,7 +2370,15 @@ function daySheetWeek(){
 function allStaffNames(){
   var names={};
   (S.base.staff||[]).forEach(function(s){ if(s.name) names[s.name]=1; });
-  (dayCtx.R.crews||[]).forEach(function(c){ (c.members||[]).forEach(function(n){ names[n]=1; }); });
+  try{
+    if(dayCtx&&dayCtx.R) (dayCtx.R.crews||[]).forEach(function(c){ (c.members||[]).forEach(function(n){ names[n]=1; }); });
+  }catch(e){}
+  /* also include crew members from all saved rosters */
+  try{
+    (S.rosters||[]).forEach(function(u){
+      ((u.roster&&u.roster.crews)||[]).forEach(function(c){ (c.members||[]).forEach(function(n){ if(n) names[n]=1; }); });
+    });
+  }catch(e){}
   return Object.keys(names).sort();
 }
 function openDayEdit(){
