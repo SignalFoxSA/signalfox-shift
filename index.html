@@ -178,6 +178,8 @@
   .dot{width:10px;height:10px;border-radius:50%; display:inline-block; margin-right:7px;}
   .dow{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin:8px 0 4px;}
   .dow span{text-align:center; font-size:11px; color:var(--muted); font-weight:700;}
+  .hdot{display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent); margin-left:4px; vertical-align:2px;}
+  .holtag{display:inline-block; font-size:10px; font-weight:700; color:var(--accent); border:1px solid var(--accent); border-radius:20px; padding:1px 8px; margin-left:6px; vertical-align:1px; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
   .cell{
     border-radius:10px; min-height:70px; padding:5px 4px; cursor:pointer; position:relative;
@@ -510,6 +512,22 @@
       <button class="btn" onclick="saveSettingsProfile()">Save</button>
     </div>
     <div class="card">
+      <h3>Display</h3>
+      <label class="f">Week starts on</label>
+      <div class="pills" id="setWeekStart"></div>
+      <label class="f">Time format</label>
+      <div class="pills" id="setTimeFmt"></div>
+      <label class="f">Public holidays</label>
+      <select id="setHolidays"></select>
+      <p class="fine">Marks public holidays on the calendar. Fetched once per year when you're online.</p>
+      <label class="f">Day shift called</label>
+      <input type="text" id="setShiftD" maxlength="30">
+      <label class="f">Night shift called</label>
+      <input type="text" id="setShiftN" maxlength="30">
+      <label class="f">24-hour shift called</label>
+      <input type="text" id="setShiftX" maxlength="30">
+    </div>
+    <div class="card">
       <h3>Data</h3>
       <p class="sub">Your rosters sync to your account, and stay on this device too.</p>
       <button class="btn ghost" onclick="exportData()">&#11015; Export backup</button>
@@ -628,7 +646,7 @@
     <div class="pills" id="calMode" style="margin:10px 0;"></div>
     <div class="legend" id="calLegend"></div>
     <div id="calMonthWrap">
-      <div class="dow"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+      <div class="dow" id="calDow"></div>
       <div class="grid" id="calGrid"></div>
     </div>
     <div id="calAgendaWrap" style="display:none"></div>
@@ -905,7 +923,7 @@ function slotTime(R, slotId){
   var slots=rotSlots(R.rotation), idx=0;
   for(var i=0;i<slots.length;i++) if(slots[i].id===slotId) idx=i;
   var s=endTime(R.startTime||'06:00', idx*(R.shiftLen||12));
-  return s+'–'+endTime(s, R.shiftLen||12);
+  return fmtTime(s)+'\u2013'+fmtTime(endTime(s, R.shiftLen||12));
 }
 function slotById(key, id){
   var slots=rotSlots(key);
@@ -1591,11 +1609,11 @@ function renderAnchor(){
     });
   }
   if(A.nightSlot){
-    dl.innerHTML='\u2600\ufe0f On days'; nl.style.display=''; document.getElementById('ancNight').style.display='';
+    dl.innerHTML='\u2600\ufe0f '+escapeHtml(shiftLabel('D')); nl.style.display=''; document.getElementById('ancNight').style.display='';
     pills('ancDay', A.dayCrew, function(i){ anchorPick('day', i); });
     pills('ancNight', A.nightCrew, function(i){ anchorPick('night', i); });
   } else {
-    dl.textContent='On duty'; nl.style.display='none'; document.getElementById('ancNight').style.display='none';
+    dl.textContent=shiftLabel(A.daySlot||'D'); nl.style.display='none'; document.getElementById('ancNight').style.display='none';
     pills('ancDay', A.dayCrew, function(i){ anchorPick('day', i); });
   }
   /* the 1st can fall on any day of a multi-day work block — ask which */
@@ -1618,7 +1636,7 @@ function renderAnchor(){
     ? 'Suggested from where last month ended \u2014 tap a crew to correct it.'
     : (A.conflict
         ? 'That combination can\u2019t happen in this rotation \u2014 the other shift was set to match.'
-        : 'Pick the crew on the first '+(A.nightSlot?'day shift':'shift')+' of the month.');
+        : 'Pick the crew on the first '+(A.nightSlot?shiftLabel('D').toLowerCase():'shift')+' of the month.');
   }
   /* day-1 lineup preview */
   var prev=document.getElementById('ancPreview');
@@ -1798,10 +1816,18 @@ function calSlotCrews(R, dayIdx){
   });
   return per;
 }
+function renderDow(){
+  var el=document.getElementById('calDow'); if(!el) return;
+  var L=['S','M','T','W','T','F','S'], ws=wsDow(), html='';
+  for(var i=0;i<7;i++) html+='<span>'+L[(ws+i)%7]+'</span>';
+  el.innerHTML=html;
+}
 function renderCalMonth(ctx){
   var cal=ensureCal(), R=ctx.R, y=cal.y, m=cal.m;
+  renderDow(); ensureHolidays(y);
+  var hol=holMapFor(y);
   var grid=document.getElementById('calGrid');
-  var dim=daysInMonth(y,m), lead=(new Date(y,m,1).getDay()+6)%7;
+  var dim=daysInMonth(y,m), lead=leadDays(y,m);
   var weeks=Math.ceil((lead+dim)/7), html='';
   for(var k=0;k<lead;k++) html+='<div class="cell out"></div>';
   for(var d=1;d<=dim;d++){
@@ -1810,7 +1836,8 @@ function renderCalMonth(ctx){
       html+='<div class="cell out"><div class="dnum">'+d+'</div></div>';
     }else{
       var date=info.date;
-      var inner='<div class="dnum">'+d+'</div>';
+      var hd=hol?hol[holISO(y,m,d)]:null;
+      var inner='<div class="dnum">'+d+(hd?'<span class="hdot" title="'+escapeHtml(hd)+'"></span>':'')+'</div>';
       calSlotCrews(R,info.dayIdx).forEach(function(ps){
         if(!ps.list.length) return;
         var names=ps.list.map(function(x){ return escapeHtml(x.c.name); }).join('/');
@@ -1835,8 +1862,9 @@ function renderCalMonth(ctx){
 }
 function renderCalEmpty(){
   var cal=ensureCal();
+  renderDow(); ensureHolidays(cal.y);
   var grid=document.getElementById('calGrid');
-  var dim=daysInMonth(cal.y,cal.m), lead=(new Date(cal.y,cal.m,1).getDay()+6)%7;
+  var dim=daysInMonth(cal.y,cal.m), lead=leadDays(cal.y,cal.m);
   var weeks=Math.ceil((lead+dim)/7), html='';
   for(var k=0;k<lead;k++) html+='<div class="cell out"></div>';
   for(var d=1;d<=dim;d++){
@@ -1894,8 +1922,9 @@ function renderCalSix(){
     }else{
       var R=ctx.R;
       html+='<div class="mgrid">';
-      ['M','T','W','T','F','S','S'].forEach(function(w){ html+='<div class="dow">'+w+'</div>'; });
-      var lead=(new Date(y,m,1).getDay()+6)%7, dim=daysInMonth(y,m);
+      var miniDow=['S','M','T','W','T','F','S'], mws=wsDow();
+      for(var wi=0;wi<7;wi++) html+='<div class="dow">'+miniDow[(mws+wi)%7]+'</div>';
+      var lead=leadDays(y,m), dim=daysInMonth(y,m);
       for(var k=0;k<lead;k++) html+='<div class="smc out"></div>';
       for(var dd=1;dd<=dim;dd++){
         var info=calRosterDay(R,y,m,dd);
@@ -2008,7 +2037,9 @@ function renderCalAgenda(ctx){
 function renderCalWeek(ctx){
   var cal=ensureCal(), R=ctx.R;
   var wk=parseISO(cal.weekISO);
-  var mon=addDays(wk, -((wk.getDay()+6)%7));
+  var mon=weekStartOf(wk);
+  ensureHolidays(mon.getFullYear()); ensureHolidays(addDays(mon,6).getFullYear());
+  var hol=holMapFor(mon.getFullYear()), hol2=holMapFor(addDays(mon,6).getFullYear());
   var wrap=document.getElementById('calWeekWrap');
   var WD=['SUN','MON','TUE','WED','THU','FRI','SAT'];
   var html='<div class="wkback"><button class="wkbackbtn">&#8592; Back to month</button></div>';
@@ -2020,9 +2051,12 @@ function renderCalWeek(ctx){
     var info=calRosterDay(R,date.getFullYear(),date.getMonth(),date.getDate());
     var isT=isToday(date);
     var isPicked=toISO(date)===cal.weekISO;
+    var hd=(hol&&hol[holISO(date.getFullYear(),date.getMonth(),date.getDate())])||
+           (hol2&&hol2[holISO(date.getFullYear(),date.getMonth(),date.getDate())])||null;
     var head='<div class="dhead"><span class="wd">'+WD[date.getDay()]+'</span>'+
       '<span class="dn">'+date.getDate()+'</span><span class="mn">'+MNS[date.getMonth()]+'</span>'+
-      (isT?'<span class="todaytag">TODAY</span>':'')+'</div>';
+      (isT?'<span class="todaytag">TODAY</span>':'')+
+      (hd?'<span class="holtag">'+escapeHtml(hd)+'</span>':'')+'</div>';
     if(!info){
       html+='<div class="daycard out">'+head+'<div style="color:var(--muted);font-size:14px;">No roster coverage</div></div>';
     }else{
@@ -2101,14 +2135,14 @@ function stLabel(st, R){
   if(st==='OFF') return 'Off';
   var sl=R?slotById(R.rotation, st):null;
   if(sl){
-    if(sl.id==='X') return '24h shift';
-    if(sl.id==='D') return 'Day shift';
-    if(sl.id==='N') return 'Night shift';
+    if(sl.id==='X') return shiftLabel('X');
+    if(sl.id==='D') return shiftLabel('D');
+    if(sl.id==='N') return shiftLabel('N');
     return sl.label+' · '+slotTime(R, st);
   }
-  if(st==='D') return 'Day shift';
-  if(st==='N') return 'Night shift';
-  if(st==='X') return '24h shift';
+  if(st==='D') return shiftLabel('D');
+  if(st==='N') return shiftLabel('N');
+  if(st==='X') return shiftLabel('X');
   return st;
 }
 function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -2830,10 +2864,114 @@ function staffDel(si){
 }
 
 /* ---------- settings ---------- */
+/* ---------- display settings ---------- */
+function defaultSettings(){
+  return {weekStart:1, timeFmt:24, holidays:'',
+    shiftNames:{D:'Day shift', N:'Night shift', X:'24h shift'}};
+}
+function appSettings(){
+  if(!S.base) return defaultSettings();
+  if(!S.base.settings) S.base.settings={};
+  var d=defaultSettings(), s=S.base.settings;
+  if(s.weekStart!==0 && s.weekStart!==1) s.weekStart=d.weekStart;
+  if(s.timeFmt!==12 && s.timeFmt!==24) s.timeFmt=d.timeFmt;
+  if(typeof s.holidays!=='string') s.holidays=d.holidays;
+  if(!s.shiftNames || typeof s.shiftNames!=='object') s.shiftNames={};
+  ['D','N','X'].forEach(function(k){ if(!s.shiftNames[k]) s.shiftNames[k]=d.shiftNames[k]; });
+  return s;
+}
+/* week start: 1=Monday (default), 0=Sunday */
+function wsDow(){ return appSettings().weekStart===0?0:1; }
+/* leading blank cells for a month grid under the week-start setting */
+function leadDays(y,m){ return ((new Date(y,m,1).getDay()-wsDow())+7)%7; }
+/* first day of the display-week holding `date` */
+function weekStartOf(date){ return addDays(date, -(((date.getDay()-wsDow())+7)%7)); }
+/* 3-letter weekday headers in week-start order */
+function dowOrder(){ var L=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], o=[]; for(var i=0;i<7;i++) o.push(L[(wsDow()+i)%7]); return o; }
+function fmtTime(hhmm){
+  if(appSettings().timeFmt!==12) return hhmm;
+  var p=String(hhmm).split(':'), h=parseInt(p[0],10), m=p[1]||'00';
+  var ap=h<12?'AM':'PM', h12=h%12; if(h12===0) h12=12;
+  return h12+':'+m+' '+ap;
+}
+/* custom shift names (full label, e.g. "Day shift") */
+function shiftLabel(id){ var s=appSettings().shiftNames||{}; return s[id]||defaultSettings().shiftNames[id]||id; }
+/* short label for export bands, e.g. "Day" */
+function shiftShort(id){ return String(shiftLabel(id)).replace(/\s+shift$/i,''); }
+
+var HOL_COUNTRIES=[['ZA','South Africa'],['NA','Namibia'],['BW','Botswana'],['ZW','Zimbabwe'],
+  ['LS','Lesotho'],['NG','Nigeria'],['KE','Kenya'],['GH','Ghana'],['US','United States'],
+  ['CA','Canada'],['GB','United Kingdom'],['IE','Ireland'],['AU','Australia'],['NZ','New Zealand'],
+  ['DE','Germany'],['NL','Netherlands'],['FR','France'],['IN','India'],['SG','Singapore'],['AE','United Arab Emirates']];
+var HOL_MEM={};
+function holMapFor(y){
+  var cc=appSettings().holidays; if(!cc) return null;
+  var k=cc+'_'+y;
+  if(HOL_MEM[k]!==undefined) return HOL_MEM[k];
+  try{
+    var raw=localStorage.getItem('sfshift_hol_'+k);
+    if(raw){ HOL_MEM[k]=JSON.parse(raw); return HOL_MEM[k]; }
+  }catch(e){}
+  return null;
+}
+function ensureHolidays(y){
+  var cc=appSettings().holidays; if(!cc) return;
+  var k=cc+'_'+y;
+  if(HOL_MEM[k]!==undefined || HOL_MEM[k+':f']) return;
+  var cached=null;
+  try{ cached=localStorage.getItem('sfshift_hol_'+k); }catch(e){}
+  if(cached){ try{ HOL_MEM[k]=JSON.parse(cached); }catch(e){ HOL_MEM[k]=null; } return; }
+  HOL_MEM[k+':f']=true;
+  fetch('https://date.nager.at/api/v3/publicholidays/'+y+'/'+cc).then(function(r){
+    if(!r.ok) throw 0; return r.json();
+  }).then(function(arr){
+    var map={};
+    (arr||[]).forEach(function(h){ if(h&&h.date) map[h.date]=h.localName||h.name||'Public holiday'; });
+    HOL_MEM[k]=map;
+    try{ localStorage.setItem('sfshift_hol_'+k, JSON.stringify(map)); }catch(e){}
+    delete HOL_MEM[k+':f'];
+    renderCalendar();
+  }).catch(function(){ delete HOL_MEM[k+':f']; });
+}
+function holISO(y,m,d){ return y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
+
 function renderSettings(){
   document.getElementById('setName').value=profileName();
   document.getElementById('setEmail').value=(sbUser && sbUser.email)||'';
   document.getElementById('setBase').value=(S.base&&S.base.name)||'';
+  var st=appSettings();
+  setPills('setWeekStart',[{v:1,t:'Monday'},{v:0,t:'Sunday'}],st.weekStart,function(v){
+    st.weekStart=v; persistBase(); renderSettings(); renderCalendar();
+  });
+  setPills('setTimeFmt',[{v:24,t:'24-hour'},{v:12,t:'12-hour'}],st.timeFmt,function(v){
+    st.timeFmt=v; persistBase(); renderSettings(); renderCalendar();
+  });
+  var hs=document.getElementById('setHolidays');
+  hs.innerHTML='<option value="">Off</option>'+HOL_COUNTRIES.map(function(c){
+    return '<option value="'+c[0]+'">'+c[1]+'</option>';
+  }).join('');
+  hs.value=st.holidays||'';
+  hs.onchange=function(){ st.holidays=this.value; persistBase(); renderCalendar(); };
+  [['setShiftD','D'],['setShiftN','N'],['setShiftX','X']].forEach(function(pair){
+    var inp=document.getElementById(pair[0]), key=pair[1];
+    inp.value=st.shiftNames[key];
+    inp.placeholder=defaultSettings().shiftNames[key];
+    inp.onchange=function(){
+      var v=this.value.trim();
+      st.shiftNames[key]=v||defaultSettings().shiftNames[key];
+      persistBase(); renderCalendar(); toast('Shift names updated');
+    };
+  });
+}
+function setPills(elId, opts, cur, cb){
+  var el=document.getElementById(elId); if(!el) return;
+  el.innerHTML=opts.map(function(o){
+    return '<div class="pill'+(o.v===cur?' sel':'')+'">'+escapeHtml(o.t)+'</div>';
+  }).join('');
+  var kids=el.querySelectorAll('.pill');
+  for(var i=0;i<kids.length;i++){
+    (function(k, v){ k.onclick=function(){ if(v!==cur) cb(v); }; })(kids[i], opts[i].v);
+  }
 }
 function saveSettingsProfile(){
   var name=document.getElementById('setName').value.trim();
@@ -2872,6 +3010,12 @@ function clearData(){
   ['sfshift_base','sfshift_units','sfshift_rosters','sfshift_hero_logo','sfshift_profile_name','sfshift_mtime'].forEach(function(k){
     try{ localStorage.removeItem(k); }catch(e){}
   });
+  try{
+    var hk=[];
+    for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(k&&k.indexOf('sfshift_hol_')===0) hk.push(k); }
+    hk.forEach(function(k){ localStorage.removeItem(k); });
+  }catch(e){}
+  HOL_MEM={};
   if(sb && sbUser){ try{ sb.from('app_state').delete().eq('user_id', sbUser.id).then(function(){}).catch(function(){}); }catch(e){} }
   loadBase(); loadSaved();
   renderHome(); renderAllRosters(); renderStaffTab(); renderSettings();
@@ -2970,7 +3114,7 @@ function expData(){
   try{
     var stT={rotation:R.rotation, startTime:v.startTime||'06:00', shiftLen:rot.hours||12};
     sub=rot.name+' rotation \u00b7 '+(hasNight
-      ? ('Day '+slotTime(stT,'D')+' \u00b7 Night '+slotTime(stT,'N'))
+      ? (shiftShort('D')+' '+slotTime(stT,'D')+' \u00b7 '+shiftShort('N')+' '+slotTime(stT,'N'))
       : '24h shifts');
   }catch(e){ sub=rot.name+' rotation'; }
   var slug=(vname+'-'+MN[m]+'-'+y).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
@@ -2978,11 +3122,11 @@ function expData(){
     subXlsx:sub.replace(/ rotation/,''),
     footer:'Generated with SignalFox Shift',
     crews:crews, pairs:pairs, hasNight:hasNight,
-    dayLabel:hasNight?'Day':'On duty',
+    dayLabel:hasNight?shiftShort('D'):'On duty',
     slug:slug, rotName:rot.name};
 }
 function expMonthCells(y,m){
-  var cells=[], dim=daysInMonth(y,m), lead=(new Date(y,m,1).getDay()+6)%7;
+  var cells=[], dim=daysInMonth(y,m), lead=leadDays(y,m);
   var py=m===0?y-1:y, pm=m===0?11:m-1, prevDim=daysInMonth(py,pm);
   for(var k=0;k<lead;k++) cells.push({date:prevDim-lead+1+k, inMonth:false});
   for(var d=1;d<=dim;d++) cells.push({date:d, inMonth:true});
@@ -3027,7 +3171,7 @@ function expBuildWorkbook(E, mode){
   set('A2',E.subXlsx,{font:{sz:11,color:{rgb:'FF666666'}}});
   var bdr={top:{style:'thin',color:{rgb:'FFBFBFBF'}},bottom:{style:'thin',color:{rgb:'FFBFBFBF'}},
            left:{style:'thin',color:{rgb:'FFBFBFBF'}},right:{style:'thin',color:{rgb:'FFBFBFBF'}}};
-  ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(function(d,i){
+  dowOrder().forEach(function(d,i){
     set(String.fromCharCode(65+i)+'3',d,
       {font:{bold:true,sz:11},alignment:{horizontal:'center',vertical:'center'},
        fill:{patternType:'solid',fgColor:{rgb:isNames?'FFD9D9D9':'FFE8E8E8'}},
@@ -3092,7 +3236,7 @@ function expGridEl(E, mode, variant){
       +'Crew '+escapeHtml(c.name)+' \u2014 '+escapeHtml(c.names.join(', '))+'</span>';
   });
   h+='</div><div style="font-size:0;border-left:1px solid #ddd;border-top:1px solid #ddd;">';
-  ['MON','TUE','WED','THU','FRI','SAT','SUN'].forEach(function(d){
+  dowOrder().map(function(d){ return d.toUpperCase(); }).forEach(function(d){
     h+='<span style="display:inline-block;box-sizing:border-box;width:'+cw+'px;font-size:'+F(11)+'px;font-weight:700;color:#888;text-align:center;padding:'+F(6)+'px 0;border-right:1px solid #ddd;border-bottom:1px solid #ddd;">'+d+'</span>';
   });
   var cellH=F(isNames?100:92);
@@ -3111,13 +3255,13 @@ function expGridEl(E, mode, variant){
       h+=open+'">'
         +'<div style="font-size:'+F(14)+'px;font-weight:700;">'+c.date+'</div>'
         +(dc?'<div style="background:'+dc.color+';border-radius:'+F(5)+'px;text-align:center;font-size:'+F(13)+'px;font-weight:800;color:'+bt+';padding:'+P+'px 0;margin-top:'+F(4)+'px;">'+E.dayLabel.toUpperCase()+': '+escapeHtml(dc.name)+'</div>':'')
-        +(E.hasNight&&nc?'<div style="background:'+nc.color+';border-radius:'+F(5)+'px;text-align:center;font-size:'+F(13)+'px;font-weight:800;color:'+bt+';padding:'+P+'px 0;margin-top:'+F(4)+'px;">NIGHT: '+escapeHtml(nc.name)+'</div>':'')
+        +(E.hasNight&&nc?'<div style="background:'+nc.color+';border-radius:'+F(5)+'px;text-align:center;font-size:'+F(13)+'px;font-weight:800;color:'+bt+';padding:'+P+'px 0;margin-top:'+F(4)+'px;">'+escapeHtml(shiftShort('N').toUpperCase())+': '+escapeHtml(nc.name)+'</div>':'')
         +'</span>';
     }else{
       h+=open+'background:'+(dc?dc.tintNames:'transparent')+';">'
         +'<div style="font-size:'+F(14)+'px;font-weight:700;">'+c.date+'</div>'
         +(dc?'<div style="font-size:'+F(12.5)+'px;margin-top:'+F(3)+'px;"><b>'+E.dayLabel+':</b> <span style="color:'+dc.dark+';">'+escapeHtml(dc.names.join(', '))+'</span></div>':'')
-        +(E.hasNight&&nc?'<div style="font-size:'+F(12.5)+'px;margin-top:'+F(2)+'px;"><b>Night:</b> <span style="color:'+nc.dark+';">'+escapeHtml(nc.names.join(', '))+'</span></div>':'')
+        +(E.hasNight&&nc?'<div style="font-size:'+F(12.5)+'px;margin-top:'+F(2)+'px;"><b>'+escapeHtml(shiftShort('N'))+':</b> <span style="color:'+nc.dark+';">'+escapeHtml(nc.names.join(', '))+'</span></div>':'')
         +'</span>';
     }
   });
