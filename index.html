@@ -521,7 +521,7 @@
       <button class="btn" onclick="openBaseSetup()">Set up my workplace</button>
     </div>
     <button class="btn" id="newRosterBtn" onclick="toNewRoster()">+ New roster</button>
-    <button class="btn ghost" onclick="openBase()">&#128065; Who's on duty</button>
+    <button class="btn ghost" onclick="switchTab('onduty')">&#128065; Who's on duty</button>
     <button class="btn ghost" onclick="openBaseSetup()">&#128736; Set up my workplace</button>
     <div class="card">
       <h3>On duty today</h3>
@@ -723,12 +723,12 @@
       <div id="baseUnits"></div>
       <div id="baseCoverPanel"></div>
     </div>
-    <button class="btn ghost" onclick="goBack()">Back</button>
   </div>
 </div>
 
 <nav class="tabs">
   <button data-tab="home" onclick="switchTab('home')"><span class="ti">&#127968;</span>Home</button>
+  <button data-tab="onduty" onclick="switchTab('onduty')"><span class="ti">&#128065;</span>On Duty</button>
   <button data-tab="rosters" onclick="switchTab('rosters')"><span class="ti">&#128197;</span>Rosters</button>
   <button data-tab="staff" onclick="switchTab('staff')"><span class="ti">&#128101;</span>Staff</button>
   <button data-tab="settings" onclick="switchTab('settings')"><span class="ti">&#9881;&#65039;</span>Settings</button>
@@ -806,7 +806,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1428';
+var BUILD='20261012-1440';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2383,13 +2383,14 @@ function renderDayEdit(){
     ed.members.forEach(function(nm, mi){
       html+='<span class="mchip">'+escapeHtml(dispMember(nm))+'<button type="button" onclick="dayEditRemove('+si+','+mi+')" aria-label="Remove">×</button></span>';
     });
-    html+='</div><div style="display:flex;gap:8px;margin-top:8px;">'+
-      '<select id="deAddSel'+si+'" style="flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card2);color:var(--text);" onchange="dayEditSelChg('+si+')">'+
-      '<option value="">— Pick staff —</option>'+
+    html+='</div><div style="margin-top:8px;">'+
+      '<select id="deAddSel'+si+'" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--card2);color:var(--text);margin-bottom:8px;" onchange="dayEditSelPick('+si+')">'+
+      '<option value="">— Pick from staff list —</option>'+
       staffNames.map(function(n){ return '<option value="'+escapeHtml(n)+'">'+escapeHtml(n)+'</option>'; }).join('')+
-      '<option value="__new__">+ Type new name…</option></select>'+
-      '<input id="deAddNew'+si+'" placeholder="New name…" style="flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;display:none;">'+
-      '<button class="btn ghost" type="button" onclick="dayEditAdd('+si+')">Add</button></div></div>';
+      '</select>'+
+      '<div style="display:flex;gap:8px;">'+
+      '<input id="deAddNew'+si+'" placeholder="Or type a name…" style="flex:1;min-width:0;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--card2);color:var(--text);">'+
+      '<button type="button" onclick="dayEditAdd('+si+')" style="flex:none;padding:10px 18px;border-radius:8px;border:1px solid var(--line);background:var(--card2);color:var(--text);font-weight:700;cursor:pointer;">Add</button></div></div></div>';
   });
   html+='<div class="scopeRow">'+
     '<label><input type="radio" name="deScope" value="once"'+(dayCtx.scope==='once'?' checked':'')+' onchange="dayCtx.scope=\'once\'"> Only this day<br><span style="color:var(--muted);font-size:12px;">Once-off change</span></label>'+
@@ -2399,22 +2400,18 @@ function renderDayEdit(){
     '<div class="btnrow"><button class="btn ghost" onclick="dayCtx.edit=false;renderDaySheet()">Back</button>'+
     '<button class="btn" onclick="saveDayEdit()">Save</button></div>';
 }
-function dayEditSelChg(si){
+function dayEditSelPick(si){
   var sel=document.getElementById('deAddSel'+si);
   var inp=document.getElementById('deAddNew'+si);
-  if(sel.value==='__new__'){ inp.style.display=''; inp.focus(); }
-  else { inp.style.display='none'; }
+  if(sel.value) inp.value=sel.value;
 }
 function dayEditRemove(si, mi){
   dayCtx.editData[si].members.splice(mi,1);
   renderDayEdit();
 }
 function dayEditAdd(si){
-  var sel=document.getElementById('deAddSel'+si);
   var inp=document.getElementById('deAddNew'+si);
-  var nm='';
-  if(sel.value==='__new__') nm=(inp.value||'').trim();
-  else nm=sel.value;
+  var nm=(inp.value||'').trim();
   if(!nm) return;
   if(dayCtx.editData[si].members.indexOf(nm)<0) dayCtx.editData[si].members.push(nm);
   renderDayEdit();
@@ -3137,7 +3134,7 @@ function enterApp(){
 }
 
 /* ---------- navigation ---------- */
-var TAB_VIEWS={home:'v-home', rosters:'v-rosters', staff:'v-staff', settings:'v-settings'};
+var TAB_VIEWS={home:'v-home', rosters:'v-rosters', onduty:'v-base', staff:'v-staff', settings:'v-settings'};
 var BACK_IDS=['v-basesetup','v-newroster','v-anchor','v-cal','v-base','v-rotbuilder'];
 function show(id){
   document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
@@ -3151,6 +3148,7 @@ function show(id){
 }
 function switchTab(name){
   if(name==='home') renderHome();
+  if(name==='onduty'){ S.baseDateISO=toISO(new Date()); renderBase(); }
   if(name==='rosters') renderAllRosters();
   if(name==='staff'){ renderStaffQuals(); renderStaffTab(); }
   if(name==='settings') renderSettings();
