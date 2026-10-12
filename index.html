@@ -817,7 +817,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1740';
+var BUILD='20261012-1758';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -3689,6 +3689,17 @@ function renderStaffTab(){
     })(s);
     bot.appendChild(tsel); bot.appendChild(csel);
     row.appendChild(top); row.appendChild(bot);
+    var meta=document.createElement('div'); meta.className='sline';
+    var empNo=document.createElement('input'); empNo.type='text'; empNo.maxLength=20; empNo.value=s.empNo||'';
+    empNo.placeholder='Employee no.'; empNo.title='Employee number (for login linking)';
+    empNo.style.maxWidth='110px';
+    empNo.oninput=function(){ s.empNo=this.value.trim(); persistBase(); };
+    var em=document.createElement('input'); em.type='email'; em.maxLength=60; em.value=s.email||'';
+    em.placeholder='Email (for login)'; em.title='Email address (for employee login)';
+    em.style.flex='1'; em.style.minWidth='0';
+    em.oninput=function(){ s.email=this.value.trim(); persistBase(); };
+    meta.appendChild(empNo); meta.appendChild(em);
+    row.appendChild(meta);
     wrap.appendChild(row);
   });
 }
