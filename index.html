@@ -786,7 +786,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1252';
+var BUILD='20261012-1255';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -1861,7 +1861,8 @@ function renderCalChrome(ctx){
   }).join('')+(function(){
     if(!ctx||!ctx.R) return '';
     return rotSlots(ctx.R.rotation).map(function(s,i){
-      return '<span><span class="dot" style="background:'+shiftStandardColor(i)+'"></span>'+escapeHtml(s.name)+'</span>';
+      var tm=''; try{ tm=slotTime(ctx.R, s.id); }catch(e){}
+      return '<span><span class="dot" style="background:'+shiftStandardColor(i)+'"></span>'+escapeHtml(s.name)+(tm?' '+escapeHtml(tm):'')+'</span>';
     }).join('');
   })();
 }
@@ -1900,7 +1901,6 @@ function renderCalMonth(ctx){
       var slots=rotSlots(R.rotation), nSlots=slots.length;
       calSlotCrews(R,info.dayIdx).forEach(function(ps, sIdx){
         if(!ps.list.length) return;
-        var tm=''; try{ tm=shortShiftTime(ps.sl); }catch(e){}
         var dateISO=info.date?isoDate(info.date):null;
         var crews=ps.list.map(function(x){ return escapeHtml(x.c.name); }).join(' / ');
         var memNames=[];
@@ -1912,7 +1912,7 @@ function renderCalMonth(ctx){
         var memLine=memNames.length?'<span class="bm">'+memNames.map(escapeHtml).join(', ')+'</span>':'';
         var band=shiftStandardColor(sIdx);
         inner+='<span class="band" style="background:'+band+';color:'+textOnBand(band)+'">'+
-          '<span class="bs">'+escapeHtml(shiftBandShort(ps.sl.name))+(tm?' '+tm:'')+'</span>'+
+          '<span class="bs">'+escapeHtml(shiftBandShort(ps.sl.name))+'</span>'+
           '<span class="bc">'+crews+'</span>'+memLine+'</span>';
       });
       var ed=R.crews.some(function(c,ci){ return R.overrides[info.dayIdx+':'+ci]; });
