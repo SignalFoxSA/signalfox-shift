@@ -315,8 +315,8 @@
     background:var(--card); color:var(--accent); font-size:26px; font-weight:800; cursor:pointer; line-height:1;}
   #calMode{margin:10px 0;}
   .cell{position:relative; min-height:76px;}
-  .cell .band{display:block; border-radius:6px; font-size:11px; font-weight:800; color:#141414;
-    padding:4px 2px; margin-top:4px; line-height:1.25; white-space:nowrap; overflow:hidden; text-align:center;}
+  .cell .band{display:block; border-radius:6px; font-size:12px; font-weight:800; color:#141414;
+    padding:6px 4px; margin-top:4px; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center;}
   .cell.out{opacity:.32; cursor:default;}
   .cell .edot{position:absolute; top:5px; right:6px; width:7px; height:7px; border-radius:50%;
     background:var(--accent); box-shadow:0 0 4px var(--accent);}
@@ -750,7 +750,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1058';
+var BUILD='20261012-1131';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -1560,7 +1560,7 @@ function toAnchorStep(){
   var abs=anySuggested?sug:(ms.length?ms[0]:0);
   if(abs<0) abs=0;
   S.anchor={vehicleId:v.id, rotKey:rotKey, year:y, month:m,
-    slots:slots.map(function(s){ return {id:s.id, name:s.name, icon:s.icon||''}; }),
+    slots:slots.map(function(s){ return {id:s.id, name:s.name}; }),
     picks:picks, abs:abs,
     blockOpts:ms, blockDay:0, suggested:anySuggested, conflict:false};
   renderAnchor();
@@ -1615,7 +1615,7 @@ function renderAnchor(){
     /* one pill row per shift */
     (A.slots||[]).forEach(function(s){
       var lab=document.createElement('label'); lab.className='f';
-      lab.innerHTML=(s.icon?s.icon+' ':'')+escapeHtml(s.name);
+      lab.textContent=s.name;
       var box=document.createElement('div'); box.className='pills';
       crews.forEach(function(c,i){
         var p=document.createElement('div');
@@ -1656,11 +1656,10 @@ function renderAnchor(){
     var st=baseState(A.rotKey, ci, A.abs);
     if(st==='OFF') return null;
     var sl=slotById(A.rotKey, st);
-    var icon=sl?(sl.icon||''):'';
     var tm='';
     try{ tm=' \u00b7 '+slotTime({rotation:A.rotKey, startTime:v.startTime||'06:00', shiftLen:rot.hours||12}, st); }catch(e){}
     var names=(c.members&&c.members.length)?' \u2014 '+c.members.map(escapeHtml).join(', '):'';
-    return '<div><span class="cdot" style="background:'+c.color+'"></span> '+icon+' <b>Crew '+escapeHtml(c.name)+'</b>'+names+'<span style="color:var(--muted)">'+tm+'</span></div>';
+    return '<div><span class="cdot" style="background:'+c.color+'"></span> <b>Crew '+escapeHtml(c.name)+'</b>'+names+'<span style="color:var(--muted)">'+tm+'</span></div>';
   }).filter(function(x){ return x; });
   var off=crews.map(function(c,ci){ return baseState(A.rotKey,ci,A.abs)==='OFF'?escapeHtml(c.name):null; }).filter(function(x){ return x; });
   prev.innerHTML='<b>1 '+MN[A.month]+':</b><br>'+bits.join('')+
@@ -1814,7 +1813,12 @@ function renderCalChrome(ctx){
   }
   lg.innerHTML=crews.map(function(c){
     return '<span><span class="dot" style="background:'+c.color+'"></span>Crew '+escapeHtml(c.name)+'</span>';
-  }).join('');
+  }).join('')+(function(){
+    if(!ctx||!ctx.R) return '';
+    return rotSlots(ctx.R.rotation).map(function(s){
+      return '<span><span class="dot" style="background:'+(s.color||'#888')+'"></span>'+escapeHtml(s.name)+'</span>';
+    }).join('');
+  })();
 }
 function calSlotCrews(R, dayIdx){
   var slots=rotSlots(R.rotation);
@@ -1851,7 +1855,7 @@ function renderCalMonth(ctx){
       calSlotCrews(R,info.dayIdx).forEach(function(ps){
         if(!ps.list.length) return;
         var names=ps.list.map(function(x){ return escapeHtml(x.c.name); }).join('/');
-        inner+='<span class="band" style="background:'+ps.list[0].c.color+'">'+(ps.sl.icon||'')+' '+names+'</span>';
+        inner+='<span class="band" style="background:'+(ps.sl.color||'#888')+'">'+escapeHtml(ps.sl.name)+': '+names+'</span>';
       });
       var ed=R.crews.some(function(c,ci){ return R.overrides[info.dayIdx+':'+ci]; });
       if(ed) inner+='<span class="edot"></span>';
@@ -2020,7 +2024,7 @@ function renderCalAgenda(ctx){
           var nm=(x.c.members&&x.c.members.length)?' \u2014 '+x.c.members.map(escapeHtml).join(', '):'';
           return '<span class="cdot" style="background:'+x.c.color+'"></span> <b>Crew '+escapeHtml(x.c.name)+'</b>'+nm;
         }).join(' \u00b7 ');
-        return '<div>'+(sl.icon||'')+' '+(sl.label||sl.id)+': '+bit+'</div>';
+        return '<div><span class="cdot" style="background:'+(sl.color||'#888')+';display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;"></span>'+escapeHtml(sl.name||sl.id)+': '+bit+'</div>';
       }).filter(function(x){ return x; });
       body='<div class="agbody">'+(lines.join('')||'<span class="dim">All off</span>')+(isT?'<span class="todaytag">TODAY</span>':'')+'</div>';
     }
@@ -2080,7 +2084,7 @@ function renderCalWeek(ctx){
         var dot=ps.list.map(function(x){ return '<span class="cdot" style="background:'+x.c.color+'"></span>'; }).join('');
         var tm=''; try{ tm=slotTime(R, ps.sl.id); }catch(e){}
         var cis=ps.list.map(function(x){ return x.ci; }).join(',');
-        body+='<div class="wshift" data-day="'+info.dayIdx+'" data-ci="'+cis+'"><div class="t">'+dot+(ps.sl.icon||'')+' '+escapeHtml(slotDisplayLabel(ps.sl))+'</div><div class="n">'+nm+'</div>'+(tm?'<div class="h">'+tm+'</div>':'')+'</div>';
+        body+='<div class="wshift" data-day="'+info.dayIdx+'" data-ci="'+cis+'" style="border-left:5px solid '+(ps.sl.color||'#888')+'"><div class="t">'+dot+escapeHtml(slotDisplayLabel(ps.sl))+'</div><div class="n">'+nm+'</div>'+(tm?'<div class="h">'+tm+'</div>':'')+'</div>';
       });
       if(!body) body='<div style="color:var(--muted);font-size:14px;">All off</div>';
       html+='<div class="daycard'+(isT?' today':'')+(isPicked?' picked':'')+'">'+head+body+'</div>';
@@ -2126,9 +2130,9 @@ function calWeekNav(dir){
 }
 
 function slotHead(R, sl){
-  var name=sl.id==='X'?'24H':sl.id==='D'?'DAY':sl.id==='N'?'NIGHT':'SHIFT '+sl.short;
-  var t=sl.id==='X'?'':(' · '+slotTime(R, sl.id));
-  return (sl.icon?sl.icon+' ':'')+name+t;
+  var name=sl.name||sl.id;
+  var t=' · '+slotTime(R, sl.id);
+  return name+t;
 }
 function slotShort(key, id){
   var sl=slotById(key, id);
@@ -2174,7 +2178,7 @@ function openSheet(dayIdx, crewIdx){
     var opts2=document.getElementById('sheetOpts'); opts2.innerHTML='';
     rotSlots(R.rotation).forEach(function(sl){
       var b=document.createElement('button'); b.className='opt';
-      b.textContent=(sl.icon?sl.icon+' ':'')+sl.name+' · '+slotTime(R,sl.id);
+      b.textContent=sl.name+' · '+slotTime(R,sl.id);
       b.onclick=(function(v){ return function(){ setOverride(v); }; })(sl.id);
       opts2.appendChild(b);
     });
@@ -2377,7 +2381,7 @@ function renderBase(){
       });
       slots.forEach(function(sl,k){
         var srow=document.createElement('div'); srow.className='urow';
-        var lab=sl.id==='X'?'🚑':(sl.icon||'🕐');
+        var lab='<span class="cdot" style="background:'+(sl.color||'#888')+';display:inline-block;"></span>';
         srow.innerHTML='<span class="ulab">'+lab+'</span><span>'+(buckets[k].join('<br>')||'<span style="color:var(--muted)">–</span>')+'</span>';
         card.appendChild(srow);
       });
@@ -2700,8 +2704,8 @@ function renderToday(){
       slots.forEach(function(sl,k){ if(st===sl.id) buckets[k].push(bit); });
     });
     var line=slots.map(function(sl,k){
-      var ic=sl.id==='X'?'&#128657;':(sl.icon||'&#128336;');
-      return ic+' '+(buckets[k].join(' &middot; ')||'&mdash;');
+      var dot='<span class="cdot" style="background:'+(sl.color||'#888')+';display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;"></span>';
+      return dot+(buckets[k].join(' &middot; ')||'&mdash;');
     }).join('<br>');
     rows.push('<div class="urow"><span class="ulab">&#8226;</span><span><b>'+escapeHtml(u.name)+'</b><br>'+line+'</span></div>');
   });
@@ -2869,10 +2873,11 @@ function staffDel(si){
    The workplace defines its shifts: name + start/end time. Add as many as
    the day needs — the count you define IS the shifts per 24 hours.
    Rotations reference these (built-ins by position: D=1st, N=2nd). */
+var SHIFT_COLORS=['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#63E6BE','#FFD43B','#E599F7'];
 function defaultShifts(){
   return [
-    {id:'s1', name:'Day shift', start:'06:00', end:'18:00'},
-    {id:'s2', name:'Night shift', start:'18:00', end:'06:00'}
+    {id:'s1', name:'Day shift', start:'06:00', end:'18:00', color:'#FFC13E'},
+    {id:'s2', name:'Night shift', start:'18:00', end:'06:00', color:'#4DABF7'}
   ];
 }
 function wpShifts(){
@@ -2894,7 +2899,7 @@ function slotDef(stateId){
     if(!s) return null;
     return {id:slot, shiftId:s.id, name:s.name||slot,
       start:s.start||'06:00', end:s.end||'18:00',
-      icon:slot==='D'?'\u2600\ufe0f':slot==='N'?'\ud83c\udf19':slot==='X'?'\ud83d\ude91':''};
+      color:s.color||SHIFT_COLORS[0]};
   }
   if(stateId==='D') return wrap(ss[0],'D');
   if(stateId==='N') return wrap(ss[1],'N');
@@ -2916,6 +2921,10 @@ function migrateShifts(){
     }
   }
   if(S.base.settings) delete S.base.settings.shiftNames;
+  /* backfill colors on shifts that predate them */
+  wpShifts().forEach(function(s,i){
+    if(!s.color) s.color=SHIFT_COLORS[i%SHIFT_COLORS.length];
+  });
   /* custom rotations: old slot ids → workplace shift ids (idempotent) */
   var ss=wpShifts();
   function byIdx(i){ return ss[i]?ss[i].id:0; }
@@ -3026,17 +3035,27 @@ function renderSettings(){
   renderShifts();
 }
 /* workplace shift manager: name + hours per shift, as many as the day needs */
+var shiftColorOpen=null;
 function renderShifts(){
   var wrap=document.getElementById('shiftList'); if(!wrap) return;
   function escQ(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   wrap.innerHTML=wpShifts().map(function(s){
-    return '<div class="shiftrow">'+
+    var col=s.color||SHIFT_COLORS[0];
+    var html='<div class="shiftrow">'+
+      '<button class="cdot cdotbtn" type="button" style="background:'+col+'" title="Change shift color" aria-label="Change shift color" data-cdot="'+s.id+'"></button>'+
       '<input type="text" maxlength="24" value="'+escQ(s.name)+'" placeholder="Shift name" aria-label="Shift name" data-shift="'+s.id+'" data-f="name">'+
       '<input type="time" value="'+escQ(s.start||'06:00')+'" aria-label="Shift start" data-shift="'+s.id+'" data-f="start">'+
       '<span class="tdash">\u2013</span>'+
       '<input type="time" value="'+escQ(s.end||'18:00')+'" aria-label="Shift end" data-shift="'+s.id+'" data-f="end">'+
       '<button class="rm" type="button" title="Remove shift" data-del="'+s.id+'">\u2715</button>'+
       '</div>';
+    if(shiftColorOpen===s.id){
+      html+='<div class="cswatches" style="margin:6px 0 2px 34px;">'+SHIFT_COLORS.map(function(c){
+        return '<button type="button" class="csw'+(String(c).toLowerCase()===String(col).toLowerCase()?' sel':'')+
+          '" style="background:'+c+'" title="'+c+'" aria-label="Shift color '+c+'" data-pick="'+s.id+'|'+c+'"></button>';
+      }).join('')+'</div>';
+    }
+    return html;
   }).join('');
   var inps=wrap.querySelectorAll('input');
   for(var i=0;i<inps.length;i++){
@@ -3050,6 +3069,27 @@ function renderShifts(){
       };
     })(inps[i]);
   }
+  var dots=wrap.querySelectorAll('button[data-cdot]');
+  for(var k=0;k<dots.length;k++){
+    (function(btn){
+      btn.onclick=function(){
+        var id=btn.getAttribute('data-cdot');
+        shiftColorOpen=(shiftColorOpen===id?null:id);
+        renderShifts();
+      };
+    })(dots[k]);
+  }
+  var picks=wrap.querySelectorAll('button[data-pick]');
+  for(var q=0;q<picks.length;q++){
+    (function(btn){
+      btn.onclick=function(){
+        var parts=btn.getAttribute('data-pick').split('|');
+        var s=wpShift(parts[0]); if(!s) return;
+        s.color=parts[1]; shiftColorOpen=null;
+        persistBase(); renderShifts(); renderCalendar();
+      };
+    })(picks[q]);
+  }
   var dels=wrap.querySelectorAll('button[data-del]');
   for(var j=0;j<dels.length;j++){
     (function(btn){
@@ -3060,7 +3100,8 @@ function renderShifts(){
 }
 function shiftAdd(){
   var ss=wpShifts();
-  ss.push({id:'s'+Date.now(), name:'', start:'06:00', end:'18:00'});
+  ss.push({id:'s'+Date.now(), name:'', start:'06:00', end:'18:00',
+    color:SHIFT_COLORS[ss.length%SHIFT_COLORS.length]});
   persistBase(); renderShifts(); renderCalendar();
   var inps=document.querySelectorAll('#shiftList .shiftrow:last-child input[type=text]');
   if(inps.length) inps[0].focus();
@@ -3182,7 +3223,7 @@ function openShare(){
 /* ================= export roster (Excel / PDF / WhatsApp image / WhatsApp text) =================
    Bottom sheet + in-browser file generation, ported from the approved export-menu demo.
    Locked formats: day/night label first ("Day: A", never "A day" outside the spreadsheet),
-   no sun/moon emojis in PDFs, images or text (spreadsheet keeps "A day" / "D night \uD83C\uDF19"). */
+   no emojis in PDFs, images, text or spreadsheet (spreadsheet keeps "A day" / "D night"). */
 function expMix(a,b,t){
   function ch(h){ return parseInt(h,16); }
   function hx(n){ n=Math.max(0,Math.min(255,Math.round(n))); var s=n.toString(16).toUpperCase(); return s.length<2?'0'+s:s; }
@@ -3193,7 +3234,7 @@ function expMix(a,b,t){
 /* Build export data from the currently viewed calendar roster. */
 function expShiftList(R){
   return rotSlots(R.rotation).map(function(sl){
-    return {id:sl.id, name:sl.name, band:sl.name};
+    return {id:sl.id, name:sl.name, band:sl.name, color:sl.color||'#888888'};
   });
 }
 function expData(){
@@ -3281,7 +3322,7 @@ function expBuildText(E, mode){
   L.push('', '_'+E.footer+'_');
   return L.join('\n');
 }
-/* ---- Excel (SheetJS; spreadsheet keeps "A day" / "D night \uD83C\uDF19") ---- */
+/* ---- Excel (SheetJS; spreadsheet keeps "A day" / "D night") ---- */
 function expBuildWorkbook(E, mode){
   var isNames=(mode==='names');
   var cells=expMonthCells(E.y,E.m), weeks=Math.ceil(cells.length/7);
@@ -3320,11 +3361,11 @@ function expBuildWorkbook(E, mode){
       });
       if(firstCrew) fill={patternType:'solid',fgColor:{rgb:'FF'+firstCrew.tintNames.replace('#','')}};
     }else{
-      /* spreadsheet letter version keeps "A day" / "D night 🌙" */
+      /* spreadsheet letter version keeps "A day" / "D night" */
       v=String(c.date);
       E.shifts.forEach(function(s,i){
         var suf=s.id==='D'?(E.hasNight?'day':'on duty')
-              :s.id==='N'?'night \uD83C\uDF19'
+              :s.id==='N'?'night'
               :s.id==='X'?'on duty':s.band.toLowerCase();
         v+='\n'+(pr[i]>=0?E.crews[pr[i]].name+' '+suf:'\u2014');
       });
@@ -3387,7 +3428,7 @@ function expGridEl(E, mode, variant){
       var bt='#1c1c1e', bands='';
       E.shifts.forEach(function(s,i){
         if(pr[i]<0) return;
-        bands+='<div style="background:'+E.crews[pr[i]].color+';border-radius:'+F(5)+'px;text-align:center;font-size:'+F(13)+'px;font-weight:800;color:'+bt+';padding:'+P+'px 0;margin-top:'+F(4)+'px;">'+escapeHtml(s.band.toUpperCase())+': '+escapeHtml(E.crews[pr[i]].name)+'</div>';
+        bands+='<div style="background:'+s.color+';border-radius:'+F(5)+'px;text-align:center;font-size:'+F(13)+'px;font-weight:800;color:'+bt+';padding:'+P+'px 0;margin-top:'+F(4)+'px;">'+escapeHtml(s.band.toUpperCase())+': '+escapeHtml(E.crews[pr[i]].name)+'</div>';
       });
       h+=open+'">'
         +'<div style="font-size:'+F(14)+'px;font-weight:700;">'+c.date+'</div>'
