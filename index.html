@@ -70,6 +70,8 @@
   .vrow label{font-size:12px; color:var(--muted); font-weight:600;}
   .srow{display:flex; gap:8px; margin-top:8px; align-items:center;}
   .srow input{flex:1; min-width:0;}
+  .srow .qmv{background:var(--card2); border:1px solid var(--line); color:var(--text); border-radius:8px; width:32px; height:36px; font-size:14px; cursor:pointer; flex:none;}
+  .srow .qmv:disabled{opacity:.3; cursor:default;}
   .srow select.qsel{flex:none; width:96px; padding:12px 6px;}
   /* staff person rows: two lines — name+qual+remove, then team+crew */
   .prow{margin-top:8px;}
@@ -222,6 +224,17 @@
   .mchip{display:inline-flex; align-items:center; gap:6px; background:var(--bg); border:1px solid var(--line);
     border-radius:20px; padding:5px 10px; margin:3px 4px 3px 0; font-size:14px;}
   .mchip button{background:none; border:none; color:var(--red); font-size:15px; cursor:pointer; padding:0 2px;}
+  /* Emergency tab */
+  .person{display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,.22); border-radius:8px; padding:7px 10px; margin:6px 0;}
+  .person .nm{font-weight:700; font-size:14px;}
+  .person .q{color:var(--muted); font-size:12px; margin-left:8px;}
+  .sickbtn{background:rgba(255,107,107,.14); color:#ff6b6b; border:1px solid #ff6b6b; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:700; cursor:pointer;}
+  .sickbtn:active{transform:scale(.95);}
+  .avail{display:flex; align-items:center; justify-content:space-between; background:var(--card2); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin:8px 0; cursor:pointer;}
+  .avail:active{transform:scale(.98); border-color:var(--accent);}
+  .avail .nm{font-weight:700;}
+  .avail .meta{color:var(--muted); font-size:12px;}
+  .avail .pick{background:#51CF66; color:#0c2b12; border:none; border-radius:16px; padding:6px 14px; font-weight:800; font-size:13px; cursor:pointer;}
   .scopeRow{display:flex; gap:8px; margin:12px 0;}
   .scopeRow label{flex:1; border:1px solid var(--line); border-radius:10px; padding:10px; font-size:14px; cursor:pointer;}
   .scopeRow input{margin-right:6px;}
@@ -705,6 +718,7 @@
       </div>
       <div style="text-align:center;margin-bottom:4px"><a href="#" onclick="baseToday();return false;" style="font-size:13px;">Today</a></div>
       <div id="baseUnits"></div>
+      <div id="baseCoverPanel"></div>
     </div>
     <button class="btn ghost" onclick="goBack()">Back</button>
   </div>
@@ -789,12 +803,26 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1334';
+var BUILD='20261012-1401';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
 /* ---------- qualifications: user-defined per workplace (BLS/ILS/ALS, chef/waiter/..., whatever the industry uses) ---------- */
 function baseQuals(){ return (S.base&&Array.isArray(S.base.quals))?S.base.quals:[]; }
+/* qualification rank: top of list (index 0) = highest. Lower index = higher qual. */
+function qualRank(qid){
+  var qs=baseQuals();
+  for(var i=0;i<qs.length;i++) if(qs[i].id===qid) return i;
+  return 999;
+}
+function qualName(qid){
+  var q=baseQuals().find(function(x){ return x.id===qid; });
+  return q?q.name:'';
+}
+function staffQualIdByName(name){
+  var s=(S.base.staff||[]).find(function(x){ return x.name===name; });
+  return s?s.qual:'';
+}
 function qualName(id){
   var q=baseQuals().find(function(x){ return x.id===id; });
   return q?q.name:'';
@@ -2401,6 +2429,8 @@ function saveDayEdit(){
 /* wire the day sheet background to close */
 document.getElementById('daySheetBg').onclick=closeDaySheet;
 
+
+
 /* ---------- per-roster crew & staff editing ---------- */
 function openCrewSheet(){
   var R=S.draft; if(!R) return;
@@ -2573,16 +2603,24 @@ function renderBase(){
       card.appendChild(none);
     } else {
       var slots=rotSlots(R.rotation);
+      var dateISO=S.baseDateISO;
       var buckets=slots.map(function(){ return []; });
       R.crews.forEach(function(c,ci){
         var st=cellState(R,dayIdx,ci);
-        var names=crewChipNames(c).join(', ');
-        var line='<b>'+escapeHtml(c.name)+':</b> '+escapeHtml(names);
+        if(st==='OFF') return;
+        var mems=effShiftMembers(R, dateISO, st, c);
+        var plist=mems.map(function(nm){
+          var q=qualName(staffQualIdByName(nm));
+          return '<div class="person"><span><span class="nm">'+escapeHtml(nm)+'</span>'
+            +(q?'<span class="q">'+escapeHtml(q)+'</span>':'')+'</span>'
+            +'<button class="sickbtn" onclick="event.stopPropagation();baseSick(\''+u.id+'\',\''+st+'\',\''+escapeHtml(nm).replace(/'/g,"\\'")+'\')">Sick</button></div>';
+        }).join('');
+        var line='<div style="margin:6px 0;"><b>Crew '+escapeHtml(c.name)+'</b>'+plist+'</div>';
         slots.forEach(function(sl,k){ if(st===sl.id) buckets[k].push(line); });
       });
       slots.forEach(function(sl,k){
         var srow=document.createElement('div'); srow.className='urow';
-        srow.innerHTML='<span class="ulab"><b>'+escapeHtml(sl.name||sl.id)+'</b></span><span>'+(buckets[k].join('<br>')||'<span style="color:var(--muted)">–</span>')+'</span>';
+        srow.innerHTML='<span class="ulab"><b>'+escapeHtml(sl.name||sl.id)+'</b></span><span style="flex:1;">'+(buckets[k].join('')||'<span style="color:var(--muted)">–</span>')+'</span>';
         card.appendChild(srow);
       });
     }
@@ -2590,6 +2628,91 @@ function renderBase(){
     card.onclick=(function(id){ return function(){ openRoster(id); }; })(u.id);
     wrap.appendChild(card);
   });
+  document.getElementById('baseCoverPanel').innerHTML='';
+}
+/* Sick cover from Who's on duty */
+function baseSick(rosterId, shiftId, personName){
+  var u=(S.rosters||[]).find(function(x){ return x.id===rosterId; });
+  if(!u) return;
+  var R=u.roster, dateISO=S.baseDateISO;
+  var sickQ=staffQualIdByName(personName), sickRank=qualRank(sickQ);
+  /* who is working that day across ALL teams — not available */
+  var dt=parseISO(dateISO), working={};
+  (S.rosters||[]).forEach(function(uu){
+    var RR=uu.roster;
+    var di=dayDiff(parseISO(RR.startISO), dt);
+    if(di<0||di>=RR.days) return;
+    rotSlots(RR.rotation).forEach(function(sl){
+      RR.crews.forEach(function(c){
+        if(cellState(RR,di,RR.crews.indexOf(c))===sl.id){
+          effShiftMembers(RR, dateISO, sl.id, c).forEach(function(nm){ working[nm]=1; });
+        }
+      });
+    });
+  });
+  var cands=[];
+  (S.base.staff||[]).forEach(function(s){
+    if(!s.name||working[s.name]||s.name===personName) return;
+    var r=qualRank(s.qual);
+    if(r>sickRank) return;
+    cands.push({name:s.name, qual:s.qual, rank:r});
+  });
+  R.crews.forEach(function(c){
+    (c.members||[]).forEach(function(nm){
+      if(working[nm]||nm===personName) return;
+      if(cands.some(function(x){ return x.name===nm; })) return;
+      var q=staffQualIdByName(nm), r=qualRank(q);
+      if(r>sickRank) return;
+      cands.push({name:nm, qual:q, rank:r});
+    });
+  });
+  cands.sort(function(a,b){
+    if(a.rank!==b.rank) return a.rank-b.rank;
+    return a.name.localeCompare(b.name);
+  });
+  var panel=document.getElementById('baseCoverPanel');
+  var qn=qualName(sickQ);
+  var h='<div class="card" style="border:2px solid var(--accent);">'
+    +'<h3>Cover for '+escapeHtml(personName)+(qn?' ('+escapeHtml(qn)+')':'')+'</h3>'
+    +'<p class="sub">Same qualification first, then higher. Lower qualifications are not shown.</p>';
+  if(!cands.length){
+    h+='<p class="fine">No suitable cover available — everyone is working or lower-qualified.</p>';
+  }else{
+    cands.forEach(function(cnd){
+      var q=qualName(cnd.qual);
+      var tag=cnd.rank===sickRank?'Same':'Higher';
+      h+='<div class="avail" onclick="basePickCover(\''+rosterId+'\',\''+shiftId+'\',\''+escapeHtml(personName).replace(/'/g,"\\'")+'\',\''+escapeHtml(cnd.name).replace(/'/g,"\\'")+'\')">'
+        +'<span><span class="nm">'+escapeHtml(cnd.name)+'</span> '
+        +'<span class="meta">'+(q?escapeHtml(q)+' · ':'')+tag+'</span></span>'
+        +'<button class="pick">Pick</button></div>';
+    });
+  }
+  h+='<div class="btnrow"><button class="btn ghost" onclick="document.getElementById(\'baseCoverPanel\').innerHTML=\'\'">Cancel</button></div></div>';
+  panel.innerHTML=h;
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function basePickCover(rosterId, shiftId, sickName, coverName){
+  var u=(S.rosters||[]).find(function(x){ return x.id===rosterId; });
+  if(!u) return;
+  var R=u.roster, dateISO=S.baseDateISO;
+  if(!R.memberOverrides) R.memberOverrides={};
+  if(!R.memberOverrides[dateISO]) R.memberOverrides[dateISO]={};
+  var dt=parseISO(dateISO), di=dayDiff(parseISO(R.startISO), dt);
+  var per=calSlotCrews(R,di);
+  for(var i=0;i<per.length;i++){
+    if(per[i].sl.id===shiftId&&per[i].list.length){
+      var mems=effShiftMembers(R, dateISO, shiftId, per[i].list[0].c);
+      var idx=mems.indexOf(sickName);
+      if(idx>=0) mems[idx]=coverName;
+      else if(mems.indexOf(coverName)<0) mems.push(coverName);
+      R.memberOverrides[dateISO][shiftId]=mems;
+      break;
+    }
+  }
+  syncUnit();
+  document.getElementById('baseCoverPanel').innerHTML='';
+  renderBase();
+  toast(coverName+' covers for '+sickName);
 }
 
 
@@ -2961,15 +3084,26 @@ function renderBaseSetup(){
 function renderStaffQuals(){
   var wrap=document.getElementById('staffQuals'); if(!wrap) return; wrap.innerHTML='';
   var qs=baseQuals();
-  if(!qs.length) wrap.innerHTML='<p class="fine">None yet &mdash; add the ones your industry uses.</p>';
+  if(qs.length) wrap.innerHTML='<p class="fine" style="margin:0 0 6px;">Top = highest qualification. Use ↑ ↓ to order.</p>';
+  else wrap.innerHTML='<p class="fine">None yet &mdash; add the ones your industry uses.</p>';
   qs.forEach(function(q,qi){
     var row=document.createElement('div'); row.className='srow';
+    var up=document.createElement('button'); up.className='qmv'; up.textContent='↑'; up.title='Move up (higher)';
+    up.disabled=(qi===0); up.onclick=function(){ qualMove(qi,-1); };
+    var dn=document.createElement('button'); dn.className='qmv'; dn.textContent='↓'; dn.title='Move down (lower)';
+    dn.disabled=(qi===qs.length-1); dn.onclick=function(){ qualMove(qi,1); };
     var inp=document.createElement('input'); inp.type='text'; inp.maxLength=24; inp.value=q.name; inp.placeholder='e.g. BLS';
     inp.oninput=function(){ q.name=this.value; persistBase(); };
     var rm=document.createElement('button'); rm.className='rm'; rm.textContent='\u2715'; rm.title='Remove';
     rm.onclick=function(){ qualDel(qi); };
-    row.appendChild(inp); row.appendChild(rm); wrap.appendChild(row);
+    row.appendChild(up); row.appendChild(dn); row.appendChild(inp); row.appendChild(rm); wrap.appendChild(row);
   });
+}
+function qualMove(qi,dir){
+  var qs=baseQuals(), j=qi+dir;
+  if(j<0||j>=qs.length) return;
+  var t=qs[qi]; qs[qi]=qs[j]; qs[j]=t;
+  persistBase(); renderStaffQuals();
 }
 function qualAdd(){
   baseQuals().push({id:'q'+Date.now()+''+Math.floor(Math.random()*1e6), name:''});
