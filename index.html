@@ -206,6 +206,26 @@
   .summary b{color:var(--accent);}
   #sheetWrap{position:fixed; inset:0; z-index:50; display:none;}
   #sheetWrap.open{display:block;}
+  /* day detail / staff editor sheet */
+  #daySheetWrap{position:fixed; inset:0; z-index:60; display:none;}
+  #daySheetWrap.open{display:block;}
+  #daySheetBg{position:absolute; inset:0; background:rgba(0,0,0,.55);}
+  #daySheet{position:absolute; left:0; right:0; bottom:0; max-height:88vh; overflow-y:auto;
+    background:var(--card); border-radius:18px 18px 0 0; padding:14px 16px 20px;}
+  #daySheet h3{margin:6px 0 2px; font-size:18px;}
+  #daySheet .grab{width:44px; height:5px; border-radius:3px; background:var(--line); margin:2px auto 8px;}
+  .dshift{border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin:10px 0;}
+  .dshift .dh{display:flex; align-items:center; gap:8px; margin-bottom:8px;}
+  .dshift .dh .t{font-weight:800;}
+  .dshift .dh .c{color:var(--muted); font-size:13px;}
+  .mchip{display:inline-flex; align-items:center; gap:6px; background:var(--bg); border:1px solid var(--line);
+    border-radius:20px; padding:5px 10px; margin:3px 4px 3px 0; font-size:14px;}
+  .mchip button{background:none; border:none; color:var(--red); font-size:15px; cursor:pointer; padding:0 2px;}
+  .scopeRow{display:flex; gap:8px; margin:12px 0;}
+  .scopeRow label{flex:1; border:1px solid var(--line); border-radius:10px; padding:10px; font-size:14px; cursor:pointer;}
+  .scopeRow input{margin-right:6px;}
+  .btnrow{display:flex; gap:10px; margin-top:12px;}
+  .btnrow .btn{flex:1;}
   #sheetBg{position:absolute; inset:0; background:rgba(0,0,0,.6);}
   #sheet{
     position:absolute; left:0; right:0; bottom:0; background:var(--card); border-radius:20px 20px 0 0;
@@ -321,6 +341,8 @@
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .cell .band .bc{display:block; font-size:15px; font-weight:800; line-height:1.3; margin-top:1px;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .cell .band .bm{display:block; font-size:9px; font-weight:600; opacity:.8; line-height:1.3; margin-top:1px;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
   .cell.out{opacity:.32; cursor:default;}
   .cell .edot{position:absolute; top:5px; right:6px; width:7px; height:7px; border-radius:50%;
     background:var(--accent); box-shadow:0 0 4px var(--accent);}
@@ -692,6 +714,16 @@
   <button data-tab="settings" onclick="switchTab('settings')"><span class="ti">&#9881;&#65039;</span>Settings</button>
 </nav>
 
+<div id="daySheetWrap">
+  <div id="daySheetBg"></div>
+  <div id="daySheet">
+    <div class="grab"></div>
+    <h3 id="daySheetTitle"></h3>
+    <p id="daySheetSub"></p>
+    <div id="daySheetBody"></div>
+    <div id="daySheetFoot"></div>
+  </div>
+</div>
 <div id="sheetWrap">
   <div id="sheetBg" onclick="closeSheet()"></div>
   <div id="sheet">
@@ -754,7 +786,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1223';
+var BUILD='20261012-1247';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -1722,7 +1754,7 @@ function generateMonthRoster(){
   S.draft={ id:'r'+Date.now(), kind:'month', vehicleId:v.id,
     name:(v.name||'Team')+' \u00b7 '+MN[A.month]+' '+A.year,
     year:A.year, month:A.month, anchorAbs:A.abs, startISO:iso, days:dim, crews:crews,
-    shiftLen:rot.hours||12, startTime:v.startTime||'06:00', rotation:A.rotKey, coverage:v.coverage||24, overrides:{} };
+    shiftLen:rot.hours||12, startTime:v.startTime||'06:00', rotation:A.rotKey, coverage:v.coverage||24, overrides:{}, memberOverrides:{} };
   S.fromSaved=false;
   S.cal={vehicleId:v.id, y:A.year, m:A.month, mode:'month', sub:'month', weekISO:null};
   renderCalendar();
@@ -1826,7 +1858,12 @@ function renderCalChrome(ctx){
   }
   lg.innerHTML=crews.map(function(c){
     return '<span><span class="dot" style="background:'+c.color+'"></span>Crew '+escapeHtml(c.name)+'</span>';
-  }).join('');
+  }).join('')+(function(){
+    if(!ctx||!ctx.R) return '';
+    return rotSlots(ctx.R.rotation).map(function(s,i){
+      return '<span><span class="dot" style="background:'+shiftStandardColor(i)+'"></span>'+escapeHtml(s.name)+'</span>';
+    }).join('');
+  })();
 }
 function calSlotCrews(R, dayIdx){
   var slots=rotSlots(R.rotation);
@@ -1864,11 +1901,19 @@ function renderCalMonth(ctx){
       calSlotCrews(R,info.dayIdx).forEach(function(ps, sIdx){
         if(!ps.list.length) return;
         var tm=''; try{ tm=shortShiftTime(ps.sl); }catch(e){}
+        var dateISO=info.date?isoDate(info.date):null;
         var crews=ps.list.map(function(x){ return escapeHtml(x.c.name); }).join(' / ');
-        var band=crewShiftColor(ps.list[0].c.color, sIdx, nSlots);
+        var memNames=[];
+        ps.list.forEach(function(x){
+          effShiftMembers(R, dateISO, ps.sl.id, x.c).forEach(function(nm){
+            if(memNames.indexOf(nm)<0) memNames.push(nm);
+          });
+        });
+        var memLine=memNames.length?'<span class="bm">'+memNames.map(escapeHtml).join(', ')+'</span>':'';
+        var band=shiftStandardColor(sIdx);
         inner+='<span class="band" style="background:'+band+';color:'+textOnBand(band)+'">'+
           '<span class="bs">'+escapeHtml(shiftBandShort(ps.sl.name))+(tm?' '+tm:'')+'</span>'+
-          '<span class="bc">'+crews+'</span></span>';
+          '<span class="bc">Crew '+crews+'</span>'+memLine+'</span>';
       });
       var ed=R.crews.some(function(c,ci){ return R.overrides[info.dayIdx+':'+ci]; });
       if(ed) inner+='<span class="edot"></span>';
@@ -1882,7 +1927,7 @@ function renderCalMonth(ctx){
     (function(el){
       el.onclick=function(){
         var dd=parseInt(el.getAttribute('data-d'),10);
-        calOpenWeek(y+'-'+String(m+1).padStart(2,'0')+'-'+String(dd).padStart(2,'0'));
+        openDaySheet(y+'-'+String(m+1).padStart(2,'0')+'-'+String(dd).padStart(2,'0'));
       };
     })(cells[i]);
   }
@@ -1959,7 +2004,7 @@ function renderCalSix(){
         var per=calSlotCrews(R,info.dayIdx), dots=[], nP=per.length;
         per.forEach(function(ps, sIdx){
           if(!ps.list.length) return;
-          dots.push(crewShiftColor(ps.list[0].c.color, sIdx, nP));
+          dots.push(shiftStandardColor(sIdx));
         });
         html+='<div class="smc">'+dots.map(function(c){
           return '<i style="background:'+c+'"></i>';
@@ -2004,7 +2049,7 @@ function continueRoster(){
     year:y, month:m, anchorAbs:(R0.anchorAbs||0)+days, startISO:iso, days:dim,
     crews:JSON.parse(JSON.stringify(R0.crews)),
     shiftLen:R0.shiftLen||rot.hours||12, startTime:R0.startTime||v.startTime||'06:00',
-    rotation:R0.rotation, coverage:R0.coverage||v.coverage||24, overrides:{} };
+    rotation:R0.rotation, coverage:R0.coverage||v.coverage||24, overrides:{}, memberOverrides:{} };
   S.fromSaved=false; S.unitId=null; S.unitName=S.draft.name;
   S.cal={vehicleId:cal.vehicleId, y:y, m:m, mode:'month', sub:'month', weekISO:null};
   renderCalendar(); show('v-cal');
@@ -2025,6 +2070,7 @@ function renderCalAgenda(ctx){
     if(!info){
       body='<div class="agbody"><span class="dim">\u2014</span></div>';
     }else{
+      var dateISO=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
       var lines=slots.map(function(sl){
         var on=[];
         R.crews.forEach(function(c,ci){
@@ -2032,7 +2078,8 @@ function renderCalAgenda(ctx){
         });
         if(!on.length) return '';
         var bit=on.map(function(x){
-          var nm=(x.c.members&&x.c.members.length)?' \u2014 '+x.c.members.map(escapeHtml).join(', '):'';
+          var mems=effShiftMembers(R, dateISO, sl.id, x.c);
+          var nm=mems.length?' \u2014 '+mems.map(escapeHtml).join(', '):'';
           return '<span class="cdot" style="background:'+x.c.color+'"></span> <b>Crew '+escapeHtml(x.c.name)+'</b>'+nm;
         }).join(' \u00b7 ');
         return '<div><b>'+escapeHtml(sl.name||sl.id)+':</b> '+bit+'</div>';
@@ -2049,7 +2096,7 @@ function renderCalAgenda(ctx){
     (function(el){
       el.onclick=function(){
         var dd=parseInt(el.getAttribute('data-d'),10);
-        calOpenWeek(y+'-'+String(m+1).padStart(2,'0')+'-'+String(dd).padStart(2,'0'));
+        openDaySheet(y+'-'+String(m+1).padStart(2,'0')+'-'+String(dd).padStart(2,'0'));
       };
     })(rows[i]);
   }
@@ -2086,16 +2133,18 @@ function renderCalWeek(ctx){
       html+='<div class="daycard out">'+head+'<div style="color:var(--muted);font-size:14px;">No roster coverage</div></div>';
     }else{
       var per=calSlotCrews(R,info.dayIdx), body='', nSl=rotSlots(R.rotation).length;
+      var wDateISO=isoDate(date);
       per.forEach(function(ps, sIdx){
         if(!ps.list.length) return;
         var nm=ps.list.map(function(x){
-          var mem=(x.c.members&&x.c.members.length)?' \u2014 '+x.c.members.map(escapeHtml).join(', '):'';
+          var mems=effShiftMembers(R, wDateISO, ps.sl.id, x.c);
+          var mem=mems.length?' \u2014 '+mems.map(escapeHtml).join(', '):'';
           return 'Crew '+escapeHtml(x.c.name)+mem;
         }).join(' \u00b7 ');
         var dot=ps.list.map(function(x){ return '<span class="cdot" style="background:'+x.c.color+'"></span>'; }).join('');
         var tm=''; try{ tm=slotTime(R, ps.sl.id); }catch(e){}
         var cis=ps.list.map(function(x){ return x.ci; }).join(',');
-        var acc=crewShiftColor(ps.list[0].c.color, sIdx, nSl);
+        var acc=shiftStandardColor(sIdx);
         body+='<div class="wshift" data-day="'+info.dayIdx+'" data-ci="'+cis+'" style="border-left:5px solid '+acc+'"><div class="t">'+dot+escapeHtml(slotDisplayLabel(ps.sl))+'</div><div class="n">'+nm+'</div>'+(tm?'<div class="h">'+tm+'</div>':'')+'</div>';
       });
       if(!body) body='<div style="color:var(--muted);font-size:14px;">All off</div>';
@@ -2213,6 +2262,140 @@ function setOverride(v){
 }
 function closeSheet(){ document.getElementById('sheetWrap').classList.remove('open'); }
 
+/* ---------- day detail sheet: view + staff editor ---------- */
+var dayCtx=null;
+function openDaySheet(dateISO){
+  var R=S.draft; if(!R||!R.crews) return;
+  var p=dateISO.split('-'); if(p.length<3) return;
+  var info=calRosterDay(R, parseInt(p[0],10), parseInt(p[1],10)-1, parseInt(p[2],10));
+  if(!info) return;
+  dayCtx={dateISO:dateISO, dayIdx:info.dayIdx, R:R, edit:false, editData:null, scope:'once'};
+  renderDaySheet();
+  document.getElementById('daySheetWrap').classList.add('open');
+}
+function closeDaySheet(){
+  document.getElementById('daySheetWrap').classList.remove('open');
+  dayCtx=null;
+}
+function daySheetShifts(){
+  var R=dayCtx.R, per=calSlotCrews(R, dayCtx.dayIdx);
+  return per.filter(function(ps){ return ps.list.length; });
+}
+function fmtDayTitle(iso){
+  var p=iso.split('-'), d=new Date(parseInt(p[0],10), parseInt(p[1],10)-1, parseInt(p[2],10));
+  return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]+' '+parseInt(p[2],10)+' '+MN[parseInt(p[1],10)-1]+' '+p[0];
+}
+function renderDaySheet(){
+  var R=dayCtx.R;
+  document.getElementById('daySheetTitle').textContent=fmtDayTitle(dayCtx.dateISO);
+  var shifts=daySheetShifts();
+  if(!dayCtx.edit){
+    document.getElementById('daySheetSub').textContent=shifts.length?shifts.length+' shift'+(shifts.length>1?'s':'')+' on duty':'No shifts rostered';
+    var html='';
+    shifts.forEach(function(ps, i){
+      var tm=''; try{ tm=slotTime(R, ps.sl.id); }catch(e){}
+      var band=shiftStandardColor(i);
+      html+='<div class="dshift" style="border-left:5px solid '+band+'">'+
+        '<div class="dh"><span class="t">'+escapeHtml(ps.sl.name)+'</span>'+
+        (tm?'<span class="c">'+escapeHtml(tm)+'</span>':'')+
+        '<span class="c">· Crew '+ps.list.map(function(x){ return escapeHtml(x.c.name); }).join(', ')+'</span></div>';
+      ps.list.forEach(function(x){
+        var mems=effShiftMembers(R, dayCtx.dateISO, ps.sl.id, x.c);
+        html+='<div>'+mems.map(function(nm){ return '<span class="mchip">'+escapeHtml(nm)+'</span>'; }).join('')+'</div>';
+      });
+      html+='</div>';
+    });
+    document.getElementById('daySheetBody').innerHTML=html;
+    document.getElementById('daySheetFoot').innerHTML=
+      '<div class="btnrow"><button class="btn ghost" onclick="closeDaySheet()">Close</button>'+
+      '<button class="btn ghost" onclick="daySheetWeek()">Week view</button>'+
+      '<button class="btn" onclick="openDayEdit()">Edit staff</button></div>';
+  }else{
+    renderDayEdit();
+  }
+}
+function daySheetWeek(){
+  var iso=dayCtx.dateISO;
+  closeDaySheet();
+  calOpenWeek(iso);
+}
+function allStaffNames(){
+  var names={};
+  (S.base.staff||[]).forEach(function(s){ if(s.name) names[s.name]=1; });
+  (dayCtx.R.crews||[]).forEach(function(c){ (c.members||[]).forEach(function(n){ names[n]=1; }); });
+  return Object.keys(names).sort();
+}
+function openDayEdit(){
+  dayCtx.edit=true;
+  /* snapshot current members per shift for editing */
+  dayCtx.editData=daySheetShifts().map(function(ps){
+    return {sl:ps.sl, idx:ps.list[0]?ps.list[0].ci:-1,
+      members:effShiftMembers(dayCtx.R, dayCtx.dateISO, ps.sl.id, ps.list[0]?ps.list[0].c:null)};
+  });
+  renderDayEdit();
+}
+function renderDayEdit(){
+  var R=dayCtx.R;
+  document.getElementById('daySheetSub').textContent='Change who works this day';
+  var staffNames=allStaffNames();
+  var html='';
+  dayCtx.editData.forEach(function(ed, si){
+    var tm=''; try{ tm=slotTime(R, ed.sl.id); }catch(e){}
+    html+='<div class="dshift"><div class="dh"><span class="t">'+escapeHtml(ed.sl.name)+'</span>'+
+      (tm?'<span class="c">'+escapeHtml(tm)+'</span>':'')+'</div><div id="deMem'+si+'">';
+    ed.members.forEach(function(nm, mi){
+      html+='<span class="mchip">'+escapeHtml(nm)+'<button type="button" onclick="dayEditRemove('+si+','+mi+')" aria-label="Remove">×</button></span>';
+    });
+    html+='</div><div style="display:flex;gap:8px;margin-top:8px;">'+
+      '<input id="deAdd'+si+'" list="staffList" placeholder="Add staff member…" style="flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;">'+
+      '<button class="btn ghost" type="button" onclick="dayEditAdd('+si+')">Add</button></div></div>';
+  });
+  html+='<datalist id="staffList">'+staffNames.map(function(n){ return '<option value="'+escapeHtml(n)+'">'; }).join('')+'</datalist>';
+  html+='<div class="scopeRow">'+
+    '<label><input type="radio" name="deScope" value="once"'+(dayCtx.scope==='once'?' checked':'')+' onchange="dayCtx.scope=\'once\'"> Only this day<br><span style="color:var(--muted);font-size:12px;">Once-off change</span></label>'+
+    '<label><input type="radio" name="deScope" value="now"'+(dayCtx.scope==='now'?' checked':'')+' onchange="dayCtx.scope=\'now\'"> From now on<br><span style="color:var(--muted);font-size:12px;">Permanent crew change</span></label></div>';
+  document.getElementById('daySheetBody').innerHTML=html;
+  document.getElementById('daySheetFoot').innerHTML=
+    '<div class="btnrow"><button class="btn ghost" onclick="dayCtx.edit=false;renderDaySheet()">Back</button>'+
+    '<button class="btn" onclick="saveDayEdit()">Save</button></div>';
+}
+function dayEditRemove(si, mi){
+  dayCtx.editData[si].members.splice(mi,1);
+  renderDayEdit();
+}
+function dayEditAdd(si){
+  var inp=document.getElementById('deAdd'+si);
+  var nm=(inp.value||'').trim();
+  if(!nm) return;
+  if(dayCtx.editData[si].members.indexOf(nm)<0) dayCtx.editData[si].members.push(nm);
+  renderDayEdit();
+}
+function saveDayEdit(){
+  var R=dayCtx.R;
+  if(!R.memberOverrides) R.memberOverrides={};
+  dayCtx.editData.forEach(function(ed){
+    if(dayCtx.scope==='once'){
+      /* once-off: store explicit member list for this date+shift */
+      if(!R.memberOverrides[dayCtx.dateISO]) R.memberOverrides[dayCtx.dateISO]={};
+      R.memberOverrides[dayCtx.dateISO][ed.sl.id]=ed.members.slice();
+    }else{
+      /* from now on: update the crew's permanent member list */
+      if(ed.idx>=0 && R.crews[ed.idx]){
+        R.crews[ed.idx].members=ed.members.slice();
+        /* clear any once-off override for this date+shift since crew now matches */
+        if(R.memberOverrides[dayCtx.dateISO]) delete R.memberOverrides[dayCtx.dateISO][ed.sl.id];
+      }
+    }
+  });
+  syncUnit();
+  dayCtx.edit=false;
+  renderDaySheet();
+  renderCalendar();
+  toast(dayCtx.scope==='once'?'Day updated':'Crew updated from now on');
+}
+/* wire the day sheet background to close */
+document.getElementById('daySheetBg').onclick=closeDaySheet;
+
 /* ---------- per-roster crew & staff editing ---------- */
 function openCrewSheet(){
   var R=S.draft; if(!R) return;
@@ -2293,6 +2476,7 @@ function loadSaved(){
   S.rosters.forEach(function(u){
     u.roster.crews.forEach(function(c){ if(!c.members) c.members=[]; });
     migrateCrewColors(u.roster.crews);
+    if(!u.roster.memberOverrides) u.roster.memberOverrides={};
   });
   if(S.rosters.length!==before) persist();
 }
@@ -2879,31 +3063,30 @@ function staffDel(si){
 }
 
 /* ---------- settings ---------- */
+/* effective member list for a shift on a date: day override wins, else crew members */
+function effShiftMembers(R, dateISO, shiftId, crew){
+  try{
+    var mo=R&&R.memberOverrides&&dateISO&&R.memberOverrides[dateISO];
+    if(mo&&mo[shiftId]) return mo[shiftId].slice();
+  }catch(e){}
+  return ((crew&&crew.members)||[]).slice();
+}
+function isoDate(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
 /* ---------- shift display colors ----------
-   Band color always comes from the CREW. The shift only changes the shade:
-   first shift (day) = lighter, last shift (night) = darker. */
-function hexRgb(hex){
-  var h=String(hex||'').replace('#','');
-  if(h.length===3) h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
-  return [parseInt(h.slice(0,2),16)||0, parseInt(h.slice(2,4),16)||0, parseInt(h.slice(4,6),16)||0];
-}
-function mixHex(hex, target, amt){
-  var c=hexRgb(hex), t=hexRgb(target);
-  function ch(i){ var v=Math.round(c[i]+(t[i]-c[i])*amt); v=Math.max(0,Math.min(255,v)); var s=v.toString(16); return s.length<2?'0'+s:s; }
-  return '#'+ch(0)+ch(1)+ch(2);
-}
-/* crew color shaded by shift position: 0 (day) lightest … last (night) darkest */
-function crewShiftColor(crewColor, shiftIdx, shiftCount){
-  if(!crewColor) crewColor='#888888';
-  if(shiftCount<=1) return crewColor;
-  var t=Math.max(0,Math.min(1,shiftIdx/(shiftCount-1)));
-  if(t<0.5) return mixHex(crewColor,'#ffffff',0.45*(1-t*2));
-  return mixHex(crewColor,'#000000',0.35*((t-0.5)*2));
+   One standard color per shift (Day=gold, Night=blue, …). Fixed palette,
+   no picker, no light/dark shading — clean and not busy. */
+var STANDARD_SHIFT_COLORS=['#FFC13E','#4DABF7','#51CF66','#FF8787','#9775fa','#ffa94d','#63e6be','#e599f7'];
+function shiftStandardColor(idx){
+  return STANDARD_SHIFT_COLORS[(idx||0)%STANDARD_SHIFT_COLORS.length];
 }
 /* readable text color on a band */
 function textOnBand(hex){
-  var c=hexRgb(hex), lum=(0.299*c[0]+0.587*c[1]+0.114*c[2])/255;
-  return lum>0.55?'#141414':'#ffffff';
+  var h=String(hex||'').replace('#','');
+  if(h.length===3) h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+  var r=parseInt(h.slice(0,2),16)||0, g=parseInt(h.slice(2,4),16)||0, b=parseInt(h.slice(4,6),16)||0;
+  return ((0.299*r+0.587*g+0.114*b)/255)>0.55?'#141414':'#ffffff';
 }
 /* ---------- workplace shifts ----------
    The workplace defines its shifts: name + start/end time. Add as many as
@@ -3269,19 +3452,22 @@ function expData(){
       dark:expMix(col,'#000000',0.45),
       names:nm.length?nm:[label]};
   });
-  var pairs=[];
+  var pairs=[], pairsMembers=[];
   for(var d=1;d<=dim;d++){
     var info=calRosterDay(R,y,m,d);
-    if(!info){ pairs.push(null); continue; }
-    var per=calSlotCrews(R,info.dayIdx), row=[];
+    if(!info){ pairs.push(null); pairsMembers.push(null); continue; }
+    var per=calSlotCrews(R,info.dayIdx), row=[], mrow=[];
+    var dateISO=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     rslots.forEach(function(sl){
-      var ci=-1;
+      var ci=-1, crew=null;
       for(var i=0;i<per.length;i++){
-        if(per[i].sl.id===sl.id && per[i].list.length){ ci=per[i].list[0].ci; break; }
+        if(per[i].sl.id===sl.id && per[i].list.length){ ci=per[i].list[0].ci; crew=per[i].list[0].c; break; }
       }
       row.push(ci);
+      /* effective members: day override wins over crew roster */
+      mrow.push(ci>=0?effShiftMembers(R, dateISO, sl.id, crew):[]);
     });
-    pairs.push(row);
+    pairs.push(row); pairsMembers.push(mrow);
   }
   var title=vname+' \u2014 '+MN[m]+' '+y, sub;
   try{
@@ -3294,7 +3480,7 @@ function expData(){
   return {y:y, m:m, dim:dim, title:title, sub:sub,
     subXlsx:sub.replace(/ rotation/,''),
     footer:'Generated with SignalFox Shift',
-    crews:crews, pairs:pairs, hasNight:hasNight, shifts:shifts, nsh:nsh,
+    crews:crews, pairs:pairs, pairsMembers:pairsMembers, hasNight:hasNight, shifts:shifts, nsh:nsh,
     dayLabel:hasNight?shiftShort('D'):'On duty',
     slug:slug, rotName:rot.name};
 }
@@ -3316,10 +3502,12 @@ function expBuildText(E, mode){
   L.push('*'+E.title+'*'+(isNames?' ('+E.rotName+')':''), E.sub, '');
   for(var d=1; d<=E.dim; d++){
     var pr=E.pairs[d-1]; if(!pr) continue;
+    var pm=((E.pairsMembers||[])[d-1])||[];
     var bits=[];
     E.shifts.forEach(function(s,i){
       var crew=pr[i]>=0?E.crews[pr[i]]:null;
-      bits.push(s.band+': '+(crew?(isNames?crew.names.join(', '):crew.name):'\u2014'));
+      var names=(pm[i]&&pm[i].length)?pm[i]:(crew?crew.names:[]);
+      bits.push(s.band+': '+(crew?(isNames?names.join(', '):crew.name):'\u2014'));
     });
     L.push(expWeekdayShort(E.y,E.m,d)+' '+d+': '+(bits.join(' \u00b7 ')||'All off'));
   }
@@ -3350,6 +3538,7 @@ function expBuildWorkbook(E, mode){
   cells.forEach(function(c,idx){
     var r=3+Math.floor(idx/7), col=idx%7, addr=String.fromCharCode(65+col)+(r+1);
     var pr=c.inMonth?E.pairs[c.date-1]:null;
+    var pm=c.inMonth?(((E.pairsMembers||[])[c.date-1])||[]):[];
     if(!pr){
       set(addr,String(c.date),{font:{sz:11,color:{rgb:'FF999999'}},
         fill:{patternType:'solid',fgColor:{rgb:'FFF2F2F2'}},
@@ -3363,7 +3552,8 @@ function expBuildWorkbook(E, mode){
     if(isNames){
       v=String(c.date);
       E.shifts.forEach(function(s,i){
-        v+='\n'+s.name+'\n'+(pr[i]>=0?E.crews[pr[i]].names.join(', '):'\u2014');
+        var nm=(pm[i]&&pm[i].length)?pm[i]:(pr[i]>=0?E.crews[pr[i]].names:[]);
+        v+='\n'+s.name+'\n'+(pr[i]>=0?nm.join(', '):'\u2014');
       });
       if(firstCrew) fill={patternType:'solid',fgColor:{rgb:'FF'+firstCrew.tintNames.replace('#','')}};
     }else{
@@ -3423,6 +3613,7 @@ function expGridEl(E, mode, variant){
     var w=(idx%7===6)?cwLast:cw;
     var open='<span style="display:inline-block;box-sizing:border-box;vertical-align:top;width:'+w+'px;min-height:'+cellH+'px;border-right:1px solid #ddd;border-bottom:1px solid #ddd;padding:'+P+'px;';
     var pr=c.inMonth?E.pairs[c.date-1]:null;
+    var pm=c.inMonth?(((E.pairsMembers||[])[c.date-1])||[]):[];
     if(!pr){
       h+=open+'background:#f7f7f7;"><div style="font-size:'+F(14)+'px;font-weight:700;color:#bbb;">'+c.date+'</div></span>';
       return;
@@ -3434,7 +3625,7 @@ function expGridEl(E, mode, variant){
       var bands='';
       E.shifts.forEach(function(s,i){
         if(pr[i]<0) return;
-        var band=crewShiftColor(E.crews[pr[i]].color, i, E.shifts.length), bt=textOnBand(band);
+        var band=shiftStandardColor(i), bt=textOnBand(band);
         bands+='<div style="background:'+band+';border-radius:'+F(5)+'px;text-align:center;font-size:'+F(13)+'px;font-weight:800;color:'+bt+';padding:'+P+'px 0;margin-top:'+F(4)+'px;">'+escapeHtml(s.band.toUpperCase())+': '+escapeHtml(E.crews[pr[i]].name)+'</div>';
       });
       h+=open+'">'
@@ -3445,7 +3636,8 @@ function expGridEl(E, mode, variant){
       var rows='';
       E.shifts.forEach(function(s,i){
         if(pr[i]<0) return;
-        rows+='<div style="font-size:'+F(12.5)+'px;margin-top:'+F(3)+'px;"><b>'+escapeHtml(s.name)+':</b> <span style="color:'+E.crews[pr[i]].dark+';">'+escapeHtml(E.crews[pr[i]].names.join(', '))+'</span></div>';
+        var nm=(pm[i]&&pm[i].length)?pm[i]:E.crews[pr[i]].names;
+        rows+='<div style="font-size:'+F(12.5)+'px;margin-top:'+F(3)+'px;"><b>'+escapeHtml(s.name)+':</b> <span style="color:'+E.crews[pr[i]].dark+';">'+escapeHtml(nm.join(', '))+'</span></div>';
       });
       h+=open+'background:'+(firstCrew?firstCrew.tintNames:'transparent')+';">'
         +'<div style="font-size:'+F(14)+'px;font-weight:700;">'+c.date+'</div>'
