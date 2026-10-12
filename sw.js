@@ -1,7 +1,7 @@
 /* SignalFox Shift V2 — app-shell service worker.
    Pages are network-first (updates appear on next load when online);
    assets are cache-first. Everything falls back to cache offline. */
-var CACHE = 'sfshift-v2-14';
+var CACHE = 'sfshift-v2-15';
 var ASSETS = [
   './',
   'index.html',
@@ -44,7 +44,7 @@ self.addEventListener('fetch', function (e) {
                url.pathname.endsWith('/index.html');
   e.respondWith(
     isPage
-      ? fetch(e.request).then(function (res) {
+      ? fetch(e.request.url, {cache:'no-store'}).then(function (res) {
           var copy = res.clone();
           caches.open(CACHE).then(function (c) { c.put(e.request, copy); });
           return res;

@@ -548,7 +548,7 @@
       <p class="sub">SignalFox Shift V2 &mdash; test build. A Signal Fox app. &#129418;</p>
     </div>
     <button class="btn ghost" style="color:var(--red);border-color:var(--red)" onclick="logout()">Log out</button>
-    <p class="fine">SignalFox Shift &middot; V2 test build</p>
+    <p class="fine">SignalFox Shift &middot; V2 test build &middot; <span id="buildTag"></span></p>
   </div>
 
   <!-- BASE SETUP -->
@@ -756,6 +756,8 @@
 <div id="toast"></div>
 
 <script>
+/* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
+var BUILD='20261012-1019';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -3550,6 +3552,7 @@ function showUpdateBanner(w){
   document.body.appendChild(b);
 }
 sbInit();
+try{ document.getElementById('buildTag').textContent='build '+BUILD; }catch(e){}
 
 </script>
 </body>
