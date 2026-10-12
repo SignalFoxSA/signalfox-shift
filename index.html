@@ -806,7 +806,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1444';
+var BUILD='20261012-1447';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2637,7 +2637,8 @@ function renderBase(){
       });
       slots.forEach(function(sl,k){
         var srow=document.createElement('div'); srow.className='urow';
-        srow.innerHTML='<span class="ulab"><b>'+escapeHtml(sl.name||sl.id)+'</b></span><span style="flex:1;">'+(buckets[k].join('')||'<span style="color:var(--muted)">–</span>')+'</span>';
+        var addBtn='<div style="margin-top:6px;"><button class="coverbtn" style="font-size:11px;padding:4px 12px;" onclick="event.stopPropagation();baseAddStaff(\''+u.id+'\',\''+sl.id+'\')">+ Add staff</button></div>';
+        srow.innerHTML='<span class="ulab"><b>'+escapeHtml(sl.name||sl.id)+'</b></span><span style="flex:1;">'+(buckets[k].join('')||'<span style="color:var(--muted)">–</span>')+addBtn+'</span>';
         card.appendChild(srow);
       });
     }
@@ -2662,6 +2663,83 @@ function baseLeave(rosterId, shiftId, personName){
   h+='<div class="btnrow"><button class="btn ghost" onclick="document.getElementById(\'baseCoverPanel\').innerHTML=\'\'">Cancel</button></div></div>';
   panel.innerHTML=h;
   panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+/* Add extra staff to a shift from Who's on duty (no leave required) */
+function baseAddStaff(rosterId, shiftId){
+  var u=(S.rosters||[]).find(function(x){ return x.id===rosterId; });
+  if(!u) return;
+  var R=u.roster, dateISO=S.baseDateISO;
+  var dt=parseISO(dateISO), working={};
+  (S.rosters||[]).forEach(function(uu){
+    var RR=uu.roster;
+    var di=dayDiff(parseISO(RR.startISO), dt);
+    if(di<0||di>=RR.days) return;
+    rotSlots(RR.rotation).forEach(function(sl){
+      RR.crews.forEach(function(c){
+        if(cellState(RR,di,RR.crews.indexOf(c))===sl.id){
+          effShiftMembers(RR, dateISO, sl.id, c).forEach(function(nm){
+            if(nm!==OPEN_MARK) working[nm]=1;
+          });
+        }
+      });
+    });
+  });
+  /* current members on this shift (so we don't offer them again) */
+  var di=dayDiff(parseISO(R.startISO), dt);
+  var per=calSlotCrews(R,di), onShift={};
+  per.forEach(function(ps){
+    if(ps.sl.id===shiftId) ps.list.forEach(function(x){
+      effShiftMembers(R, dateISO, shiftId, x.c).forEach(function(nm){ onShift[nm]=1; });
+    });
+  });
+  var cands=[];
+  (S.base.staff||[]).forEach(function(s){
+    if(!s.name||working[s.name]||onShift[s.name]) return;
+    cands.push({name:s.name, qual:s.qual, rank:qualRank(s.qual)});
+  });
+  cands.sort(function(a,b){
+    if(a.rank!==b.rank) return a.rank-b.rank;
+    return a.name.localeCompare(b.name);
+  });
+  var panel=document.getElementById('baseCoverPanel');
+  var h='<div class="card" style="border:2px solid var(--accent);">'
+    +'<h3>Add staff to shift</h3>'
+    +'<p class="sub">Who should join this shift?</p>';
+  if(!cands.length){
+    h+='<p class="fine">No one available — everyone is already working.</p>';
+  }else{
+    cands.forEach(function(cnd){
+      var q=qualName(cnd.qual);
+      h+='<div class="avail" onclick="baseDoAddStaff(\''+rosterId+'\',\''+shiftId+'\',\''+escapeHtml(cnd.name).replace(/'/g,"\\'")+'\')">'
+        +'<span><span class="nm">'+escapeHtml(cnd.name)+'</span> '
+        +'<span class="meta">'+(q?escapeHtml(q):'')+'</span></span>'
+        +'<button class="pick">Add</button></div>';
+    });
+  }
+  h+='<div class="btnrow"><button class="btn ghost" onclick="document.getElementById(\'baseCoverPanel\').innerHTML=\'\'">Cancel</button></div></div>';
+  panel.innerHTML=h;
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function baseDoAddStaff(rosterId, shiftId, personName){
+  var u=(S.rosters||[]).find(function(x){ return x.id===rosterId; });
+  if(!u) return;
+  var R=u.roster, dateISO=S.baseDateISO;
+  if(!R.memberOverrides) R.memberOverrides={};
+  if(!R.memberOverrides[dateISO]) R.memberOverrides[dateISO]={};
+  var dt=parseISO(dateISO), di=dayDiff(parseISO(R.startISO), dt);
+  var per=calSlotCrews(R,di);
+  for(var i=0;i<per.length;i++){
+    if(per[i].sl.id===shiftId&&per[i].list.length){
+      var mems=effShiftMembers(R, dateISO, shiftId, per[i].list[0].c);
+      if(mems.indexOf(personName)<0) mems.push(personName);
+      R.memberOverrides[dateISO][shiftId]=mems;
+      break;
+    }
+  }
+  persist();
+  document.getElementById('baseCoverPanel').innerHTML='';
+  renderBase();
+  toast(personName+' added to shift');
 }
 /* Long-term leave: person + date range */
 function baseLongLeave(){
