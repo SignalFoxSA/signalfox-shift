@@ -218,6 +218,17 @@
     background:var(--accent); color:var(--accent-ink); font-weight:700; font-size:14px;
     padding:12px 20px; border-radius:30px; display:none; white-space:nowrap;
   }
+  #swUpdate{
+    position:fixed; left:12px; right:12px; bottom:12px; z-index:70;
+    background:var(--card2); border:1px solid var(--accent); border-radius:var(--radius);
+    padding:12px 14px; display:flex; align-items:center; gap:12px;
+    box-shadow:0 8px 30px rgba(0,0,0,.5);
+  }
+  #swUpdate span{flex:1; font-size:14px; font-weight:600;}
+  #swUpdate button{
+    background:var(--accent); color:var(--accent-ink); border:none; border-radius:20px;
+    font-weight:800; font-size:14px; padding:10px 18px; cursor:pointer; flex:none;
+  }
   .rosteritem{
     display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--line);
     border-radius:var(--radius); padding:14px; margin:10px 0; cursor:pointer;
@@ -3504,9 +3515,40 @@ loadCustomRotations();
 loadBase(); loadSaved();
 try{
   if(typeof navigator!=='undefined' && 'serviceWorker' in navigator && typeof location!=='undefined' && /^https?:$/.test(location.protocol)){
-    navigator.serviceWorker.register('sw.js').catch(function(){});
+    /* update banner: when a new app version is ready, offer it instead of
+       silently serving the old one */
+    window.__swUpdated=false;
+    navigator.serviceWorker.addEventListener('controllerchange', function(){
+      if(window.__swUpdated) return; window.__swUpdated=true;
+      try{ location.reload(); }catch(e){}
+    });
+    navigator.serviceWorker.register('sw.js').then(function(reg){
+      function watch(w){
+        if(!w) return;
+        function ready(){
+          if(w.state==='installed' && navigator.serviceWorker.controller) showUpdateBanner(w);
+        }
+        w.addEventListener('statechange', ready); ready();
+      }
+      reg.addEventListener('updatefound', function(){ watch(reg.installing); });
+      watch(reg.installing);
+      if(reg.waiting && navigator.serviceWorker.controller) showUpdateBanner(reg.waiting);
+    }).catch(function(){});
   }
 }catch(e){}
+function showUpdateBanner(w){
+  if(document.getElementById('swUpdate')) return;
+  var b=document.createElement('div'); b.id='swUpdate';
+  var s=document.createElement('span'); s.textContent='A new version of Shift is ready.';
+  var btn=document.createElement('button'); btn.textContent='Update';
+  btn.onclick=function(){
+    btn.textContent='Updating\u2026'; btn.disabled=true;
+    try{ w.postMessage({type:'SKIP_WAITING'}); }catch(e){}
+    setTimeout(function(){ try{ location.reload(); }catch(e){} }, 3000);
+  };
+  b.appendChild(s); b.appendChild(btn);
+  document.body.appendChild(b);
+}
 sbInit();
 
 </script>
