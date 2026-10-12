@@ -184,6 +184,10 @@
   .shiftrow input[type=time]{flex:none; width:96px; padding:10px 4px; font-size:14px;}
   .shiftrow .tdash{color:var(--muted); flex:none;}
   .shiftrow .rm{background:none; border:none; color:var(--red); font-size:16px; cursor:pointer; padding:6px; flex:none;}
+  .shiftrow .cdotbtn{width:30px; height:30px; border-radius:50%; border:2px solid rgba(255,255,255,.25); flex:none; cursor:pointer;}
+  .cswatches{display:flex; flex-wrap:wrap; gap:8px; padding:8px 0 8px 38px;}
+  .csw{width:32px; height:32px; border-radius:50%; border:2px solid transparent; cursor:pointer;}
+  .csw.sel{border-color:#fff; box-shadow:0 0 0 2px var(--accent);}
   .grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
   .cell{
     border-radius:10px; min-height:70px; padding:5px 4px; cursor:pointer; position:relative;
@@ -786,7 +790,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1255';
+var BUILD='20261012-1258';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -1862,7 +1866,7 @@ function renderCalChrome(ctx){
     if(!ctx||!ctx.R) return '';
     return rotSlots(ctx.R.rotation).map(function(s,i){
       var tm=''; try{ tm=slotTime(ctx.R, s.id); }catch(e){}
-      return '<span><span class="dot" style="background:'+shiftStandardColor(i)+'"></span>'+escapeHtml(s.name)+(tm?' '+escapeHtml(tm):'')+'</span>';
+      return '<span><span class="dot" style="background:'+shiftColor(s,i)+'"></span>'+escapeHtml(s.name)+(tm?' '+escapeHtml(tm):'')+'</span>';
     }).join('');
   })();
 }
@@ -1910,7 +1914,7 @@ function renderCalMonth(ctx){
           });
         });
         var memLine=memNames.length?'<span class="bm">'+memNames.map(escapeHtml).join(', ')+'</span>':'';
-        var band=shiftStandardColor(sIdx);
+        var band=shiftColor(ps.sl, sIdx);
         inner+='<span class="band" style="background:'+band+';color:'+textOnBand(band)+'">'+
           '<span class="bs">'+escapeHtml(shiftBandShort(ps.sl.name))+'</span>'+
           '<span class="bc">'+crews+'</span>'+memLine+'</span>';
@@ -2004,7 +2008,7 @@ function renderCalSix(){
         var per=calSlotCrews(R,info.dayIdx), dots=[], nP=per.length;
         per.forEach(function(ps, sIdx){
           if(!ps.list.length) return;
-          dots.push(shiftStandardColor(sIdx));
+          dots.push(shiftColor(ps.sl, sIdx));
         });
         html+='<div class="smc">'+dots.map(function(c){
           return '<i style="background:'+c+'"></i>';
@@ -2144,7 +2148,7 @@ function renderCalWeek(ctx){
         var dot=ps.list.map(function(x){ return '<span class="cdot" style="background:'+x.c.color+'"></span>'; }).join('');
         var tm=''; try{ tm=slotTime(R, ps.sl.id); }catch(e){}
         var cis=ps.list.map(function(x){ return x.ci; }).join(',');
-        var acc=shiftStandardColor(sIdx);
+        var acc=shiftColor(ps.sl, sIdx);
         body+='<div class="wshift" data-day="'+info.dayIdx+'" data-ci="'+cis+'" style="border-left:5px solid '+acc+'"><div class="t">'+dot+escapeHtml(slotDisplayLabel(ps.sl))+'</div><div class="n">'+nm+'</div>'+(tm?'<div class="h">'+tm+'</div>':'')+'</div>';
       });
       if(!body) body='<div style="color:var(--muted);font-size:14px;">All off</div>';
@@ -2294,7 +2298,7 @@ function renderDaySheet(){
     var html='';
     shifts.forEach(function(ps, i){
       var tm=''; try{ tm=slotTime(R, ps.sl.id); }catch(e){}
-      var band=shiftStandardColor(i);
+      var band=shiftColor(ps.sl, i);
       html+='<div class="dshift" style="border-left:5px solid '+band+'">'+
         '<div class="dh"><span class="t">'+escapeHtml(ps.sl.name)+'</span>'+
         (tm?'<span class="c">'+escapeHtml(tm)+'</span>':'')+
@@ -3075,11 +3079,11 @@ function isoDate(d){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 /* ---------- shift display colors ----------
-   One standard color per shift (Day=gold, Night=blue, …). Fixed palette,
-   no picker, no light/dark shading — clean and not busy. */
-var STANDARD_SHIFT_COLORS=['#FFC13E','#4DABF7','#51CF66','#FF8787','#9775fa','#ffa94d','#63e6be','#e599f7'];
-function shiftStandardColor(idx){
-  return STANDARD_SHIFT_COLORS[(idx||0)%STANDARD_SHIFT_COLORS.length];
+   One color per shift — the color the user selected in Settings → Shifts.
+   Falls back to the palette by position for shifts without a saved color. */
+function shiftColor(sl, idx){
+  if(sl && sl.color) return sl.color;
+  return SHIFT_COLORS[(idx||0)%SHIFT_COLORS.length];
 }
 /* readable text color on a band */
 function textOnBand(hex){
@@ -3092,7 +3096,9 @@ function textOnBand(hex){
    The workplace defines its shifts: name + start/end time. Add as many as
    the day needs — the count you define IS the shifts per 24 hours.
    Rotations reference these (built-ins by position: D=1st, N=2nd). */
-var SHIFT_COLORS=['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#63E6BE','#FFD43B','#E599F7'];
+var SHIFT_COLORS=['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#63E6BE','#FFD43B','#E599F7',
+  '#FFA94D','#3BC9DB','#F783AC','#A9E34B','#748FFC','#FF8787','#66D9E8','#E9C46A',
+  '#2EC4B6','#E71D36','#FF9F1C','#9B5DE5','#00BBF9','#80ED99','#F15BB5','#FEE440'];
 function defaultShifts(){
   return [
     {id:'s1', name:'Day shift', start:'06:00', end:'18:00', color:'#FFC13E'},
@@ -3253,20 +3259,50 @@ function renderSettings(){
   hs.onchange=function(){ st.holidays=this.value; persistBase(); renderCalendar(); };
   renderShifts();
 }
-/* workplace shift manager: name + hours per shift, as many as the day needs.
-   (Band colors come from the crew, shaded by shift — shifts don't need colors.) */
+/* workplace shift manager: name + hours + color per shift, as many as the day needs. */
+var shiftColorOpen=null;
 function renderShifts(){
   var wrap=document.getElementById('shiftList'); if(!wrap) return;
   function escQ(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   wrap.innerHTML=wpShifts().map(function(s){
-    return '<div class="shiftrow">'+
+    var col=s.color||SHIFT_COLORS[0];
+    var html='<div class="shiftrow">'+
+      '<button class="cdot cdotbtn" type="button" style="background:'+col+'" title="Change shift color" aria-label="Change shift color" data-cdot="'+s.id+'"></button>'+
       '<input type="text" maxlength="24" value="'+escQ(s.name)+'" placeholder="Shift name" aria-label="Shift name" data-shift="'+s.id+'" data-f="name">'+
       '<input type="time" value="'+escQ(s.start||'06:00')+'" aria-label="Shift start" data-shift="'+s.id+'" data-f="start">'+
       '<span class="tdash">\u2013</span>'+
       '<input type="time" value="'+escQ(s.end||'18:00')+'" aria-label="Shift end" data-shift="'+s.id+'" data-f="end">'+
       '<button class="rm" type="button" title="Remove shift" data-del="'+s.id+'">\u2715</button>'+
       '</div>';
+    if(shiftColorOpen===s.id){
+      html+='<div class="cswatches">'+SHIFT_COLORS.map(function(c){
+        return '<button type="button" class="csw'+(String(c).toLowerCase()===String(col).toLowerCase()?' sel':'')+
+          '" style="background:'+c+'" title="'+c+'" aria-label="Shift color '+c+'" data-pick="'+s.id+'|'+c+'"></button>';
+      }).join('')+'</div>';
+    }
+    return html;
   }).join('');
+  var dots=wrap.querySelectorAll('button[data-cdot]');
+  for(var k=0;k<dots.length;k++){
+    (function(btn){
+      btn.onclick=function(){
+        var id=btn.getAttribute('data-cdot');
+        shiftColorOpen=(shiftColorOpen===id?null:id);
+        renderShifts();
+      };
+    })(dots[k]);
+  }
+  var picks=wrap.querySelectorAll('button[data-pick]');
+  for(var q=0;q<picks.length;q++){
+    (function(btn){
+      btn.onclick=function(){
+        var parts=btn.getAttribute('data-pick').split('|');
+        var s=wpShift(parts[0]); if(!s) return;
+        s.color=parts[1]; shiftColorOpen=null;
+        persistBase(); renderShifts(); renderCalendar();
+      };
+    })(picks[q]);
+  }
   var inps=wrap.querySelectorAll('input');
   for(var i=0;i<inps.length;i++){
     (function(inp){
@@ -3625,7 +3661,7 @@ function expGridEl(E, mode, variant){
       var bands='';
       E.shifts.forEach(function(s,i){
         if(pr[i]<0) return;
-        var band=shiftStandardColor(i), bt=textOnBand(band);
+        var band=shiftColor(s, i), bt=textOnBand(band);
         bands+='<div style="background:'+band+';border-radius:'+F(5)+'px;text-align:center;font-size:'+F(13)+'px;font-weight:800;color:'+bt+';padding:'+P+'px 0;margin-top:'+F(4)+'px;">'+escapeHtml(s.band.toUpperCase())+': '+escapeHtml(E.crews[pr[i]].name)+'</div>';
       });
       h+=open+'">'
