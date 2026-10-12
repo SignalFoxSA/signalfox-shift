@@ -522,6 +522,7 @@
     </div>
     <button class="btn" id="newRosterBtn" onclick="toNewRoster()">+ New roster</button>
     <button class="btn ghost" onclick="switchTab('onduty')">&#128065; Who's on duty</button>
+    <button class="btn ghost" onclick="msPickPerson()">&#128100; My shifts (employee view)</button>
     <button class="btn ghost" onclick="openBaseSetup()">&#128736; Set up my workplace</button>
     <div class="card">
       <h3>On duty today</h3>
@@ -708,6 +709,16 @@
     <button class="btn ghost" onclick="goBack()">Back</button>
   </div>
 
+  <!-- MY SHIFTS (employee view) -->
+  <div class="view" id="v-myshifts">
+    <div class="card">
+      <h3 id="msTitle">My Shifts</h3>
+      <p class="sub" id="msSub">Your upcoming shifts.</p>
+      <div id="msList"></div>
+    </div>
+    <button class="btn ghost" onclick="msBack()">Back</button>
+  </div>
+
   <!-- BASE VIEW -->
   <div class="view" id="v-base">
     <div class="card">
@@ -806,7 +817,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1511';
+var BUILD='20261012-1735';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2580,6 +2591,89 @@ function deleteRoster(id){
 /* ---------- who's-on-duty view: all teams, one day ---------- */
 function dayDiff(a,b){ return Math.round((b.getTime()-a.getTime())/86400000); }
 function fmtLong(d){ return d.toLocaleDateString('en-ZA',{weekday:'long', day:'numeric', month:'long'}); }
+/* ---------- My Shifts (employee view) ---------- */
+var msPerson=null;
+function msPickPerson(){
+  var names=allStaffNames();
+  if(!names.length){ toast('No staff members yet'); return; }
+  var panel=document.getElementById('msPickPanel');
+  if(!panel){
+    panel=document.createElement('div');
+    panel.id='msPickPanel';
+    document.getElementById('v-home').appendChild(panel);
+  }
+  var h='<div class="card" style="border:2px solid var(--accent);margin-top:10px;">'
+    +'<h3>Whose shifts?</h3>'
+    +'<p class="sub">Pick a staff member to view their shifts.</p>';
+  names.forEach(function(nm){
+    h+='<div class="avail" onclick="openMyShifts(\''+escapeHtml(nm).replace(/'/g,"\\'")+'\')">'
+      +'<span class="nm">'+escapeHtml(nm)+'</span><span class="meta">→</span></div>';
+  });
+  h+='<div class="btnrow"><button class="btn ghost" onclick="document.getElementById(\'msPickPanel\').innerHTML=\'\'">Cancel</button></div></div>';
+  panel.innerHTML=h;
+  panel.scrollIntoView({behavior:'smooth'});
+}
+function openMyShifts(personName){
+  msPerson=personName;
+  renderMyShifts();
+  show('v-myshifts');
+}
+function msBack(){
+  /* return to where we came from */
+  show('v-home');
+}
+function renderMyShifts(){
+  if(!msPerson) return;
+  document.getElementById('msTitle').textContent=msPerson+"'s Shifts";
+  var wrap=document.getElementById('msList');
+  wrap.innerHTML='';
+  loadSaved();
+  var shifts=[];
+  (S.rosters||[]).forEach(function(u){
+    var R=u.roster;
+    if(R.kind!=='month') return;
+    for(var d=1; d<=daysInMonth(R.year, R.month); d++){
+      var dateISO=R.year+'-'+String(R.month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      var info=calRosterDay(R, R.year, R.month, d);
+      if(!info) continue;
+      var per=calSlotCrews(R, info.dayIdx);
+      per.forEach(function(ps){
+        if(!ps.list.length) return;
+        ps.list.forEach(function(x){
+          var mems=effShiftMembers(R, dateISO, ps.sl.id, x.c);
+          if(mems.indexOf(msPerson)>=0){
+            var tm=''; try{ tm=slotTime(R, ps.sl.id); }catch(e){}
+            shifts.push({
+              date:dateISO, d:d,
+              dt:new Date(R.year, R.month, d),
+              shift:ps.sl.name, time:tm,
+              crew:x.c.name, color:x.c.color,
+              team:u.name
+            });
+          }
+        });
+      });
+    }
+  });
+  shifts.sort(function(a,b){ return a.dt-b.dt; });
+  /* only upcoming (today onwards) */
+  var today=new Date(); today.setHours(0,0,0,0);
+  shifts=shifts.filter(function(s){ return s.dt>=today; });
+  document.getElementById('msSub').textContent=shifts.length?shifts.length+' upcoming shift'+(shifts.length>1?'s':''):'No upcoming shifts.';
+  var html='';
+  shifts.forEach(function(s){
+    var wd=s.dt.toLocaleDateString('en-ZA',{weekday:'short'});
+    var md=s.dt.toLocaleDateString('en-ZA',{day:'numeric', month:'short'});
+    html+='<div class="dshift" style="border-left:5px solid '+s.color+'">'
+      +'<div class="dh"><span class="t">'+wd+' '+md+'</span>'
+      +'<span class="c">'+escapeHtml(s.team)+'</span></div>'
+      +'<div style="font-weight:700;margin:4px 0;">'+escapeHtml(s.shift)+'</div>'
+      +(s.time?'<div style="color:var(--muted);font-size:13px;">'+escapeHtml(s.time)+'</div>':'')
+      +'<div style="color:var(--muted);font-size:13px;">Crew '+escapeHtml(s.crew)+'</div>'
+      +'</div>';
+  });
+  wrap.innerHTML=html||'<p class="fine">Nothing rostered.</p>';
+}
 function openBase(){
   S.baseDateISO=toISO(new Date());
   renderBase(); show('v-base');
