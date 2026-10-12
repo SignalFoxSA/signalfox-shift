@@ -184,10 +184,6 @@
   .shiftrow input[type=time]{flex:none; width:96px; padding:10px 4px; font-size:14px;}
   .shiftrow .tdash{color:var(--muted); flex:none;}
   .shiftrow .rm{background:none; border:none; color:var(--red); font-size:16px; cursor:pointer; padding:6px; flex:none;}
-  .shiftrow .cdotbtn{width:30px; height:30px; border-radius:50%; border:2px solid rgba(255,255,255,.25); flex:none; cursor:pointer;}
-  .cswatches{display:flex; flex-wrap:wrap; gap:8px; padding:8px 0 8px 38px;}
-  .csw{width:32px; height:32px; border-radius:50%; border:2px solid transparent; cursor:pointer;}
-  .csw.sel{border-color:#fff; box-shadow:0 0 0 2px var(--accent);}
   .grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
   .cell{
     border-radius:10px; min-height:70px; padding:5px 4px; cursor:pointer; position:relative;
@@ -790,7 +786,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1258';
+var BUILD='20261012-1304';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -1864,9 +1860,9 @@ function renderCalChrome(ctx){
     return '<span><span class="dot" style="background:'+c.color+'"></span>Crew '+escapeHtml(c.name)+'</span>';
   }).join('')+(function(){
     if(!ctx||!ctx.R) return '';
-    return rotSlots(ctx.R.rotation).map(function(s,i){
+    return rotSlots(ctx.R.rotation).map(function(s){
       var tm=''; try{ tm=slotTime(ctx.R, s.id); }catch(e){}
-      return '<span><span class="dot" style="background:'+shiftColor(s,i)+'"></span>'+escapeHtml(s.name)+(tm?' '+escapeHtml(tm):'')+'</span>';
+      return '<span>'+escapeHtml(s.name)+(tm?' '+escapeHtml(tm):'')+'</span>';
     }).join('');
   })();
 }
@@ -1914,7 +1910,7 @@ function renderCalMonth(ctx){
           });
         });
         var memLine=memNames.length?'<span class="bm">'+memNames.map(escapeHtml).join(', ')+'</span>':'';
-        var band=shiftColor(ps.sl, sIdx);
+        var band=(ps.list[0]&&ps.list[0].c.color)||'#888888';
         inner+='<span class="band" style="background:'+band+';color:'+textOnBand(band)+'">'+
           '<span class="bs">'+escapeHtml(shiftBandShort(ps.sl.name))+'</span>'+
           '<span class="bc">'+crews+'</span>'+memLine+'</span>';
@@ -2008,7 +2004,7 @@ function renderCalSix(){
         var per=calSlotCrews(R,info.dayIdx), dots=[], nP=per.length;
         per.forEach(function(ps, sIdx){
           if(!ps.list.length) return;
-          dots.push(shiftColor(ps.sl, sIdx));
+          dots.push((ps.list[0]&&ps.list[0].c.color)||'#888888');
         });
         html+='<div class="smc">'+dots.map(function(c){
           return '<i style="background:'+c+'"></i>';
@@ -2148,7 +2144,7 @@ function renderCalWeek(ctx){
         var dot=ps.list.map(function(x){ return '<span class="cdot" style="background:'+x.c.color+'"></span>'; }).join('');
         var tm=''; try{ tm=slotTime(R, ps.sl.id); }catch(e){}
         var cis=ps.list.map(function(x){ return x.ci; }).join(',');
-        var acc=shiftColor(ps.sl, sIdx);
+        var acc=(ps.list[0]&&ps.list[0].c.color)||'#888888';
         body+='<div class="wshift" data-day="'+info.dayIdx+'" data-ci="'+cis+'" style="border-left:5px solid '+acc+'"><div class="t">'+dot+escapeHtml(slotDisplayLabel(ps.sl))+'</div><div class="n">'+nm+'</div>'+(tm?'<div class="h">'+tm+'</div>':'')+'</div>';
       });
       if(!body) body='<div style="color:var(--muted);font-size:14px;">All off</div>';
@@ -2298,7 +2294,7 @@ function renderDaySheet(){
     var html='';
     shifts.forEach(function(ps, i){
       var tm=''; try{ tm=slotTime(R, ps.sl.id); }catch(e){}
-      var band=shiftColor(ps.sl, i);
+      var band=(ps.list[0]&&ps.list[0].c.color)||'#888888';
       html+='<div class="dshift" style="border-left:5px solid '+band+'">'+
         '<div class="dh"><span class="t">'+escapeHtml(ps.sl.name)+'</span>'+
         (tm?'<span class="c">'+escapeHtml(tm)+'</span>':'')+
@@ -3079,12 +3075,7 @@ function isoDate(d){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 /* ---------- shift display colors ----------
-   One color per shift — the color the user selected in Settings → Shifts.
-   Falls back to the palette by position for shifts without a saved color. */
-function shiftColor(sl, idx){
-  if(sl && sl.color) return sl.color;
-  return SHIFT_COLORS[(idx||0)%SHIFT_COLORS.length];
-}
+   Blocks use the CREW's flat color (A=gold, B=blue…). No shading, no shift colors. */
 /* readable text color on a band */
 function textOnBand(hex){
   var h=String(hex||'').replace('#','');
@@ -3259,50 +3250,20 @@ function renderSettings(){
   hs.onchange=function(){ st.holidays=this.value; persistBase(); renderCalendar(); };
   renderShifts();
 }
-/* workplace shift manager: name + hours + color per shift, as many as the day needs. */
-var shiftColorOpen=null;
+/* workplace shift manager: name + hours per shift, as many as the day needs.
+   (Blocks use the crew's color — shifts don't need colors.) */
 function renderShifts(){
   var wrap=document.getElementById('shiftList'); if(!wrap) return;
   function escQ(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   wrap.innerHTML=wpShifts().map(function(s){
-    var col=s.color||SHIFT_COLORS[0];
-    var html='<div class="shiftrow">'+
-      '<button class="cdot cdotbtn" type="button" style="background:'+col+'" title="Change shift color" aria-label="Change shift color" data-cdot="'+s.id+'"></button>'+
+    return '<div class="shiftrow">'+
       '<input type="text" maxlength="24" value="'+escQ(s.name)+'" placeholder="Shift name" aria-label="Shift name" data-shift="'+s.id+'" data-f="name">'+
       '<input type="time" value="'+escQ(s.start||'06:00')+'" aria-label="Shift start" data-shift="'+s.id+'" data-f="start">'+
       '<span class="tdash">\u2013</span>'+
       '<input type="time" value="'+escQ(s.end||'18:00')+'" aria-label="Shift end" data-shift="'+s.id+'" data-f="end">'+
       '<button class="rm" type="button" title="Remove shift" data-del="'+s.id+'">\u2715</button>'+
       '</div>';
-    if(shiftColorOpen===s.id){
-      html+='<div class="cswatches">'+SHIFT_COLORS.map(function(c){
-        return '<button type="button" class="csw'+(String(c).toLowerCase()===String(col).toLowerCase()?' sel':'')+
-          '" style="background:'+c+'" title="'+c+'" aria-label="Shift color '+c+'" data-pick="'+s.id+'|'+c+'"></button>';
-      }).join('')+'</div>';
-    }
-    return html;
   }).join('');
-  var dots=wrap.querySelectorAll('button[data-cdot]');
-  for(var k=0;k<dots.length;k++){
-    (function(btn){
-      btn.onclick=function(){
-        var id=btn.getAttribute('data-cdot');
-        shiftColorOpen=(shiftColorOpen===id?null:id);
-        renderShifts();
-      };
-    })(dots[k]);
-  }
-  var picks=wrap.querySelectorAll('button[data-pick]');
-  for(var q=0;q<picks.length;q++){
-    (function(btn){
-      btn.onclick=function(){
-        var parts=btn.getAttribute('data-pick').split('|');
-        var s=wpShift(parts[0]); if(!s) return;
-        s.color=parts[1]; shiftColorOpen=null;
-        persistBase(); renderShifts(); renderCalendar();
-      };
-    })(picks[q]);
-  }
   var inps=wrap.querySelectorAll('input');
   for(var i=0;i<inps.length;i++){
     (function(inp){
@@ -3661,7 +3622,7 @@ function expGridEl(E, mode, variant){
       var bands='';
       E.shifts.forEach(function(s,i){
         if(pr[i]<0) return;
-        var band=shiftColor(s, i), bt=textOnBand(band);
+        var band=(E.crews[pr[i]]&&E.crews[pr[i]].color)||'#888888', bt=textOnBand(band);
         bands+='<div style="background:'+band+';border-radius:'+F(5)+'px;text-align:center;font-size:'+F(13)+'px;font-weight:800;color:'+bt+';padding:'+P+'px 0;margin-top:'+F(4)+'px;">'+escapeHtml(s.band.toUpperCase())+': '+escapeHtml(E.crews[pr[i]].name)+'</div>';
       });
       h+=open+'">'
