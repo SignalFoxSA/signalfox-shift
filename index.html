@@ -71,7 +71,14 @@
   .srow{display:flex; gap:8px; margin-top:8px; align-items:center;}
   .srow input{flex:1; min-width:0;}
   .srow select.qsel{flex:none; width:96px; padding:12px 6px;}
-  .srow select.tsel{flex:1 1 42%; min-width:0;}
+  /* staff person rows: two lines — name+qual+remove, then team+crew */
+  .prow{margin-top:8px;}
+  .prow .sline{display:flex; gap:8px; align-items:center;}
+  .prow .sline + .sline{margin-top:8px;}
+  .prow .sline input[type=text]{flex:1; min-width:0;}
+  .prow .sline select.qsel{flex:none; width:96px; padding:12px 6px;}
+  .prow .sline select.tsel{flex:1; min-width:0;}
+  .prow .sline .rm{background:none; border:none; color:var(--red); font-size:16px; cursor:pointer; padding:6px; flex:none;}
   .srow .rm{background:none; border:none; color:var(--red); font-size:16px; cursor:pointer; padding:6px; flex:none;}
   .vsect{margin:14px 0 4px; font-size:13px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.5px;}
   .mrow select{flex:1; min-width:0;}
@@ -2768,7 +2775,8 @@ function renderStaffTab(){
   if(!S.base.staff.length) wrap.innerHTML='<p class="fine">Nobody here yet &mdash; add your people below.</p>';
   var teams=S.base.vehicles||[];
   S.base.staff.forEach(function(s,si){
-    var row=document.createElement('div'); row.className='srow';
+    var row=document.createElement('div'); row.className='prow';
+    var top=document.createElement('div'); top.className='sline';
     var inp=document.createElement('input'); inp.type='text'; inp.maxLength=24; inp.value=s.name; inp.placeholder='Staff name';
     inp.oninput=function(){ s.name=this.value; persistBase(); };
     var q=document.createElement('select'); q.className='qsel'; q.title='Qualification';
@@ -2780,7 +2788,8 @@ function renderStaffTab(){
     q.onchange=function(){ s.qual=this.value; persistBase(); };
     var rm=document.createElement('button'); rm.className='rm'; rm.textContent='\u2715'; rm.title='Remove';
     rm.onclick=function(){ staffDel(si); };
-    row.appendChild(inp); row.appendChild(q); row.appendChild(rm);
+    top.appendChild(inp); top.appendChild(q); top.appendChild(rm);
+    var bot=document.createElement('div'); bot.className='sline';
     var cur=staffCrewOf(s.id), curTeam=cur?cur.vehicleId:'';
     var tsel=document.createElement('select'); tsel.className='tsel'; tsel.title='Team';
     tsel.setAttribute('aria-label','Team for '+(s.name||'staff member'));
@@ -2805,7 +2814,8 @@ function renderStaffTab(){
         persistBase(); renderBsCrews();
       };
     })(s);
-    row.appendChild(tsel); row.appendChild(csel);
+    bot.appendChild(tsel); bot.appendChild(csel);
+    row.appendChild(top); row.appendChild(bot);
     wrap.appendChild(row);
   });
 }
