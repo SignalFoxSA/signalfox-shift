@@ -230,6 +230,8 @@
   .person .q{color:var(--muted); font-size:12px; margin-left:8px;}
   .sickbtn{background:rgba(255,107,107,.14); color:#ff6b6b; border:1px solid #ff6b6b; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:700; cursor:pointer;}
   .sickbtn:active{transform:scale(.95);}
+  .coverbtn{background:var(--accent); color:#141414; border:none; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:800; cursor:pointer;}
+  .coverbtn:active{transform:scale(.95);}
   .avail{display:flex; align-items:center; justify-content:space-between; background:var(--card2); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin:8px 0; cursor:pointer;}
   .avail:active{transform:scale(.98); border-color:var(--accent);}
   .avail .nm{font-weight:700;}
@@ -717,6 +719,7 @@
         <button class="btn ghost" onclick="baseNav(1)">&#8594;</button>
       </div>
       <div style="text-align:center;margin-bottom:4px"><a href="#" onclick="baseToday();return false;" style="font-size:13px;">Today</a></div>
+      <div style="text-align:center;margin-bottom:8px;"><button class="btn ghost" style="font-size:13px;padding:8px 16px;" onclick="baseLongLeave()">+ Long-term leave</button></div>
       <div id="baseUnits"></div>
       <div id="baseCoverPanel"></div>
     </div>
@@ -803,7 +806,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1405';
+var BUILD='20261012-1412';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -1938,6 +1941,7 @@ function renderCalMonth(ctx){
         var memNames=[];
         ps.list.forEach(function(x){
           effShiftMembers(R, dateISO, ps.sl.id, x.c).forEach(function(nm){
+            nm=dispMember(nm);
             if(memNames.indexOf(nm)<0) memNames.push(nm);
           });
         });
@@ -2114,7 +2118,7 @@ function renderCalAgenda(ctx){
         if(!on.length) return '';
         var bit=on.map(function(x){
           var mems=effShiftMembers(R, dateISO, sl.id, x.c);
-          var nm=mems.length?' \u2014 '+mems.map(escapeHtml).join(', '):'';
+          var nm=mems.length?' \u2014 '+mems.map(function(n){ return escapeHtml(dispMember(n)); }).join(', '):'';
           return '<span class="cdot" style="background:'+x.c.color+'"></span> <b>Crew '+escapeHtml(x.c.name)+'</b>'+nm;
         }).join(' \u00b7 ');
         return '<div><b>'+escapeHtml(sl.name||sl.id)+':</b> '+bit+'</div>';
@@ -2173,7 +2177,7 @@ function renderCalWeek(ctx){
         if(!ps.list.length) return;
         var nm=ps.list.map(function(x){
           var mems=effShiftMembers(R, wDateISO, ps.sl.id, x.c);
-          var mem=mems.length?' \u2014 '+mems.map(escapeHtml).join(', '):'';
+          var mem=mems.length?' \u2014 '+mems.map(function(n){ return escapeHtml(dispMember(n)); }).join(', '):'';
           return 'Crew '+escapeHtml(x.c.name)+mem;
         }).join(' \u00b7 ');
         var dot=ps.list.map(function(x){ return '<span class="cdot" style="background:'+x.c.color+'"></span>'; }).join('');
@@ -2334,7 +2338,7 @@ function renderDaySheet(){
         '<span class="c">· Crew '+ps.list.map(function(x){ return escapeHtml(x.c.name); }).join(', ')+'</span></div>';
       ps.list.forEach(function(x){
         var mems=effShiftMembers(R, dayCtx.dateISO, ps.sl.id, x.c);
-        html+='<div>'+mems.map(function(nm){ return '<span class="mchip">'+escapeHtml(nm)+'</span>'; }).join('')+'</div>';
+        html+='<div>'+mems.map(function(nm){ return '<span class="mchip">'+escapeHtml(dispMember(nm))+'</span>'; }).join('')+'</div>';
       });
       html+='</div>';
     });
@@ -2610,6 +2614,10 @@ function renderBase(){
         if(st==='OFF') return;
         var mems=effShiftMembers(R, dateISO, st, c);
         var plist=mems.map(function(nm){
+          if(nm===OPEN_MARK){
+            return '<div class="person" style="border:1px dashed var(--accent);"><span><span class="nm" style="color:var(--accent);">Open shift</span><span class="q">needs cover</span></span>'
+              +'<button class="coverbtn" onclick="event.stopPropagation();baseFillOpen(\''+u.id+'\',\''+st+'\')">Fill</button></div>';
+          }
           var q=qualName(staffQualIdByName(nm));
           return '<div class="person"><span><span class="nm">'+escapeHtml(nm)+'</span>'
             +(q?'<span class="q">'+escapeHtml(q)+'</span>':'')+'</span>'
@@ -2632,6 +2640,7 @@ function renderBase(){
 }
 /* Sick cover from Who's on duty */
 var LEAVE_TYPES=['Sick leave','Annual leave','Family responsibility','Study leave','Maternity / Paternity','Unpaid leave','Other'];
+var OPEN_MARK='__OPEN__'; /* marker for an unfilled position in memberOverrides */
 function baseLeave(rosterId, shiftId, personName){
   var panel=document.getElementById('baseCoverPanel');
   var h='<div class="card" style="border:2px solid var(--accent);">'
@@ -2644,6 +2653,71 @@ function baseLeave(rosterId, shiftId, personName){
   h+='<div class="btnrow"><button class="btn ghost" onclick="document.getElementById(\'baseCoverPanel\').innerHTML=\'\'">Cancel</button></div></div>';
   panel.innerHTML=h;
   panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+/* Long-term leave: person + date range */
+function baseLongLeave(){
+  var panel=document.getElementById('baseCoverPanel');
+  var staff=(S.base.staff||[]).filter(function(s){ return s.name; });
+  var opts=staff.map(function(s){
+    return '<option value="'+escapeHtml(s.name)+'">'+escapeHtml(s.name)+'</option>';
+  }).join('');
+  var types=LEAVE_TYPES.map(function(t){
+    return '<option>'+escapeHtml(t)+'</option>';
+  }).join('');
+  var today=toISO(new Date());
+  var h='<div class="card" style="border:2px solid var(--accent);">'
+    +'<h3>Long-term leave</h3>'
+    +'<p class="sub">Remove someone from the roster for a date range. Their shifts become open.</p>'
+    +'<label class="f">Person</label>'
+    +'<select id="llPerson" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--card2);color:var(--text);">'+opts+'</select>'
+    +'<label class="f" style="margin-top:8px;">From</label>'
+    +'<input type="date" id="llFrom" value="'+today+'" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--card2);color:var(--text);">'
+    +'<label class="f" style="margin-top:8px;">To</label>'
+    +'<input type="date" id="llTo" value="'+today+'" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--card2);color:var(--text);">'
+    +'<label class="f" style="margin-top:8px;">Type</label>'
+    +'<select id="llType" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--card2);color:var(--text);">'+types+'</select>'
+    +'<div class="btnrow" style="margin-top:12px;"><button class="btn ghost" onclick="document.getElementById(\'baseCoverPanel\').innerHTML=\'\'">Cancel</button>'
+    +'<button class="btn primary" onclick="baseApplyLongLeave()">Apply</button></div></div>';
+  panel.innerHTML=h;
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function baseApplyLongLeave(){
+  var person=document.getElementById('llPerson').value;
+  var from=document.getElementById('llFrom').value;
+  var to=document.getElementById('llTo').value;
+  var type=document.getElementById('llType').value;
+  if(!person||!from||!to){ toast('Fill in all fields'); return; }
+  if(from>to){ toast('From date must be before To date'); return; }
+  var affected=0;
+  var d=parseISO(from), end=parseISO(to);
+  while(d<=end){
+    var dateISO=toISO(d);
+    (S.rosters||[]).forEach(function(u){
+      var R=u.roster;
+      var di=dayDiff(parseISO(R.startISO), d);
+      if(di<0||di>=R.days) return;
+      var per=calSlotCrews(R,di), changed=false;
+      per.forEach(function(ps){
+        if(!ps.list.length) return;
+        var mems=effShiftMembers(R, dateISO, ps.sl.id, ps.list[0].c);
+        var idx=mems.indexOf(person);
+        if(idx>=0){
+          mems[idx]=OPEN_MARK;
+          if(!R.memberOverrides) R.memberOverrides={};
+          if(!R.memberOverrides[dateISO]) R.memberOverrides[dateISO]={};
+          R.memberOverrides[dateISO][ps.sl.id]=mems;
+          if(!R.leaveLog) R.leaveLog=[];
+          R.leaveLog.push({date:dateISO, shift:ps.sl.id, person:person, type:type, cover:'OPEN', ts:Date.now()});
+          changed=true; affected++;
+        }
+      });
+      if(changed) syncUnit();
+    });
+    d.setDate(d.getDate()+1);
+  }
+  document.getElementById('baseCoverPanel').innerHTML='';
+  renderBase();
+  toast(affected?person+' on '+type+' ('+affected+' shift'+(affected>1?'s':'')+' opened)':'No shifts found for '+person+' in that range');
 }
 function baseSick(rosterId, shiftId, personName, leaveType){
   var u=(S.rosters||[]).find(function(x){ return x.id===rosterId; });
@@ -2688,7 +2762,10 @@ function baseSick(rosterId, shiftId, personName, leaveType){
   var qn=qualName(sickQ);
   var h='<div class="card" style="border:2px solid var(--accent);">'
     +'<h3>Cover for '+escapeHtml(personName)+(qn?' ('+escapeHtml(qn)+')':'')+'</h3>'
-    +'<p class="sub">'+escapeHtml(leaveType||'Leave')+' — same qualification first, then higher. Lower qualifications are not shown.</p>';
+    +'<p class="sub">'+escapeHtml(leaveType||'Leave')+' — same qualification first, then higher. Lower qualifications are not shown.</p>'
+    +'<div class="avail" style="border-style:dashed;" onclick="basePickCover(\''+rosterId+'\',\''+shiftId+'\',\''+escapeHtml(personName).replace(/'/g,"\\'")+'\',\''+OPEN_MARK+'\',\''+escapeHtml(leaveType||'Leave')+'\')">'
+    +'<span><span class="nm">Leave as open shift</span> <span class="meta">fill later</span></span>'
+    +'<button class="pick" style="background:var(--accent);">Open</button></div>';
   if(!cands.length){
     h+='<p class="fine">No suitable cover available — everyone is working or lower-qualified.</p>';
   }else{
@@ -2717,19 +2794,89 @@ function basePickCover(rosterId, shiftId, sickName, coverName, leaveType){
     if(per[i].sl.id===shiftId&&per[i].list.length){
       var mems=effShiftMembers(R, dateISO, shiftId, per[i].list[0].c);
       var idx=mems.indexOf(sickName);
-      if(idx>=0) mems[idx]=coverName;
-      else if(mems.indexOf(coverName)<0) mems.push(coverName);
+      if(coverName===OPEN_MARK){
+        if(idx>=0) mems[idx]=OPEN_MARK;
+        else if(mems.indexOf(OPEN_MARK)<0) mems.push(OPEN_MARK);
+      }else{
+        if(idx>=0) mems[idx]=coverName;
+        else if(mems.indexOf(coverName)<0) mems.push(coverName);
+        /* if filling an open slot, remove the marker */
+        var oi=mems.indexOf(OPEN_MARK);
+        if(sickName===OPEN_MARK&&oi>=0) mems.splice(oi,1);
+      }
       R.memberOverrides[dateISO][shiftId]=mems;
       break;
     }
   }
-  /* log the leave */
   if(!R.leaveLog) R.leaveLog=[];
-  R.leaveLog.push({date:dateISO, shift:shiftId, person:sickName, type:leaveType||'Leave', cover:coverName, ts:Date.now()});
+  R.leaveLog.push({date:dateISO, shift:shiftId, person:sickName, type:leaveType||'Leave', cover:(coverName===OPEN_MARK?'OPEN':coverName), ts:Date.now()});
   syncUnit();
   document.getElementById('baseCoverPanel').innerHTML='';
   renderBase();
-  toast(coverName+' covers for '+sickName+' ('+(leaveType||'leave')+')');
+  if(coverName===OPEN_MARK) toast('Open shift — tap to fill later');
+  else toast(coverName+' covers for '+sickName+' ('+(leaveType||'leave')+')');
+}
+/* Fill an open shift from Who's on duty */
+function baseFillOpen(rosterId, shiftId){
+  var u=(S.rosters||[]).find(function(x){ return x.id===rosterId; });
+  if(!u) return;
+  var R=u.roster, dateISO=S.baseDateISO;
+  /* find the qual of the person who was originally here (from leave log) */
+  var sickRank=999, qn='';
+  if(R.leaveLog){
+    for(var li=R.leaveLog.length-1; li>=0; li--){
+      var lg=R.leaveLog[li];
+      if(lg.date===dateISO&&lg.shift===shiftId&&lg.cover==='OPEN'){
+        sickRank=qualRank(staffQualIdByName(lg.person));
+        qn=qualName(staffQualIdByName(lg.person));
+        break;
+      }
+    }
+  }
+  var dt=parseISO(dateISO), working={};
+  (S.rosters||[]).forEach(function(uu){
+    var RR=uu.roster;
+    var di=dayDiff(parseISO(RR.startISO), dt);
+    if(di<0||di>=RR.days) return;
+    rotSlots(RR.rotation).forEach(function(sl){
+      RR.crews.forEach(function(c){
+        if(cellState(RR,di,RR.crews.indexOf(c))===sl.id){
+          effShiftMembers(RR, dateISO, sl.id, c).forEach(function(nm){
+            if(nm!==OPEN_MARK) working[nm]=1;
+          });
+        }
+      });
+    });
+  });
+  var cands=[];
+  (S.base.staff||[]).forEach(function(s){
+    if(!s.name||working[s.name]) return;
+    var r=qualRank(s.qual);
+    if(r>sickRank) return;
+    cands.push({name:s.name, qual:s.qual, rank:r});
+  });
+  cands.sort(function(a,b){
+    if(a.rank!==b.rank) return a.rank-b.rank;
+    return a.name.localeCompare(b.name);
+  });
+  var panel=document.getElementById('baseCoverPanel');
+  var h='<div class="card" style="border:2px solid var(--accent);">'
+    +'<h3>Fill open shift'+(qn?' ('+escapeHtml(qn)+' or higher)':'')+'</h3>'
+    +'<p class="sub">Who can take this shift?</p>';
+  if(!cands.length){
+    h+='<p class="fine">No one available right now.</p>';
+  }else{
+    cands.forEach(function(cnd){
+      var q=qualName(cnd.qual);
+      h+='<div class="avail" onclick="basePickCover(\''+rosterId+'\',\''+shiftId+'\',\''+OPEN_MARK+'\',\''+escapeHtml(cnd.name).replace(/'/g,"\\'")+'\',\'Cover\')">'
+        +'<span><span class="nm">'+escapeHtml(cnd.name)+'</span> '
+        +'<span class="meta">'+(q?escapeHtml(q):'')+'</span></span>'
+        +'<button class="pick">Pick</button></div>';
+    });
+  }
+  h+='<div class="btnrow"><button class="btn ghost" onclick="document.getElementById(\'baseCoverPanel\').innerHTML=\'\'">Cancel</button></div></div>';
+  panel.innerHTML=h;
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
 
@@ -3227,6 +3374,7 @@ function effShiftMembers(R, dateISO, shiftId, crew){
   }catch(e){}
   return ((crew&&crew.members)||[]).slice();
 }
+function dispMember(nm){ return nm===OPEN_MARK?'Open':nm; }
 function isoDate(d){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
@@ -3659,7 +3807,7 @@ function expBuildText(E, mode){
     var bits=[];
     E.shifts.forEach(function(s,i){
       var crew=pr[i]>=0?E.crews[pr[i]]:null;
-      var names=(pm[i]&&pm[i].length)?pm[i]:(crew?crew.names:[]);
+      var names=(pm[i]&&pm[i].length)?pm[i].map(dispMember):(crew?crew.names:[]);
       bits.push(s.band+': '+(crew?(isNames?names.join(', '):crew.name):'\u2014'));
     });
     L.push(expWeekdayShort(E.y,E.m,d)+' '+d+': '+(bits.join(' \u00b7 ')||'All off'));
@@ -3705,7 +3853,7 @@ function expBuildWorkbook(E, mode){
     if(isNames){
       v=String(c.date);
       E.shifts.forEach(function(s,i){
-        var nm=(pm[i]&&pm[i].length)?pm[i]:(pr[i]>=0?E.crews[pr[i]].names:[]);
+        var nm=(pm[i]&&pm[i].length)?pm[i].map(dispMember):(pr[i]>=0?E.crews[pr[i]].names:[]);
         v+='\n'+s.name+'\n'+(pr[i]>=0?nm.join(', '):'\u2014');
       });
       if(firstCrew) fill={patternType:'solid',fgColor:{rgb:'FF'+firstCrew.tintNames.replace('#','')}};
@@ -3789,7 +3937,7 @@ function expGridEl(E, mode, variant){
       var rows='';
       E.shifts.forEach(function(s,i){
         if(pr[i]<0) return;
-        var nm=(pm[i]&&pm[i].length)?pm[i]:E.crews[pr[i]].names;
+        var nm=(pm[i]&&pm[i].length)?pm[i].map(dispMember):E.crews[pr[i]].names;
         rows+='<div style="font-size:'+F(12.5)+'px;margin-top:'+F(3)+'px;"><b>'+escapeHtml(s.name)+':</b> <span style="color:'+E.crews[pr[i]].dark+';">'+escapeHtml(nm.join(', '))+'</span></div>';
       });
       h+=open+'background:'+(firstCrew?firstCrew.tintNames:'transparent')+';">'
