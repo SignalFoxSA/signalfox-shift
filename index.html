@@ -71,6 +71,7 @@
   .srow{display:flex; gap:8px; margin-top:8px; align-items:center;}
   .srow input{flex:1; min-width:0;}
   .srow select.qsel{flex:none; width:96px; padding:12px 6px;}
+  .srow select.tsel{flex:1 1 42%; min-width:0;}
   .srow .rm{background:none; border:none; color:var(--red); font-size:16px; cursor:pointer; padding:6px; flex:none;}
   .vsect{margin:14px 0 4px; font-size:13px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.5px;}
   .mrow select{flex:1; min-width:0;}
@@ -476,8 +477,14 @@
   <!-- STAFF -->
   <div class="view" id="v-staff">
     <div class="card">
+      <h3>Qualifications</h3>
+      <p class="sub">The skill levels your industry uses &mdash; BLS, ILS, ALS, or chef, waiter, barista, whatever. They become the options on each staff member.</p>
+      <div id="staffQuals"></div>
+      <button class="addperson" onclick="qualAdd()">+ Add qualification</button>
+    </div>
+    <div class="card">
       <h3>Staff <span class="countchip" id="staffCount"></span></h3>
-      <p class="sub">Everyone at your workplace, in one list. Assign them to crews in setup.</p>
+      <p class="sub">Everyone at your workplace, in one list. Put each person into their team and crew below.</p>
       <div id="staffList"></div>
       <button class="addperson" onclick="staffAdd()">+ Add staff member</button>
     </div>
@@ -527,14 +534,8 @@
     </div>
     <div class="card">
       <h3>Crews</h3>
-      <p class="sub">Pair your people into the crews that work together, on each team. Type a name to add someone new &mdash; set their qualification in the Staff tab.</p>
+      <p class="sub">The crews on each team &mdash; name them and set their colors. Assign people to crews in the Staff tab.</p>
       <div id="bsCrews"></div>
-    </div>
-    <div class="card">
-      <h3>Qualifications</h3>
-      <p class="sub">The skill levels your industry uses &mdash; BLS, ILS, ALS, or chef, waiter, barista, whatever. They become the options on each staff member.</p>
-      <div id="bsQuals"></div>
-      <button class="addperson" onclick="qualAdd()">+ Add qualification</button>
     </div>
     <details class="card adv">
       <summary><h3>Advanced &mdash; design your own rotation</h3></summary>
@@ -1147,6 +1148,7 @@ function loadBase(){
   });
   migrateCrewColors(S.base.crews);
   migrateQuals();
+  if(migrateCrewNames()>0) persistBase();
 }
 function firstRotForCov(cov){
   var keys=Object.keys(ROTATIONS);
@@ -1167,12 +1169,38 @@ function shiftLenOptions(k){
 function persistBase(){ try{ localStorage.setItem('sfshift_base', JSON.stringify(S.base)); }catch(e){} queueCloudSave(); }
 function staffName(id){ var s=S.base.staff.find(function(x){ return x.id===id; }); return s?s.name:''; }
 function vehicleCrews(vid){ return S.base.crews.filter(function(c){ return c.vehicleId===vid; }); }
+/* crew names must be unique across the whole workplace ("I'm crew A — but on which team?"
+   should never happen). New crews take the next free letter: A–D on team 1, E–H on team 2… */
+function nextCrewName(){
+  var used={};
+  (S.base.crews||[]).forEach(function(c){ used[(c.name||'').trim().toUpperCase()]=1; });
+  for(var i=0;i<26;i++){
+    var nm=String.fromCharCode(65+i);
+    if(!used[nm]) return nm;
+  }
+  var n=1; while(used['A'+n]) n++;
+  return 'A'+n;
+}
+/* one-time: fix pre-existing duplicate crew names so the rule holds everywhere */
+function migrateCrewNames(){
+  if(!S.base||!Array.isArray(S.base.crews)) return;
+  var seen={}, fixed=0;
+  S.base.crews.forEach(function(c){
+    var nm=(c.name||'').trim().toUpperCase();
+    if(!nm||seen[nm]){
+      c.name=nextCrewName(); fixed++;
+    }
+    seen[(c.name||'').trim().toUpperCase()]=1;
+  });
+  /* note: nextCrewName reads the live list, so each fixed crew gets a fresh letter */
+  return fixed;
+}
 function ensureCrews(v){
   var rot=ROTATIONS[v.rotation]||ROTATIONS['224'];
   var need=rot.crews, vc=vehicleCrews(v.id);
   while(vc.length<need){
     var c={id:'c'+Date.now()+''+vc.length+''+Math.floor(Math.random()*999), vehicleId:v.id,
-      name:String.fromCharCode(65+vc.length), color:CREW_COLORS[vc.length%CREW_COLORS.length], memberIds:['','']};
+      name:nextCrewName(), color:CREW_COLORS[vc.length%CREW_COLORS.length], memberIds:[]};
     S.base.crews.push(c); vc.push(c);
   }
   if(vc.length>need){
@@ -1259,7 +1287,7 @@ function renderBsVehicles(){
   });
 }
 function bsAddVehicle(){
-  var v={id:'v'+Date.now(), name:'Vehicle '+(S.base.vehicles.length+1), rotation:'224', shiftLen:12, startTime:'06:00', coverage:24};
+  var v={id:'v'+Date.now(), name:'Team '+(S.base.vehicles.length+1), rotation:'224', shiftLen:12, startTime:'06:00', coverage:24};
   S.base.vehicles.push(v); ensureCrews(v); persistBase(); renderBsVehicles(); renderBsCrews();
 }
 function bsDelVehicle(vi){
@@ -1269,22 +1297,9 @@ function bsDelVehicle(vi){
   persistBase(); renderBsVehicles(); renderBsCrews();
 }
 
-/* shared name autocomplete for crew cards: pick an existing person or type a new name to create them on the spot */
-function staffDatalist(){
-  var dl=document.getElementById('sfStaffNames');
-  if(!dl){ dl=document.createElement('datalist'); dl.id='sfStaffNames'; document.body.appendChild(dl); }
-  dl.innerHTML='';
-  (S.base.staff||[]).forEach(function(s){
-    if(!(s.name||'').trim()) return;
-    var o=document.createElement('option'); o.value=s.name;
-    var qn=qualName(s.qual); if(qn) o.label=qn;
-    dl.appendChild(o);
-  });
-}
 function renderBsCrews(){
   var wrap=document.getElementById('bsCrews'); wrap.innerHTML='';
-  staffDatalist();
-  if(!S.base.vehicles.length){ wrap.innerHTML='<p class="fine">Add a vehicle above to start pairing crews.</p>'; return; }
+  if(!S.base.vehicles.length){ wrap.innerHTML='<p class="fine">Add a team above to start building crews.</p>'; return; }
   S.base.vehicles.forEach(function(v){
     var rot=ROTATIONS[v.rotation];
     var h=document.createElement('div'); h.className='vsect';
@@ -1297,40 +1312,28 @@ function renderBsCrews(){
         return function(){ bsColorOpen=(bsColorOpen===cc.id?null:cc.id); renderBsCrews(); };
       })(c));
       var nm=document.createElement('input'); nm.type='text'; nm.maxLength=14; nm.value=c.name;
-      nm.oninput=function(){ c.name=this.value; persistBase(); };
+      nm.title='Crew names must be unique across the workplace';
+      nm.onchange=(function(cc){
+        return function(){
+          var nn=this.value.trim();
+          if(!nn){ this.value=cc.name; return; }
+          var dup=(S.base.crews||[]).some(function(x){ return x!==cc && (x.name||'').trim().toUpperCase()===nn.toUpperCase(); });
+          if(dup){ toast('Crew names must be unique \u2014 "'+nn+'" is already used'); this.value=cc.name; return; }
+          cc.name=nn; this.value=nn; persistBase();
+        };
+      })(c);
       head.appendChild(dot); head.appendChild(nm); card.appendChild(head);
       if(bsColorOpen===c.id){
         card.appendChild(colorSwatches(c.color, (function(cc){
           return function(col){ cc.color=col; persistBase(); bsColorOpen=null; renderBsCrews(); };
         })(c)));
       }
-      c.memberIds.forEach(function(sid,mi){
-        var row=document.createElement('div'); row.className='mrow';
-        var inp=document.createElement('input');
-        inp.type='text'; inp.maxLength=24; inp.placeholder='Name \u2014 pick or type new';
-        inp.setAttribute('list','sfStaffNames');
-        inp.value=staffName(sid);
-        inp.onchange=(function(cc,midx){
-          return function(){
-            var nm=this.value.trim();
-            if(!nm){ cc.memberIds[midx]=''; persistBase(); return; }
-            var s=(S.base.staff||[]).find(function(x){ return (x.name||'').toLowerCase()===nm.toLowerCase(); });
-            if(!s){ s={id:'s'+Date.now()+''+Math.floor(Math.random()*1e6), name:nm, qual:''}; S.base.staff.push(s); }
-            cc.memberIds[midx]=s.id; persistBase();
-            renderBsCrews(); renderStaffTab();
-          };
-        })(c,mi);
-        row.appendChild(inp);
-        if(c.memberIds.length>1){
-          var rm=document.createElement('button'); rm.className='rm'; rm.textContent='✕'; rm.title='Remove';
-          rm.onclick=(function(cc,midx){ return function(){ cc.memberIds.splice(midx,1); persistBase(); renderBsCrews(); }; })(c,mi);
-          row.appendChild(rm);
-        }
-        card.appendChild(row);
-      });
-      var add=document.createElement('button'); add.className='addperson'; add.textContent='+ Add person';
-      add.onclick=function(){ c.memberIds.push(''); persistBase(); renderBsCrews(); };
-      card.appendChild(add);
+      var nmem=(c.memberIds||[]).length;
+      var sub=document.createElement('p'); sub.className='fine'; sub.style.margin='6px 0 0';
+      sub.textContent=nmem===0
+        ? 'No one assigned yet \u2014 put people into this crew in the Staff tab.'
+        : nmem+' person'+(nmem>1?'s':'')+' assigned';
+      card.appendChild(sub);
       wrap.appendChild(card);
     });
   });
@@ -2606,7 +2609,7 @@ function show(id){
 function switchTab(name){
   if(name==='home') renderHome();
   if(name==='rosters') renderAllRosters();
-  if(name==='staff') renderStaffTab();
+  if(name==='staff'){ renderStaffQuals(); renderStaffTab(); }
   if(name==='settings') renderSettings();
   show(TAB_VIEWS[name]);
 }
@@ -2707,11 +2710,11 @@ function renderAllRosters(){ renderRosterList(document.getElementById('allRoster
 function openBaseSetup(){ renderBaseSetup(); show('v-basesetup'); }
 function renderBaseSetup(){
   document.getElementById('bsName').value=S.base.name||'';
-  renderBsVehicles(); renderBsCrews(); renderBsQuals(); renderCustomList();
+  renderBsVehicles(); renderBsCrews(); renderCustomList();
 }
-/* ---------- qualifications ---------- */
-function renderBsQuals(){
-  var wrap=document.getElementById('bsQuals'); wrap.innerHTML='';
+/* ---------- qualifications (managed on the Staff tab) ---------- */
+function renderStaffQuals(){
+  var wrap=document.getElementById('staffQuals'); if(!wrap) return; wrap.innerHTML='';
   var qs=baseQuals();
   if(!qs.length) wrap.innerHTML='<p class="fine">None yet &mdash; add the ones your industry uses.</p>';
   qs.forEach(function(q,qi){
@@ -2725,31 +2728,45 @@ function renderBsQuals(){
 }
 function qualAdd(){
   baseQuals().push({id:'q'+Date.now()+''+Math.floor(Math.random()*1e6), name:''});
-  persistBase(); renderBsQuals();
-  var inputs=document.querySelectorAll('#bsQuals input'); if(inputs.length) inputs[inputs.length-1].focus();
+  persistBase(); renderStaffQuals();
+  var inputs=document.querySelectorAll('#staffQuals input'); if(inputs.length) inputs[inputs.length-1].focus();
 }
 function qualDel(qi){
   var q=baseQuals()[qi]; if(!q) return;
   var used=(S.base.staff||[]).filter(function(s){ return s.qual===q.id; }).length;
   if(used){ toast('Still used by '+used+' staff member'+(used>1?'s':'')+' \u2014 change them first'); return; }
-  baseQuals().splice(qi,1); persistBase(); renderBsQuals(); renderStaffTab();
+  baseQuals().splice(qi,1); persistBase(); renderStaffQuals(); renderStaffTab();
 }
 
-/* ---------- staff tab ---------- */
-function crewAssignment(sid){
-  var out=[];
-  S.base.crews.forEach(function(c){
-    if(c.memberIds.indexOf(sid)>=0){
-      var v=S.base.vehicles.find(function(x){ return x.id===c.vehicleId; });
-      out.push('Crew '+c.name+(v? ' \u00B7 '+v.name : ''));
-    }
+/* ---------- staff tab: people, qualifications, and putting people into crews ---------- */
+function staffCrewOf(sid){
+  return (S.base.crews||[]).find(function(c){ return (c.memberIds||[]).indexOf(sid)>=0; })||null;
+}
+function assignStaffToCrew(sid, crewId){
+  (S.base.crews||[]).forEach(function(c){
+    c.memberIds=(c.memberIds||[]).filter(function(id){ return id!==sid; });
   });
-  return out.join(', ');
+  if(crewId){
+    var c=(S.base.crews||[]).find(function(x){ return x.id===crewId; });
+    if(c){ c.memberIds=c.memberIds||[]; if(c.memberIds.indexOf(sid)<0) c.memberIds.push(sid); }
+  }
+}
+function fillCrewSelect(sel, teamId, current){
+  sel.innerHTML='';
+  var o0=document.createElement('option'); o0.value=''; o0.textContent='Crew \u2014'; sel.appendChild(o0);
+  (S.base.crews||[]).forEach(function(c){
+    if(c.vehicleId!==teamId) return;
+    var o=document.createElement('option'); o.value=c.id; o.textContent='Crew '+(c.name||'?');
+    sel.appendChild(o);
+  });
+  sel.value=current||'';
+  sel.disabled=!teamId;
 }
 function renderStaffTab(){
   var wrap=document.getElementById('staffList'); wrap.innerHTML='';
   document.getElementById('staffCount').textContent=S.base.staff.length+' people';
   if(!S.base.staff.length) wrap.innerHTML='<p class="fine">Nobody here yet &mdash; add your people below.</p>';
+  var teams=S.base.vehicles||[];
   S.base.staff.forEach(function(s,si){
     var row=document.createElement('div'); row.className='srow';
     var inp=document.createElement('input'); inp.type='text'; inp.maxLength=24; inp.value=s.name; inp.placeholder='Staff name';
@@ -2764,8 +2781,31 @@ function renderStaffTab(){
     var rm=document.createElement('button'); rm.className='rm'; rm.textContent='\u2715'; rm.title='Remove';
     rm.onclick=function(){ staffDel(si); };
     row.appendChild(inp); row.appendChild(q); row.appendChild(rm);
-    var a=crewAssignment(s.id);
-    if(a){ var sub=document.createElement('div'); sub.className='staffsub'; sub.textContent=a; row.appendChild(sub); }
+    var cur=staffCrewOf(s.id), curTeam=cur?cur.vehicleId:'';
+    var tsel=document.createElement('select'); tsel.className='tsel'; tsel.title='Team';
+    tsel.setAttribute('aria-label','Team for '+(s.name||'staff member'));
+    var t0=document.createElement('option'); t0.value=''; t0.textContent='Team \u2014'; tsel.appendChild(t0);
+    teams.forEach(function(v){
+      var o=document.createElement('option'); o.value=v.id; o.textContent=v.name||'Team'; tsel.appendChild(o);
+    });
+    tsel.value=curTeam;
+    var csel=document.createElement('select'); csel.className='tsel'; csel.title='Crew';
+    csel.setAttribute('aria-label','Crew for '+(s.name||'staff member'));
+    fillCrewSelect(csel, curTeam, cur?cur.id:'');
+    tsel.onchange=(function(ss, cs){
+      return function(){
+        assignStaffToCrew(ss.id, null);
+        fillCrewSelect(cs, this.value, '');
+        persistBase(); renderBsCrews();
+      };
+    })(s, csel);
+    csel.onchange=(function(ss){
+      return function(){
+        assignStaffToCrew(ss.id, this.value||null);
+        persistBase(); renderBsCrews();
+      };
+    })(s);
+    row.appendChild(tsel); row.appendChild(csel);
     wrap.appendChild(row);
   });
 }
@@ -2775,7 +2815,7 @@ function staffAdd(){
 }
 function staffDel(si){
   var sid=S.base.staff[si].id;
-  S.base.crews.forEach(function(c){ c.memberIds=c.memberIds.map(function(id){ return id===sid?'':id; }); });
+  S.base.crews.forEach(function(c){ c.memberIds=(c.memberIds||[]).filter(function(id){ return id!==sid; }); });
   S.base.staff.splice(si,1); persistBase(); renderStaffTab();
 }
 
