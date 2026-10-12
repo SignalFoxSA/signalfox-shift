@@ -806,7 +806,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1447';
+var BUILD='20261012-1453';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2594,6 +2594,32 @@ function renderBase(){
   var dt=parseISO(S.baseDateISO);
   document.getElementById('baseDate').textContent=fmtLong(dt);
   var wrap=document.getElementById('baseUnits'); wrap.innerHTML='';
+  /* who's out today summary from leave logs */
+  var outList=[];
+  (S.rosters||[]).forEach(function(u){
+    var R=u.roster;
+    (R.leaveLog||[]).forEach(function(lg){
+      if(lg.date===S.baseDateISO&&lg.type!=='Swap'){
+        outList.push({person:lg.person, type:lg.type, cover:lg.cover});
+      }
+    });
+  });
+  if(outList.length){
+    var seen={}, uniq=[];
+    outList.forEach(function(o){
+      var k=o.person+'|'+o.type;
+      if(!seen[k]){ seen[k]=1; uniq.push(o); }
+    });
+    var outHtml='<div class="card" style="border-left:3px solid #ff6b6b;margin-bottom:10px;padding:10px 12px;">'
+      +'<div style="font-size:13px;font-weight:700;margin-bottom:4px;">Out today ('+uniq.length+')</div>'
+      +uniq.map(function(o){
+        return '<div style="font-size:13px;">'+escapeHtml(o.person)
+          +' <span style="color:var(--muted);">— '+escapeHtml(o.type)+'</span>'
+          +(o.cover&&o.cover!=='OPEN'?' <span style="color:#51CF66;">→ '+escapeHtml(o.cover)+'</span>':' <span style="color:#FFC13E;">(open)</span>')
+          +'</div>';
+      }).join('')+'</div>';
+    wrap.innerHTML=outHtml;
+  }
   if(!S.base.vehicles.length){
     wrap.innerHTML='<p class="fine">No teams yet.<br>Go to <b>Set up my workplace</b> and add your first team.</p>';
     return;
@@ -2618,6 +2644,7 @@ function renderBase(){
       var slots=rotSlots(R.rotation);
       var dateISO=S.baseDateISO;
       var buckets=slots.map(function(){ return []; });
+      var shiftCounts=slots.map(function(){ return 0; });
       R.crews.forEach(function(c,ci){
         var st=cellState(R,dayIdx,ci);
         if(st==='OFF') return;
@@ -2630,15 +2657,32 @@ function renderBase(){
           var q=qualName(staffQualIdByName(nm));
           return '<div class="person"><span><span class="nm">'+escapeHtml(nm)+'</span>'
             +(q?'<span class="q">'+escapeHtml(q)+'</span>':'')+'</span>'
-            +'<button class="sickbtn" onclick="event.stopPropagation();baseLeave(\''+u.id+'\',\''+st+'\',\''+escapeHtml(nm).replace(/'/g,"\\'")+'\')">Leave</button></div>';
+            +'<span style="display:flex;gap:6px;">'
+            +'<button class="sickbtn" onclick="event.stopPropagation();baseLeave(\''+u.id+'\',\''+st+'\',\''+escapeHtml(nm).replace(/'/g,"\\'")+'\')">Leave</button>'
+            +'<button class="coverbtn" style="background:var(--card2);color:var(--text);border:1px solid var(--line);" onclick="event.stopPropagation();baseSwap(\''+u.id+'\',\''+st+'\',\''+escapeHtml(nm).replace(/'/g,"\\'")+'\')">Swap</button>'
+            +'</span></div>';
         }).join('');
         var line='<div style="margin:6px 0;"><b>Crew '+escapeHtml(c.name)+'</b>'+plist+'</div>';
-        slots.forEach(function(sl,k){ if(st===sl.id) buckets[k].push(line); });
+        slots.forEach(function(sl,k){
+          if(st===sl.id){
+            buckets[k].push(line);
+            /* count real members (not open slots) for understaffed check */
+            mems.forEach(function(nm){ if(nm!==OPEN_MARK) shiftCounts[k]++; });
+          }
+        });
       });
       slots.forEach(function(sl,k){
         var srow=document.createElement('div'); srow.className='urow';
+        var tm=(sl.start&&sl.end)?'<div style="font-size:11px;color:var(--muted);font-weight:400;">'+escapeHtml(sl.start)+'–'+escapeHtml(sl.end)+'</div>':'';
+        var sz=shiftSize(sl.shiftId||sl.id);
+        var warn='';
+        if(sz&&shiftCounts[k]<sz){
+          warn='<div style="font-size:11px;color:#FFC13E;font-weight:700;margin-top:2px;">⚠ Short by '+(sz-shiftCounts[k])+' ('+shiftCounts[k]+'/'+sz+')</div>';
+          srow.style.borderLeft='3px solid #FFC13E';
+          srow.style.paddingLeft='8px';
+        }
         var addBtn='<div style="margin-top:6px;"><button class="coverbtn" style="font-size:11px;padding:4px 12px;" onclick="event.stopPropagation();baseAddStaff(\''+u.id+'\',\''+sl.id+'\')">+ Add staff</button></div>';
-        srow.innerHTML='<span class="ulab"><b>'+escapeHtml(sl.name||sl.id)+'</b></span><span style="flex:1;">'+(buckets[k].join('')||'<span style="color:var(--muted)">–</span>')+addBtn+'</span>';
+        srow.innerHTML='<span class="ulab"><b>'+escapeHtml(sl.name||sl.id)+'</b>'+tm+'</span><span style="flex:1;">'+(buckets[k].join('')||'<span style="color:var(--muted)">–</span>')+warn+addBtn+'</span>';
         card.appendChild(srow);
       });
     }
@@ -2740,6 +2784,68 @@ function baseDoAddStaff(rosterId, shiftId, personName){
   document.getElementById('baseCoverPanel').innerHTML='';
   renderBase();
   toast(personName+' added to shift');
+}
+/* Shift swap: Person A swaps with Person B on a different shift */
+function baseSwap(rosterId, shiftIdA, personA){
+  var u=(S.rosters||[]).find(function(x){ return x.id===rosterId; });
+  if(!u) return;
+  var R=u.roster, dateISO=S.baseDateISO;
+  var dt=parseISO(dateISO), di=dayDiff(parseISO(R.startISO), dt);
+  var per=calSlotCrews(R,di);
+  var cands=[];
+  per.forEach(function(ps){
+    if(ps.sl.id===shiftIdA||!ps.list.length) return;
+    ps.list.forEach(function(x){
+      effShiftMembers(R, dateISO, ps.sl.id, x.c).forEach(function(nm){
+        if(nm===OPEN_MARK||nm===personA) return;
+        cands.push({name:nm, shift:ps.sl.id, shiftName:ps.sl.name});
+      });
+    });
+  });
+  var panel=document.getElementById('baseCoverPanel');
+  var h='<div class="card" style="border:2px solid var(--accent);">'
+    +'<h3>Swap '+escapeHtml(personA)+'</h3>'
+    +'<p class="sub">Who should they swap with?</p>';
+  if(!cands.length){
+    h+='<p class="fine">No one else working today to swap with.</p>';
+  }else{
+    cands.forEach(function(cnd){
+      h+='<div class="avail" onclick="baseDoSwap(\''+rosterId+'\',\''+shiftIdA+'\',\''+escapeHtml(personA).replace(/'/g,"\\'")+'\',\''+cnd.shift+'\',\''+escapeHtml(cnd.name).replace(/'/g,"\\'")+'\')">'
+        +'<span><span class="nm">'+escapeHtml(cnd.name)+'</span> '
+        +'<span class="meta">'+escapeHtml(cnd.shiftName)+'</span></span>'
+        +'<button class="pick">Swap</button></div>';
+    });
+  }
+  h+='<div class="btnrow"><button class="btn ghost" onclick="document.getElementById(\'baseCoverPanel\').innerHTML=\'\'">Cancel</button></div></div>';
+  panel.innerHTML=h;
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function baseDoSwap(rosterId, shiftIdA, personA, shiftIdB, personB){
+  var u=(S.rosters||[]).find(function(x){ return x.id===rosterId; });
+  if(!u) return;
+  var R=u.roster, dateISO=S.baseDateISO;
+  if(!R.memberOverrides) R.memberOverrides={};
+  if(!R.memberOverrides[dateISO]) R.memberOverrides[dateISO]={};
+  var dt=parseISO(dateISO), di=dayDiff(parseISO(R.startISO), dt);
+  var per=calSlotCrews(R,di);
+  [ [shiftIdA, personA, personB], [shiftIdB, personB, personA] ].forEach(function(sw){
+    var sid=sw[0], from=sw[1], to=sw[2];
+    for(var i=0;i<per.length;i++){
+      if(per[i].sl.id===sid&&per[i].list.length){
+        var mems=effShiftMembers(R, dateISO, sid, per[i].list[0].c);
+        var idx=mems.indexOf(from);
+        if(idx>=0) mems[idx]=to;
+        R.memberOverrides[dateISO][sid]=mems;
+        break;
+      }
+    }
+  });
+  if(!R.leaveLog) R.leaveLog=[];
+  R.leaveLog.push({date:dateISO, shift:shiftIdA, person:personA, type:'Swap', cover:personB, ts:Date.now()});
+  persist();
+  document.getElementById('baseCoverPanel').innerHTML='';
+  renderBase();
+  toast(personA+' ↔ '+personB+' swapped');
 }
 /* Long-term leave: person + date range */
 function baseLongLeave(){
