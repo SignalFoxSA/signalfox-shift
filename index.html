@@ -873,7 +873,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-1013';
+var BUILD='20261013-1026';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -4919,7 +4919,7 @@ function expData(){
     pairs.push(row); pairsMembers.push(mrow);
   }
   /* personal filter: only the person's own shifts, with their partners — no opposite shift */
-  if(S.expPerson){
+  if(E.expPerson){
     for(var fd=0; fd<pairs.length; fd++){
       var pm=pairsMembers[fd];
       if(!pm) continue;
@@ -4934,6 +4934,7 @@ function expData(){
     }
   }
   var title=(S.expPerson?S.expPerson+' \u2014 ':'')+vname+' \u2014 '+MN[m]+' '+y, sub;
+  var expPerson=S.expPerson;
   try{
     var stT={rotation:R.rotation, startTime:v.startTime||'06:00', shiftLen:rot.hours||12};
     sub=rot.name+' rotation \u00b7 '+((nsh===1&&shifts[0].id==='X')
@@ -4941,7 +4942,7 @@ function expData(){
       : shifts.map(function(s){ return shiftBandShort(s.band)+' '+slotTime(stT,s.id); }).join(' \u00b7 '));
   }catch(e){ sub=rot.name+' rotation'; }
   var slug=(vname+'-'+MN[m]+'-'+y).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
-  return {y:y, m:m, dim:dim, title:title, sub:sub,
+  return {y:y, m:m, dim:dim, title:title, sub:sub, expPerson:expPerson,
     subXlsx:sub.replace(/ rotation/,''),
     footer:'Generated with SignalFox Shift',
     crews:crews, pairs:pairs, pairsMembers:pairsMembers, hasNight:hasNight, shifts:shifts, nsh:nsh,
@@ -5090,7 +5091,7 @@ function expGridEl(E, mode, variant){
       E.shifts.forEach(function(s,i){
         if(pr[i]<0) return;
         var band=(E.crews[pr[i]]&&E.crews[pr[i]].color)||'#888888', bt=textOnBand(band);
-        var pBlock=S.expPerson
+        var pBlock=E.expPerson
           ? '<div>'+escapeHtml(shiftBandShort(s.band).toUpperCase())+'</div>'
             +'<div style="font-size:'+F(12)+'px;">'+escapeHtml(E.crews[pr[i]].name)+'</div>'
             +(s.start?'<div style="font-size:'+F(11)+'px;font-weight:600;">'+escapeHtml(fmtTime(s.start)+'\u2013'+fmtTime(s.end))+'</div>':'')
@@ -5106,7 +5107,7 @@ function expGridEl(E, mode, variant){
       E.shifts.forEach(function(s,i){
         if(pr[i]<0) return;
         var nm=(pm[i]&&pm[i].length)?pm[i].map(dispMember):E.crews[pr[i]].names;
-        if(S.expPerson){
+        if(E.expPerson){
           rows+='<div style="font-size:'+F(12.5)+'px;margin-top:'+F(3)+'px;">'
             +'<div><b>'+escapeHtml(shiftBandShort(s.name))+'</b></div>'
             +nm.map(function(n){ return '<div style="color:'+E.crews[pr[i]].dark+';">'+escapeHtml(n)+'</div>'; }).join('')
