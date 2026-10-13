@@ -875,7 +875,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-0714';
+var BUILD='20261013-0722';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -4549,37 +4549,75 @@ function genTestData(){
   var now=new Date();
   if(!S.base) S.base={};
   if(!S.base.name) S.base.name='Demo Base';
-  /* build demo workplace from scratch if empty */
-  if(!(S.base.vehicles||[]).length){
-    var t=Date.now();
-    var mkc=function(nm,color){ return {id:'c'+t+nm+Math.floor(Math.random()*999), name:nm, color:color, members:[]}; };
-    S.base.vehicles=[
-      {id:'v'+t+'a', name:'Ambulance 1', crews:[mkc('A','#FFC13E'),mkc('B','#4DABF7'),mkc('C','#51CF66'),mkc('D','#FF8787')]},
-      {id:'v'+t+'b', name:'Ambulance 2', crews:[mkc('A','#FFC13E'),mkc('B','#4DABF7'),mkc('C','#51CF66'),mkc('D','#FF8787')]}
+  var t=Date.now();
+  /* qualifications */
+  if(!(S.base.quals||[]).length){
+    S.base.quals=[
+      {id:'q'+t+'1', name:'ALS'},
+      {id:'q'+t+'2', name:'ILS'},
+      {id:'q'+t+'3', name:'BLS'}
     ];
   }
-  if(!(S.base.staff||[]).length){
-    ['Thabo M','Sarah K','Mike D','Lisa P','James N','Anna S','Pieter V','Naledi K'].forEach(function(nm,i){
-      S.base.staff.push({id:'s'+Date.now()+i, name:nm, empNo:'E'+(1001+i)});
-    });
+  var quals=S.base.quals;
+  /* vehicles with crews (both nested and flat) */
+  if(!(S.base.vehicles||[]).length){
+    S.base.vehicles=[
+      {id:'v'+t+'a', name:'Ambulance 1', crews:[]},
+      {id:'v'+t+'b', name:'Ambulance 2', crews:[]}
+    ];
   }
-  var leaveTypes=['Annual leave','Sick leave','Family responsibility'];
-  var staffNames=S.base.staff.map(function(s){ return s.name; });
-  (S.base.vehicles||[]).forEach(function(vv, vvi){
-    var vid=vv.id;
-    /* ensure the vehicle has 4 crews */
-    if(!(vv.crews||[]).length){
-      var t2=Date.now()+vvi;
-      var mkc2=function(nm,color){ return {id:'c'+t2+nm, name:nm, color:color, members:[]}; };
-      vv.crews=[mkc2('A','#FFC13E'),mkc2('B','#4DABF7'),mkc2('C','#51CF66'),mkc2('D','#FF8787')];
-    }
-    var crews=vv.crews||[];
-    /* put members directly on the vehicle crews */
-    crews.forEach(function(c,ci){
-      if(!(c.members||[]).length){
-        c.members=[staffNames[(ci*2)%staffNames.length], staffNames[(ci*2+1)%staffNames.length]].filter(function(n){return n;});
+  if(!(S.base.crews||[])) S.base.crews=[];
+  var crewColors=['#FFC13E','#4DABF7','#51CF66','#FF8787'];
+  var crewNames=['A','B','C','D'];
+  S.base.vehicles.forEach(function(vv){
+    crewNames.forEach(function(cn,ci){
+      var existing=(vv.crews||[]).find(function(c){ return c.name===cn; });
+      if(!existing){
+        var cid='c'+t+vv.id+cn;
+        var crew={id:cid, vehicleId:vv.id, name:cn, color:crewColors[ci%4], members:[], memberIds:[]};
+        vv.crews.push(crew);
+        if(!S.base.crews.find(function(c){ return c.id===cid; })) S.base.crews.push(crew);
       }
     });
+    /* sync flat list */
+    (vv.crews||[]).forEach(function(c){
+      if(!S.base.crews.find(function(x){ return x.id===c.id; })){
+        c.vehicleId=vv.id;
+        S.base.crews.push(c);
+      }
+    });
+  });
+  /* staff with qualifications and employee numbers */
+  if(!(S.base.staff||[]).length){
+    var demoNames=['Thabo M','Sarah K','Mike D','Lisa P','James N','Anna S','Pieter V','Naledi K'];
+    demoNames.forEach(function(nm,i){
+      S.base.staff.push({
+        id:'s'+t+i, name:nm, empNo:'E'+(1001+i),
+        qual:quals[i%quals.length].id
+      });
+    });
+  } else {
+    /* fill in missing quals on existing staff */
+    S.base.staff.forEach(function(s,i){
+      if(!s.qual&&quals.length) s.qual=quals[i%quals.length].id;
+      if(!s.empNo) s.empNo='E'+(1001+i);
+    });
+  }
+  /* assign staff to crews via the proper function */
+  var v0=S.base.vehicles[0];
+  S.base.staff.forEach(function(s,i){
+    if(!staffCrewOf(s.id)&&v0&&v0.crews.length){
+      var crew=v0.crews[i%v0.crews.length];
+      assignStaffToCrew(s.id, crew.id);
+      /* also put the name on the nested crew members for roster rendering */
+      if(crew.members.indexOf(s.name)<0) crew.members.push(s.name);
+    }
+  });
+  var leaveTypes=['Annual leave','Sick leave','Family responsibility'];
+  var staffNames=S.base.staff.map(function(s){ return s.name; });
+  S.base.vehicles.forEach(function(vv, vvi){
+    var vid=vv.id;
+    var crews=vv.crews||[];
     for(var mi=0; mi<6; mi++){
       var d=new Date(now.getFullYear(), now.getMonth()+mi, 1);
       var y=d.getFullYear(), m=d.getMonth();
@@ -4589,14 +4627,19 @@ function genTestData(){
       if(exists) continue;
       var dim=daysInMonth(y,m);
       var snapCrews=JSON.parse(JSON.stringify(crews));
+      /* ensure snapshot crews have members */
+      snapCrews.forEach(function(c,ci){
+        if(!(c.members||[]).length){
+          c.members=[staffNames[(ci*2)%staffNames.length], staffNames[(ci*2+1)%staffNames.length]].filter(function(n){return n;});
+        }
+      });
       var R={
-        id:'r'+Date.now()+vvi+'_'+mi, kind:'month', vehicleId:vid,
+        id:'r'+t+vvi+'_'+mi, kind:'month', vehicleId:vid,
         name:(vv.name||'Team')+' \u00b7 '+MN[m]+' '+y,
         year:y, month:m, anchorAbs:0,
         startISO:y+'-'+String(m+1).padStart(2,'0')+'-01', days:dim,
         crews:snapCrews, rotation:'224', overrides:{}, memberOverrides:{}, leaveLog:[]
       };
-      /* sprinkle 8 leave/open entries per month */
       for(var k=0; k<8; k++){
         var rd=1+Math.floor(Math.random()*dim);
         var dateISO=y+'-'+String(m+1).padStart(2,'0')+'-'+String(rd).padStart(2,'0');
