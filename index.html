@@ -875,7 +875,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-0745';
+var BUILD='20261013-0750';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -4256,44 +4256,43 @@ function renderStaffTab(){
     var row=document.createElement('div'); row.className='prow';
     var top=document.createElement('div'); top.className='sline';
     var inp=document.createElement('input'); inp.type='text'; inp.maxLength=24; inp.value=s.name; inp.placeholder='Staff name';
-    inp.oninput=(function(ss){ return function(){
-      var oldName=ss.name, newName=this.value;
-      ss.name=newName;
-      /* propagate rename to all roster crew members */
-      if(oldName&&oldName!==newName){
-        var renameIn=function(R){
-          if(!R||!R.crews) return;
-          R.crews.forEach(function(c){
-            (c.members||[]).forEach(function(nm,i){
-              if(nm===oldName) c.members[i]=newName;
-            });
+    /* capture original name on focus, propagate rename on blur */
+    inp.onfocus=(function(ss){ return function(){ ss._origName=ss.name; }; })(s);
+    inp.oninput=(function(ss){ return function(){ ss.name=this.value; persistBase(); }; })(s);
+    inp.onblur=(function(ss){ return function(){
+      var oldName=ss._origName, newName=ss.name;
+      ss._origName=null;
+      if(!oldName||oldName===newName) return;
+      var renameIn=function(R){
+        if(!R||!R.crews) return;
+        R.crews.forEach(function(c){
+          (c.members||[]).forEach(function(nm,i){
+            if(nm===oldName) c.members[i]=newName;
           });
-          if(R.memberOverrides){
-            Object.keys(R.memberOverrides).forEach(function(dk){
-              Object.keys(R.memberOverrides[dk]).forEach(function(sk){
-                var mems=R.memberOverrides[dk][sk];
-                if(Array.isArray(mems)) mems.forEach(function(nm,i){
-                  if(nm===oldName) mems[i]=newName;
-                });
+        });
+        if(R.memberOverrides){
+          Object.keys(R.memberOverrides).forEach(function(dk){
+            Object.keys(R.memberOverrides[dk]).forEach(function(sk){
+              var mems=R.memberOverrides[dk][sk];
+              if(Array.isArray(mems)) mems.forEach(function(nm,i){
+                if(nm===oldName) mems[i]=newName;
               });
             });
-          }
-          if(R.leaveLog){
-            R.leaveLog.forEach(function(lg){
-              if(lg.person===oldName) lg.person=newName;
-              if(lg.cover===oldName) lg.cover=newName;
-            });
-          }
-        };
-        loadSaved();
-        (S.rosters||[]).forEach(function(u){ renameIn(u.roster); });
-        /* also the currently open draft copy */
-        if(S.draft) renameIn(S.draft);
-        saveSaved();
-        /* re-render if viewing a roster */
-        try{ if(document.getElementById('v-cal')&&document.getElementById('v-cal').classList.contains('active')) renderCalendar(); }catch(e){}
-      }
-      persistBase();
+          });
+        }
+        if(R.leaveLog){
+          R.leaveLog.forEach(function(lg){
+            if(lg.person===oldName) lg.person=newName;
+            if(lg.cover===oldName) lg.cover=newName;
+          });
+        }
+      };
+      loadSaved();
+      (S.rosters||[]).forEach(function(u){ renameIn(u.roster); });
+      if(S.draft) renameIn(S.draft);
+      saveSaved(); persistBase();
+      try{ if(document.getElementById('v-cal')&&document.getElementById('v-cal').classList.contains('active')) renderCalendar(); }catch(e){}
+      toast('Renamed to '+newName);
     }; })(s);
     var q=document.createElement('select'); q.className='qsel'; q.title='Qualification';
     q.setAttribute('aria-label','Qualification for '+(s.name||'staff member'));
