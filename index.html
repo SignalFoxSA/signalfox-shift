@@ -873,7 +873,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-0917';
+var BUILD='20261013-0920';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -3044,6 +3044,75 @@ function msPicPickTab(input){
 function renderCompany(){
   /* placeholder — head office view comes later */
 }
+/* ---------- Employee export: WYSIWYG — exports the current view ---------- */
+function msExport(){
+  loadSaved();
+  var vid=null;
+  (S.rosters||[]).forEach(function(u){
+    if(vid) return;
+    var R=u.roster;
+    if(R&&R.year===msYear&&R.month===msMonth) vid=R.vehicleId;
+  });
+  if(!vid){ toast('No roster for this month yet'); return; }
+  if(!S.cal) S.cal={};
+  S.cal.vehicleId=vid; S.cal.y=msYear; S.cal.m=msMonth;
+  S.expPerson=(msScope==='me'&&msPerson)?msPerson:null;
+  S.expHideMode=true;
+  openExportSheet();
+}
+/* ---------- Staff profile tab ---------- */
+function renderStaffProfile(){
+  var wrap=document.getElementById('profContent');
+  if(!msPerson){ wrap.innerHTML='<p class="fine">Pick a staff member in Settings.</p>'; return; }
+  var st=(S.base.staff||[]).find(function(s){ return s.name===msPerson; })||{};
+  var pic=st.pic||'';
+  var qualName=(baseQuals().find(function(q){return q.id===st.qual;})||{}).name||'—';
+  /* count upcoming shifts */
+  var now=new Date(); now.setHours(0,0,0,0);
+  var upcoming=0;
+  loadSaved();
+  (S.rosters||[]).forEach(function(u){
+    var R=u.roster; if(!R||R.kind!=='month') return;
+    for(var d=1; d<=daysInMonth(R.year,R.month); d++){
+      var dt=new Date(R.year,R.month,d);
+      if(dt<now) continue;
+      var dateISO=R.year+'-'+String(R.month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      var info=calRosterDay(R,R.year,R.month,d);
+      if(!info) continue;
+      calSlotCrews(R,info.dayIdx).forEach(function(ps){
+        ps.list.forEach(function(x){
+          if(effShiftMembers(R,dateISO,ps.sl.id,x.c).indexOf(msPerson)>=0) upcoming++;
+        });
+      });
+    }
+  });
+  var h='<div style="text-align:center;margin-bottom:16px;">'
+    +'<div style="width:90px;height:90px;border-radius:50%;margin:0 auto 10px;overflow:hidden;background:#eee;display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:800;color:var(--accent);">'
+    +(pic?'<img src="'+pic+'" style="width:100%;height:100%;object-fit:cover;" alt="">':escapeHtml(msPerson.charAt(0).toUpperCase()))
+    +'</div>'
+    +'<div style="font-weight:800;font-size:20px;">'+escapeHtml(msPerson)+'</div>'
+    +'<div style="color:var(--muted);">'+escapeHtml(qualName)+'</div></div>'
+    +'<div class="dshift"><div class="dh"><span class="t">Employee no.</span><span class="c">'+escapeHtml(st.empNo||'—')+'</span></div></div>'
+    +'<div class="dshift"><div class="dh"><span class="t">Upcoming shifts</span><span class="c">'+upcoming+'</span></div></div>'
+    +'<div class="btnrow" style="margin-top:12px;"><label class="btn ghost" style="cursor:pointer;">Change picture'
+    +'<input type="file" accept="image/*" style="display:none;" onchange="msPicPickTab(this)"></label></div>';
+  wrap.innerHTML=h;
+}
+function msPicPickTab(input){
+  var f=input.files&&input.files[0];
+  if(!f) return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    var st=(S.base.staff||[]).find(function(s){ return s.name===msPerson; });
+    if(st){ st.pic=rd.result; persistBase(); }
+    renderStaffProfile();
+    toast('Profile picture updated.');
+  };
+  rd.readAsDataURL(f);
+}
+function renderCompany(){
+  /* placeholder — head office view comes later */
+}
 /* ---------- Employee export: use the standard manager export sheet ---------- */
 function msExport(){
   /* ask: full roster or just mine? */
@@ -5141,6 +5210,9 @@ function openExportSheet(){
   if(!E){ toast('Open a roster first'); return; }
   S.exp=E;
   document.getElementById('expSub').textContent=E.title;
+  var modeSeg=document.getElementById('expModeSeg');
+  if(modeSeg) modeSeg.style.display=S.expHideMode?'none':'';
+  S.expHideMode=false;
   expSetMode('shifts');
   var seg=document.getElementById('expModeSeg');
   seg.querySelector('#expModeShifts').textContent=E.hasNight?'Shifts':'On duty';
