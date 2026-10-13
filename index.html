@@ -873,7 +873,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-1228';
+var BUILD='20261013-1232';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -1560,7 +1560,7 @@ function ensureCal(){
 }
 /* compact shift label for month bands: "Day shift" -> "Day" */
 function shiftBandShort(name){
-  return String(name||'').replace(/\s+shift$/i,'');
+  return String(name||'').replace(/\s+shift\b/i,'');
 }
 /* compact time range for month bands: "06:00–18:00" -> "06–18" */
 function shortShiftTime(sl){
@@ -4922,7 +4922,7 @@ function expData(){
   /* for personal exports, bake times into shift names so standard renderer shows them */
   if(expPerson){
     shifts.forEach(function(s){
-      if(s.start&&s.end){ var tstr=fmtTime(s.start)+'\u2013'+fmtTime(s.end); s.name=s.name+' '+tstr; s.band=s.band+' '+tstr; }
+      s.name=s.name+' '+tstr;
     });
   }
   /* personal filter: only the person's own shifts, with their partners — no opposite shift */
