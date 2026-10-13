@@ -875,7 +875,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-0741';
+var BUILD='20261013-0745';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -4261,15 +4261,13 @@ function renderStaffTab(){
       ss.name=newName;
       /* propagate rename to all roster crew members */
       if(oldName&&oldName!==newName){
-        loadSaved();
-        (S.rosters||[]).forEach(function(u){
-          var R=u.roster; if(!R||!R.crews) return;
+        var renameIn=function(R){
+          if(!R||!R.crews) return;
           R.crews.forEach(function(c){
             (c.members||[]).forEach(function(nm,i){
               if(nm===oldName) c.members[i]=newName;
             });
           });
-          /* also in member overrides */
           if(R.memberOverrides){
             Object.keys(R.memberOverrides).forEach(function(dk){
               Object.keys(R.memberOverrides[dk]).forEach(function(sk){
@@ -4280,8 +4278,20 @@ function renderStaffTab(){
               });
             });
           }
-        });
+          if(R.leaveLog){
+            R.leaveLog.forEach(function(lg){
+              if(lg.person===oldName) lg.person=newName;
+              if(lg.cover===oldName) lg.cover=newName;
+            });
+          }
+        };
+        loadSaved();
+        (S.rosters||[]).forEach(function(u){ renameIn(u.roster); });
+        /* also the currently open draft copy */
+        if(S.draft) renameIn(S.draft);
         saveSaved();
+        /* re-render if viewing a roster */
+        try{ if(document.getElementById('v-cal')&&document.getElementById('v-cal').classList.contains('active')) renderCalendar(); }catch(e){}
       }
       persistBase();
     }; })(s);
