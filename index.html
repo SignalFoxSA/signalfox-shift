@@ -873,7 +873,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-0922';
+var BUILD='20261013-0925';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -929,7 +929,7 @@ function migrateCrewColors(list){
 }
 
 /* Rotation presets.
-   2-2-4: 2 day shifts, 2 night shifts, 4 days off — 8-day cycle.
+   2-2-4: 2 days, 2 nights, 4 off — 8-day cycle.
    4 crews staggered by 2 days, so every day has exactly one DAY-shift
    crew and one NIGHT-shift crew; the other two crews rest.
    Per-crew pattern (relative day): 'D' | 'N' | 0 (off).
@@ -1035,8 +1035,8 @@ function persistCustomRotations(){
    Custom rotations carry their own slots, so a 12h window can hold two
    6-hour shifts and a 24h day can hold three 8-hour shifts. */
 function slotsFor(coverage, shiftLen){
-  var D={id:'D',short:'D',label:'Day shift',icon:'☀️'};
-  var N={id:'N',short:'N',label:'Night shift',icon:'🌙'};
+  var D={id:'D',short:'D',label:'Day',icon:'☀️'};
+  var N={id:'N',short:'N',label:'Night',icon:'🌙'};
   var X={id:'X',short:'24H',label:'24h shift',icon:'🚑'};
   function numbered(n){
     var out=[];
@@ -4380,8 +4380,8 @@ var SHIFT_COLORS=['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#63E6BE','#
   '#2EC4B6','#E71D36','#FF9F1C','#9B5DE5','#00BBF9','#80ED99','#F15BB5','#FEE440'];
 function defaultShifts(){
   return [
-    {id:'s1', name:'Day shift', start:'06:00', end:'18:00', color:'#FFC13E', size:2},
-    {id:'s2', name:'Night shift', start:'18:00', end:'06:00', color:'#4DABF7', size:2}
+    {id:'s1', name:'Day', start:'06:00', end:'18:00', color:'#FFC13E', size:2},
+    {id:'s2', name:'Night', start:'18:00', end:'06:00', color:'#4DABF7', size:2}
   ];
 }
 function wpShifts(){
