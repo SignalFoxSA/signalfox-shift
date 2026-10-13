@@ -875,7 +875,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-0708';
+var BUILD='20261013-0714';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -4567,6 +4567,12 @@ function genTestData(){
   var staffNames=S.base.staff.map(function(s){ return s.name; });
   (S.base.vehicles||[]).forEach(function(vv, vvi){
     var vid=vv.id;
+    /* ensure the vehicle has 4 crews */
+    if(!(vv.crews||[]).length){
+      var t2=Date.now()+vvi;
+      var mkc2=function(nm,color){ return {id:'c'+t2+nm, name:nm, color:color, members:[]}; };
+      vv.crews=[mkc2('A','#FFC13E'),mkc2('B','#4DABF7'),mkc2('C','#51CF66'),mkc2('D','#FF8787')];
+    }
     var crews=vv.crews||[];
     /* put members directly on the vehicle crews */
     crews.forEach(function(c,ci){
