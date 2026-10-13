@@ -441,11 +441,11 @@
   #expSheet .sheet-close{border:none; background:#f1f0ed; width:32px; height:32px; border-radius:50%;
     font-size:16px; color:#6e6e73; cursor:pointer;}
   #expSheet .sheet-sub{font-size:13px; color:#6e6e73; margin:2px 0 10px;}
-  /* employee view segmented controls — matches app aesthetic */
-  #v-myshifts .seg{display:flex; background:#f1f0ed; border-radius:12px; padding:4px;}
+  /* employee view segmented controls — matches app dark theme */
+  #v-myshifts .seg{display:flex; background:var(--card2); border:1px solid var(--line); border-radius:12px; padding:4px;}
   #v-myshifts .seg button{flex:1; border:none; background:transparent; border-radius:9px; padding:10px;
-    font-size:14px; font-weight:700; color:#6e6e73; cursor:pointer; font-family:inherit;}
-  #v-myshifts .seg button.on{background:#1c1c1e; color:#fff;}
+    font-size:14px; font-weight:700; color:var(--muted); cursor:pointer; font-family:inherit;}
+  #v-myshifts .seg button.on{background:var(--accent); color:var(--accent-ink);}
   #expSheet .seg{display:flex; background:#f1f0ed; border-radius:12px; padding:4px; margin-bottom:10px;}
   #expSheet .seg button{flex:1; border:none; background:transparent; border-radius:9px; padding:10px;
     font-size:14px; font-weight:700; color:#6e6e73; cursor:pointer;}
@@ -568,10 +568,10 @@
     <div class="card" style="border:2px solid var(--accent);">
       <h3>App role</h3>
       <p class="sub">View the app as a manager, staff member, or company.</p>
-      <div class="seg" id="roleSeg" style="display:flex;background:#f1f0ed;border-radius:12px;padding:4px;">
-        <button id="roleMgr" onclick="setRole('manager')" style="flex:1;border:none;background:transparent;border-radius:9px;padding:10px;font-size:14px;font-weight:700;color:#6e6e73;cursor:pointer;font-family:inherit;">Manager</button>
-        <button id="roleStaff" onclick="setRole('staff')" style="flex:1;border:none;background:transparent;border-radius:9px;padding:10px;font-size:14px;font-weight:700;color:#6e6e73;cursor:pointer;font-family:inherit;">Staff</button>
-        <button id="roleCo" onclick="setRole('company')" style="flex:1;border:none;background:transparent;border-radius:9px;padding:10px;font-size:14px;font-weight:700;color:#6e6e73;cursor:pointer;font-family:inherit;">Company</button>
+      <div class="seg" id="roleSeg" style="display:flex;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:4px;">
+        <button id="roleMgr" onclick="setRole('manager')" style="flex:1;border:none;background:transparent;border-radius:9px;padding:10px;font-size:14px;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;">Manager</button>
+        <button id="roleStaff" onclick="setRole('staff')" style="flex:1;border:none;background:transparent;border-radius:9px;padding:10px;font-size:14px;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;">Staff</button>
+        <button id="roleCo" onclick="setRole('company')" style="flex:1;border:none;background:transparent;border-radius:9px;padding:10px;font-size:14px;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;">Company</button>
       </div>
       <div id="roleStaffPick" style="margin-top:8px;"></div>
     </div>
@@ -875,7 +875,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-0854';
+var BUILD='20261013-0906';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -4002,8 +4002,8 @@ function setRole(r){
       +'</select><button class="btn" style="margin-top:8px;" onclick="confirmStaffRole()">Switch to Staff view</button>';
     pick.innerHTML=h;
     /* highlight staff button */
-    document.getElementById('roleStaff').style.background='#1c1c1e';
-    document.getElementById('roleStaff').style.color='#fff';
+    document.getElementById('roleStaff').style.background='var(--accent)';
+    document.getElementById('roleStaff').style.color='var(--accent-ink)';
     return;
   }
   S.role=r;
@@ -4033,11 +4033,11 @@ function syncRoleSeg(){
   var r=appRole();
   ['roleMgr','roleStaff','roleCo'].forEach(function(id){ 
     var el=document.getElementById(id);
-    if(el){ el.style.background='transparent'; el.style.color='#6e6e73'; }
+    if(el){ el.style.background='transparent'; el.style.color='var(--muted)'; }
   });
   var map={manager:'roleMgr',staff:'roleStaff',company:'roleCo'};
   var active=document.getElementById(map[r]);
-  if(active){ active.style.background='#1c1c1e'; active.style.color='#fff'; }
+  if(active){ active.style.background='var(--accent)'; active.style.color='var(--accent-ink)'; }
 }
 /* dynamic tab bar per role */
 function renderTabs(){
