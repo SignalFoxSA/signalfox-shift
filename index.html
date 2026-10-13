@@ -873,7 +873,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-0925';
+var BUILD='20261013-0928';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -4939,7 +4939,7 @@ function expData(){
     var stT={rotation:R.rotation, startTime:v.startTime||'06:00', shiftLen:rot.hours||12};
     sub=rot.name+' rotation \u00b7 '+((nsh===1&&shifts[0].id==='X')
       ? '24h shifts'
-      : shifts.map(function(s){ return s.band+' '+slotTime(stT,s.id); }).join(' \u00b7 '));
+      : shifts.map(function(s){ return shiftBandShort(s.band)+' '+slotTime(stT,s.id); }).join(' \u00b7 '));
   }catch(e){ sub=rot.name+' rotation'; }
   var slug=(vname+'-'+MN[m]+'-'+y).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
   return {y:y, m:m, dim:dim, title:title, sub:sub,
@@ -4972,7 +4972,7 @@ function expBuildText(E, mode){
     E.shifts.forEach(function(s,i){
       var crew=pr[i]>=0?E.crews[pr[i]]:null;
       var names=(pm[i]&&pm[i].length)?pm[i].map(dispMember):(crew?crew.names:[]);
-      bits.push(s.band+': '+(crew?(isNames?names.join(', '):crew.name):'\u2014'));
+      bits.push(shiftBandShort(s.band)+': '+(crew?(isNames?names.join(', '):crew.name):'\u2014'));
     });
     L.push(expWeekdayShort(E.y,E.m,d)+' '+d+': '+(bits.join(' \u00b7 ')||'All off'));
   }
@@ -5027,7 +5027,7 @@ function expBuildWorkbook(E, mode){
       E.shifts.forEach(function(s,i){
         var suf=s.id==='D'?(E.hasNight?'day':'on duty')
               :s.id==='N'?'night'
-              :s.id==='X'?'on duty':s.band.toLowerCase();
+              :s.id==='X'?'on duty':shiftBandShort(s.band).toLowerCase();
         v+='\n'+(pr[i]>=0?E.crews[pr[i]].name+' '+suf:'\u2014');
       });
     }
@@ -5091,7 +5091,7 @@ function expGridEl(E, mode, variant){
       E.shifts.forEach(function(s,i){
         if(pr[i]<0) return;
         var band=(E.crews[pr[i]]&&E.crews[pr[i]].color)||'#888888', bt=textOnBand(band);
-        bands+='<div style="background:'+band+';border-radius:'+F(5)+'px;text-align:center;font-size:'+F(13)+'px;font-weight:800;color:'+bt+';padding:'+P+'px 0;margin-top:'+F(4)+'px;">'+escapeHtml(s.band.toUpperCase())+': '+escapeHtml(E.crews[pr[i]].name)+'</div>';
+        bands+='<div style="background:'+band+';border-radius:'+F(5)+'px;text-align:center;font-size:'+F(13)+'px;font-weight:800;color:'+bt+';padding:'+P+'px 0;margin-top:'+F(4)+'px;">'+escapeHtml(shiftBandShort(s.band).toUpperCase())+': '+escapeHtml(E.crews[pr[i]].name)+'</div>';
       });
       h+=open+'">'
         +'<div style="font-size:'+F(14)+'px;font-weight:700;">'+c.date+'</div>'
