@@ -441,6 +441,11 @@
   #expSheet .sheet-close{border:none; background:#f1f0ed; width:32px; height:32px; border-radius:50%;
     font-size:16px; color:#6e6e73; cursor:pointer;}
   #expSheet .sheet-sub{font-size:13px; color:#6e6e73; margin:2px 0 10px;}
+  /* employee view segmented controls — matches app aesthetic */
+  #v-myshifts .seg{display:flex; background:#f1f0ed; border-radius:12px; padding:4px;}
+  #v-myshifts .seg button{flex:1; border:none; background:transparent; border-radius:9px; padding:10px;
+    font-size:14px; font-weight:700; color:#6e6e73; cursor:pointer; font-family:inherit;}
+  #v-myshifts .seg button.on{background:#1c1c1e; color:#fff;}
   #expSheet .seg{display:flex; background:#f1f0ed; border-radius:12px; padding:4px; margin-bottom:10px;}
   #expSheet .seg button{flex:1; border:none; background:transparent; border-radius:9px; padding:10px;
     font-size:14px; font-weight:700; color:#6e6e73; cursor:pointer;}
@@ -829,7 +834,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-0632';
+var BUILD='20261013-0637';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2693,34 +2698,45 @@ function msRenderCal(){
   var wrap=document.getElementById('msContent');
   var data=msMonthData(msYear,msMonth);
   var myData=msScope==='me'?data.filter(function(s){ return s.members.indexOf(msPerson)>=0; }):data;
-  /* nav */
-  var h='<div class="btnrow" style="align-items:center;justify-content:space-between;margin-bottom:8px;">'
-    +'<button class="btn ghost" onclick="msShiftNav(-1)">‹ Prev</button>'
+  /* nav — matches manager calendar nav */
+  var h='<div class="sixnav"><button class="mnav" onclick="msShiftNav(-1)" aria-label="Previous month">&#8249;</button>'
     +'<b>'+MN[msMonth]+' '+msYear+'</b>'
-    +'<button class="btn ghost" onclick="msShiftNav(1)">Next ›</button></div>';
-  /* grid */
-  h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:11px;color:var(--muted);margin-bottom:4px;">'
-    +['M','T','W','T','F','S','S'].map(function(x){return '<div>'+x+'</div>';}).join('')+'</div>';
-  h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;">';
+    +'<button class="mnav" onclick="msShiftNav(1)" aria-label="Next month">&#8250;</button></div>';
+  /* day-of-week header — same as manager */
+  h+='<div class="dow">'+['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(function(x){return '<span>'+x+'</span>';}).join('')+'</div>';
+  h+='<div class="grid">';
   var first=new Date(msYear,msMonth,1);
-  var startDay=(first.getDay()+6)%7; /* Monday=0 */
-  for(var i=0;i<startDay;i++) h+='<div></div>';
+  var lead=(first.getDay()+6)%7;
+  for(var i=0;i<lead;i++) h+='<div class="cell out"></div>';
   var dim=daysInMonth(msYear,msMonth);
-  var today=new Date(); today.setHours(0,0,0,0);
   for(var d=1; d<=dim; d++){
     var dt=new Date(msYear,msMonth,d);
-    var isToday=dt.getTime()===today.getTime();
     var dayShifts=myData.filter(function(s){ return s.d===d; });
-    var blocks='';
+    var inner='<div class="dnum">'+d+'</div>';
     dayShifts.forEach(function(s){
-      var lbl=msScope==='me'?s.shift+' '+s.time:s.crew;
-      blocks+='<div style="background:'+s.color+';color:#111;font-size:9px;font-weight:700;border-radius:3px;padding:1px 2px;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+escapeHtml(s.shift+' — Crew '+s.crew+(s.time?' ('+s.time+')':''))+'">'+escapeHtml(lbl)+'</div>';
+      var band=s.color||'#888888';
+      var mems=s.members.map(function(nm){ return escapeHtml(dispMember(nm)); }).join(', ');
+      /* in "me" mode highlight the employee's own name */
+      if(msScope==='me'){
+        inner+='<span class="band" style="background:'+band+';color:'+textOnBand(band)+'">'
+          +'<span class="bs">'+escapeHtml(shiftBandShort(s.shift))+'</span>'
+          +'<span class="bc">'+escapeHtml(s.crew)+'</span>'
+          +(s.time?'<span class="bm">'+escapeHtml(s.time)+'</span>':'')
+          +'</span>';
+      }else{
+        inner+='<span class="band" style="background:'+band+';color:'+textOnBand(band)+'">'
+          +'<span class="bs">'+escapeHtml(shiftBandShort(s.shift))+'</span>'
+          +'<span class="bc">'+escapeHtml(s.crew)+'</span>'
+          +(mems?'<span class="bm">'+mems+'</span>':'')
+          +'</span>';
+      }
     });
-    h+='<div onclick="msDayTap('+d+')" style="min-height:44px;border:1px solid '+(isToday?'var(--accent)':'#e0e0e0')+';border-radius:6px;padding:2px;font-size:12px;'+(isToday?'background:#fff8e6;':'')+'">'
-      +'<div style="font-weight:'+(isToday?'800':'400')+';">'+d+'</div>'+blocks+'</div>';
+    h+='<div class="cell'+(isToday(dt)?' today':'')+'" onclick="msDayTap('+d+')">'+inner+'</div>';
   }
+  var trail=(lead+dim)%7;
+  if(trail) for(var t=trail;t<7;t++) h+='<div class="cell out"></div>';
   h+='</div>';
-  if(!myData.length) h+='<p class="fine" style="margin-top:8px;">No shifts this month.</p>';
+  if(!myData.length) h+='<p class="fine" style="margin-top:8px;text-align:center;">No shifts this month.</p>';
   h+='<div id="msDayDetail" style="margin-top:10px;"></div>';
   wrap.innerHTML=h;
 }
