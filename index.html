@@ -875,7 +875,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-0734';
+var BUILD='20261013-0740';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -4256,7 +4256,35 @@ function renderStaffTab(){
     var row=document.createElement('div'); row.className='prow';
     var top=document.createElement('div'); top.className='sline';
     var inp=document.createElement('input'); inp.type='text'; inp.maxLength=24; inp.value=s.name; inp.placeholder='Staff name';
-    inp.oninput=function(){ s.name=this.value; persistBase(); };
+    inp.oninput=(function(ss){ return function(){
+      var oldName=ss.name, newName=this.value;
+      ss.name=newName;
+      /* propagate rename to all roster crew members */
+      if(oldName&&oldName!==newName){
+        loadSaved();
+        (S.rosters||[]).forEach(function(u){
+          var R=u.roster; if(!R||!R.crews) return;
+          R.crews.forEach(function(c){
+            (c.members||[]).forEach(function(nm,i){
+              if(nm===oldName) c.members[i]=newName;
+            });
+          });
+          /* also in member overrides */
+          if(R.memberOverrides){
+            Object.keys(R.memberOverrides).forEach(function(dk){
+              Object.keys(R.memberOverrides[dk]).forEach(function(sk){
+                var mems=R.memberOverrides[dk][sk];
+                if(Array.isArray(mems)) mems.forEach(function(nm,i){
+                  if(nm===oldName) mems[i]=newName;
+                });
+              });
+            });
+          }
+        });
+        saveSaved();
+      }
+      persistBase();
+    }; })(s);
     var q=document.createElement('select'); q.className='qsel'; q.title='Qualification';
     q.setAttribute('aria-label','Qualification for '+(s.name||'staff member'));
     var q0=document.createElement('option'); q0.value=''; q0.textContent='Qual.';
