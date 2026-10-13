@@ -873,7 +873,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-0910';
+var BUILD='20261013-0913';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -3044,98 +3044,21 @@ function msPicPickTab(input){
 function renderCompany(){
   /* placeholder — head office view comes later */
 }
-/* ---------- Employee export ---------- */
+/* ---------- Employee export: use the standard manager export sheet ---------- */
 function msExport(){
-  var data=msMonthData(msYear,msMonth);
-  if(msScope==='me') data=data.filter(function(s){ return s.members.indexOf(msPerson)>=0; });
-  if(!data.length){ toast('Nothing to export'); return; }
-  var scopeLbl=msScope==='me'?msPerson+"'s shifts":'Base roster';
-  var title=scopeLbl+' — '+MN[msMonth]+' '+msYear;
-  var panel=document.getElementById('msExpPanel');
-  if(!panel){
-    panel=document.createElement('div');
-    panel.id='msExpPanel';
-    document.getElementById('v-myshifts').appendChild(panel);
-  }
-  var h='<div class="card" style="border:2px solid var(--accent);margin-top:10px;">'
-    +'<h3>Export</h3><p class="sub">'+escapeHtml(title)+'</p>'
-    +'<div class="btnrow">'
-    +'<button class="btn" onclick="msDoExport(\'txt\')">Text</button>'
-    +'<button class="btn" onclick="msDoExport(\'xlsx\')">Excel</button>'
-    +'<button class="btn" onclick="msDoExport(\'pdf\')">PDF</button>'
-    +'</div>'
-    +'<div class="btnrow"><button class="btn ghost" onclick="document.getElementById(\'msExpPanel\').innerHTML=\'\'">Cancel</button></div></div>';
-  panel.innerHTML=h;
-  panel.scrollIntoView({behavior:'smooth'});
+  loadSaved();
+  var vid=null;
+  (S.rosters||[]).forEach(function(u){
+    if(vid) return;
+    var R=u.roster;
+    if(R&&R.year===msYear&&R.month===msMonth) vid=R.vehicleId;
+  });
+  if(!vid){ toast('No roster for this month yet'); return; }
+  if(!S.cal) S.cal={};
+  S.cal.vehicleId=vid; S.cal.y=msYear; S.cal.m=msMonth;
+  openExportSheet();
 }
-function msDoExport(fmt){
-  var data=msMonthData(msYear,msMonth);
-  if(msScope==='me') data=data.filter(function(s){ return s.members.indexOf(msPerson)>=0; });
-  data.sort(function(a,b){ return a.dt-b.dt||a.shift.localeCompare(b.shift); });
-  var title=(msScope==='me'?msPerson+"'s shifts":'Base roster')+' — '+MN[msMonth]+' '+msYear;
-  if(fmt==='txt'){
-    var txt=title+'\n'+'='.repeat(title.length)+'\n\n';
-    var lastDate='';
-    data.forEach(function(s){
-      if(s.date!==lastDate){
-        lastDate=s.date;
-        txt+='\n'+s.dt.toLocaleDateString('en-ZA',{weekday:'long',day:'numeric',month:'long'})+'\n';
-      }
-      txt+='  '+s.shift+(s.time?' ('+s.time+')':'')+' — Crew '+s.crew+' ['+s.team+']';
-      if(msScope==='base') txt+='\n    '+s.members.join(', ');
-      txt+='\n';
-    });
-    try{ navigator.clipboard.writeText(txt); }catch(e){}
-    var blob=new Blob([txt],{type:'text/plain'});
-    var a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download='myshifts-'+msYear+'-'+String(msMonth+1).padStart(2,'0')+'.txt';
-    document.body.appendChild(a); a.click(); a.remove();
-    toast('Text exported — copied to clipboard too.');
-  }else if(fmt==='xlsx'){
-    try{
-      var rows=[['Date','Day','Shift','Time','Crew','Team'].concat(msScope==='base'?['Members']:[])];
-      data.forEach(function(s){
-        rows.push([
-          s.dt.toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'}),
-          s.dt.toLocaleDateString('en-ZA',{weekday:'long'}),
-          s.shift, s.time||'', s.crew, s.team
-        ].concat(msScope==='base'?[s.members.join(', ')] : []));
-      });
-      var ws=XLSX.utils.aoa_to_sheet([[title],[]].concat(rows));
-      var wb=XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb,ws,'Shifts');
-      XLSX.writeFile(wb,'myshifts-'+msYear+'-'+String(msMonth+1).padStart(2,'0')+'.xlsx');
-      toast('Excel file downloaded.');
-    }catch(e){ toast('Excel export needs internet (library).'); }
-  }else if(fmt==='pdf'){
-    try{
-      var doc=new jspdf.jsPDF();
-      doc.setFontSize(14); doc.text(title,10,12);
-      var y=22; doc.setFontSize(10);
-      var lastD='';
-      data.forEach(function(s){
-        if(y>270){ doc.addPage(); y=12; }
-        if(s.date!==lastD){
-          lastD=s.date; y+=4;
-          doc.setFont(undefined,'bold');
-          doc.text(s.dt.toLocaleDateString('en-ZA',{weekday:'long',day:'numeric',month:'long'}),10,y);
-          doc.setFont(undefined,'normal'); y+=6;
-        }
-        doc.text('  '+s.shift+(s.time?' ('+s.time+')':'')+' — Crew '+s.crew+' ['+s.team+']',10,y);
-        y+=6;
-        if(msScope==='base'&&s.members.length){
-          doc.setFontSize(9); doc.setTextColor(100);
-          doc.text('    '+s.members.join(', '),10,y); y+=5;
-          doc.setFontSize(10); doc.setTextColor(0);
-        }
-      });
-      doc.save('myshifts-'+msYear+'-'+String(msMonth+1).padStart(2,'0')+'.pdf');
-      toast('PDF downloaded.');
-    }catch(e){ toast('PDF export needs internet (library).'); }
-  }
-  document.getElementById('msExpPanel').innerHTML='';
-}
+
 /* ---------- Employee profile ---------- */
 function msProfile(){
   var st=(S.base.staff||[]).find(function(s){ return s.name===msPerson; })||{};
