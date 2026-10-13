@@ -873,7 +873,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-1212';
+var BUILD='20261013-1228';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -4919,6 +4919,12 @@ function expData(){
     pairs.push(row); pairsMembers.push(mrow);
   }
   var expPerson=S.expPerson;
+  /* for personal exports, bake times into shift names so standard renderer shows them */
+  if(expPerson){
+    shifts.forEach(function(s){
+      if(s.start&&s.end){ var tstr=fmtTime(s.start)+'\u2013'+fmtTime(s.end); s.name=s.name+' '+tstr; s.band=s.band+' '+tstr; }
+    });
+  }
   /* personal filter: only the person's own shifts, with their partners — no opposite shift */
   if(expPerson){
     try{
@@ -5103,16 +5109,7 @@ function expGridEl(E, mode, variant){
       E.shifts.forEach(function(s,i){
         if(pr[i]<0) return;
         var nm=(pm[i]&&pm[i].length)?pm[i].map(dispMember):E.crews[pr[i]].names;
-        if(E.expPerson){
-          var pTime=(s.start&&s.end)?fmtTime(s.start)+'\u2013'+fmtTime(s.end):'';
-          rows+='<div style="font-size:'+F(12.5)+'px;margin-top:'+F(3)+'px;">'
-            +'<div><b>'+escapeHtml(shiftBandShort(s.name))+'</b></div>'
-            +(pTime?'<div style="color:#666;">'+escapeHtml(pTime)+'</div>':'')
-            +nm.map(function(n){ return '<div style="color:'+E.crews[pr[i]].dark+';">'+escapeHtml(dispMember(n))+'</div>'; }).join('')
-            +'</div>';
-        } else {
-          rows+='<div style="font-size:'+F(12.5)+'px;margin-top:'+F(3)+'px;"><b>'+escapeHtml(shiftBandShort(s.name))+':</b> <span style="color:'+E.crews[pr[i]].dark+';">'+escapeHtml(nm.join(', '))+'</span></div>';
-        }
+        rows+='<div style="font-size:'+F(12.5)+'px;margin-top:'+F(3)+'px;"><b>'+escapeHtml(shiftBandShort(s.name))+':</b> <span style="color:'+E.crews[pr[i]].dark+';">'+escapeHtml(nm.join(', '))+'</span></div>';
       });
       h+=open+'background:'+(firstCrew?firstCrew.tintNames:'transparent')+';">'
         +'<div style="font-size:'+F(14)+'px;font-weight:700;">'+c.date+'</div>'
