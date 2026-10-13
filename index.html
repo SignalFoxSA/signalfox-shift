@@ -873,7 +873,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-1338';
+var BUILD='20261013-1342';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -3057,6 +3057,7 @@ function msExport(){
   if(!S.cal) S.cal={};
   S.cal.vehicleId=vid; S.cal.y=msYear; S.cal.m=msMonth;
   S.expPerson=(msScope==='me'&&msPerson)?msPerson:null;
+  try{ window.__persExp=S.expPerson; }catch(_){}
   openExportSheet();
 }
 /* ---------- Staff profile tab ---------- */
@@ -5110,7 +5111,8 @@ function expGridEl(E, mode, variant){
       E.shifts.forEach(function(s,i){
         if(pr[i]<0) return;
         var nm=(pm[i]&&pm[i].length)?pm[i].map(dispMember):E.crews[pr[i]].names;
-        if(E.isPersonal){
+        var _isPers=E.isPersonal; try{ if(window.__persExp) _isPers=window.__persExp; }catch(_){}
+        if(_isPers){
           var tLine=(s.start&&s.end)?'<div style="color:#666;">'+escapeHtml(fmtTime(s.start)+'\u2013'+fmtTime(s.end))+'</div>':'';
           var nLines='';
           for(var k=0;k<nm.length;k++){ nLines+='<div>'+escapeHtml(dispMemberQual(nm[k]))+'</div>'; }
