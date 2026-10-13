@@ -875,7 +875,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-0800';
+var BUILD='20261013-0854';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2981,7 +2981,7 @@ function mkApprove(appId){
     R.memberOverrides[a.dateISO][a.shiftId]=mems;
   }
   a.status='approved';
-  persistBase(); saveSaved();
+  persistBase(); persist();
   toast(a.applicant+' approved for '+a.shift+'.');
   renderBase();
 }
@@ -4284,7 +4284,7 @@ function staffSaveName(sid, oldName, newName){
     loadSaved();
     (S.rosters||[]).forEach(function(u){ renameIn(u.roster); });
     if(S.draft) renameIn(S.draft);
-    saveSaved();
+    persist();
     try{ if(document.getElementById('v-cal')&&document.getElementById('v-cal').classList.contains('active')) renderCalendar(); }catch(e){}
     toast('Saved — '+count+' roster entr'+(count===1?'y':'ies')+' updated.');
   } else {
@@ -4786,7 +4786,7 @@ function genTestData(){
       S.rosters.push({id:R.id, name:R.name, roster:R});
     }
   });
-  persistBase(); saveSaved();
+  persistBase(); persist();
   toast('Test data generated — 6 months with leave and open shifts.');
 }
 /* ---------- Test data generator ---------- */
