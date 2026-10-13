@@ -873,7 +873,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-1026';
+var BUILD='20261013-1029';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -4918,23 +4918,24 @@ function expData(){
     });
     pairs.push(row); pairsMembers.push(mrow);
   }
-  /* personal filter: only the person's own shifts, with their partners — no opposite shift */
-  if(E.expPerson){
-    for(var fd=0; fd<pairs.length; fd++){
-      var pm=pairsMembers[fd];
-      if(!pm) continue;
-      var personSlots=[];
-      pm.forEach(function(mems,si){ if(mems&&mems.indexOf(S.expPerson)>=0) personSlots.push(si); });
-      if(!personSlots.length){
-        pairs[fd]=null; pairsMembers[fd]=null;
-      } else {
-        /* blank out slots where the person is not working; keep full member lists (partners) */
-        pairs[fd]=(pairs[fd]||[]).map(function(ci,si){ return personSlots.indexOf(si)>=0?ci:-1; });
-      }
-    }
-  }
-  var title=(S.expPerson?S.expPerson+' \u2014 ':'')+vname+' \u2014 '+MN[m]+' '+y, sub;
   var expPerson=S.expPerson;
+  /* personal filter: only the person's own shifts, with their partners — no opposite shift */
+  if(expPerson){
+    try{
+      for(var fd=0; fd<pairs.length; fd++){
+        var pm=pairsMembers[fd];
+        if(!pm||!pairs[fd]) continue;
+        var personSlots=[];
+        pm.forEach(function(mems,si){ if(mems&&mems.indexOf(expPerson)>=0) personSlots.push(si); });
+        if(!personSlots.length){
+          pairs[fd]=null; pairsMembers[fd]=null;
+        } else {
+          pairs[fd]=(pairs[fd]||[]).map(function(ci,si){ return personSlots.indexOf(si)>=0?ci:-1; });
+        }
+      }
+    }catch(e){}
+  }
+  var title=(expPerson?expPerson+' \u2014 ':'')+vname+' \u2014 '+MN[m]+' '+y, sub;
   try{
     var stT={rotation:R.rotation, startTime:v.startTime||'06:00', shiftLen:rot.hours||12};
     sub=rot.name+' rotation \u00b7 '+((nsh===1&&shifts[0].id==='X')
