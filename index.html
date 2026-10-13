@@ -873,7 +873,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-1440';
+var BUILD='20261013-1453';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -3057,7 +3057,6 @@ function msExport(){
   if(!S.cal) S.cal={};
   S.cal.vehicleId=vid; S.cal.y=msYear; S.cal.m=msMonth;
   S.expPerson=(msScope==='me'&&msPerson)?msPerson:null;
-  try{ window.__persExp=S.expPerson; }catch(_){}
   openExportSheet();
 }
 /* ---------- Staff profile tab ---------- */
@@ -5110,13 +5109,24 @@ function expGridEl(E, mode, variant){
       var rows='';
       E.shifts.forEach(function(s,i){
         if(pr[i]<0) return;
-        var nm=[]; try{ nm=(pm[i]&&pm[i].length)?pm[i].map(dispMember):((E.crews[pr[i]]&&E.crews[pr[i]].names)||[]); }catch(_){ nm=[]; }
-          var tLine=(s.start&&s.end)?'<div style="color:#666;">'+escapeHtml(fmtTime(s.start)+'\u2013'+fmtTime(s.end))+'</div>':'';
-          if(!nm.length && E.title){ var _pn=E.title.split('\u2014')[0].trim(); if(_pn) nm=[_pn]; }
-          var nLines=''; try{ var _pn2=null; try{ _pn2=window.__persExp; }catch(_){} if(!_pn2 && E.title) _pn2=E.title.split('\u2014')[0].trim(); if(_pn2){ nLines='<div>'+escapeHtml(dispMemberQual(_pn2))+'</div>'; } }catch(_){}
-          rows+='<div style="font-size:'+F(12.5)+'px;margin-top:'+F(3)+'px;color:'+E.crews[pr[i]].dark+';">'
-            +'<div><b style="color:#1c1c1e;">'+escapeHtml(shiftBandShort(s.name))+'</b></div>'
-            +tLine+nLines+'</div>';
+        var nm=[];
+        try{
+          if(pm[i]&&pm[i].length) nm=pm[i].map(dispMember);
+          else if(E.crews[pr[i]]&&E.crews[pr[i]].names) nm=E.crews[pr[i]].names.slice();
+        }catch(_){ nm=[]; }
+        var tLine='';
+        try{
+          if(s.start&&s.end) tLine='<div style="color:#666;">'+escapeHtml(fmtTime(s.start)+'\u2013'+fmtTime(s.end))+'</div>';
+        }catch(_){}
+        var nLines='';
+        for(var k=0;k<nm.length;k++){
+          try{ nLines+='<div>'+escapeHtml(dispMemberQual(nm[k]))+'</div>'; }
+          catch(_){ nLines+='<div>'+escapeHtml(String(nm[k]))+'</div>'; }
+        }
+        var crewDark=(E.crews[pr[i]]&&E.crews[pr[i]].dark)||'#333';
+        rows+='<div style="font-size:'+F(12.5)+'px;margin-top:'+F(3)+'px;color:'+crewDark+';">'
+          +'<div><b style="color:#1c1c1e;">'+escapeHtml(shiftBandShort(s.name))+'</b></div>'
+          +tLine+nLines+'</div>';
       });
       h+=open+'background:'+(firstCrew?firstCrew.tintNames:'transparent')+';">'
         +'<div style="font-size:'+F(14)+'px;font-weight:700;">'+c.date+'</div>'
