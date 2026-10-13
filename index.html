@@ -527,7 +527,6 @@
     </div>
     <button class="btn" id="newRosterBtn" onclick="toNewRoster()">+ New roster</button>
     <button class="btn ghost" onclick="switchTab('onduty')">&#128065; Who's on duty</button>
-    <button class="btn ghost" onclick="msPickPerson()">&#128100; My shifts (employee view)</button>
     <button class="btn ghost" onclick="openBaseSetup()">&#128736; Set up my workplace</button>
     <div class="card">
       <h3>On duty today</h3>
@@ -566,6 +565,16 @@
 
   <!-- SETTINGS -->
   <div class="view" id="v-settings">
+    <div class="card" style="border:2px solid var(--accent);">
+      <h3>App role</h3>
+      <p class="sub">View the app as a manager, staff member, or company.</p>
+      <div class="seg" id="roleSeg" style="display:flex;background:#f1f0ed;border-radius:12px;padding:4px;">
+        <button id="roleMgr" onclick="setRole('manager')" style="flex:1;border:none;background:transparent;border-radius:9px;padding:10px;font-size:14px;font-weight:700;color:#6e6e73;cursor:pointer;font-family:inherit;">Manager</button>
+        <button id="roleStaff" onclick="setRole('staff')" style="flex:1;border:none;background:transparent;border-radius:9px;padding:10px;font-size:14px;font-weight:700;color:#6e6e73;cursor:pointer;font-family:inherit;">Staff</button>
+        <button id="roleCo" onclick="setRole('company')" style="flex:1;border:none;background:transparent;border-radius:9px;padding:10px;font-size:14px;font-weight:700;color:#6e6e73;cursor:pointer;font-family:inherit;">Company</button>
+      </div>
+      <div id="roleStaffPick" style="margin-top:8px;"></div>
+    </div>
     <div class="card">
       <h3>Profile</h3>
       <label class="f">Your name</label>
@@ -604,8 +613,12 @@
     </div>
     <button class="btn ghost" style="color:var(--red);border-color:var(--red)" onclick="logout()">Log out</button>
     <p class="fine">SignalFox Shift &middot; V2 test build &middot; <span id="buildTag"></span></p>
+    <div class="card">
+      <h3>Testing</h3>
+      <p class="sub">Generate 6 months of rosters with leave, sick leave and open shifts.</p>
+      <button class="btn" onclick="genTestData()">Generate test data</button>
+    </div>
   </div>
-
   <!-- BASE SETUP -->
   <div class="view" id="v-basesetup">
     <div class="card">
@@ -714,6 +727,23 @@
     <button class="btn ghost" onclick="goBack()">Back</button>
   </div>
 
+  <!-- STAFF PROFILE TAB -->
+  <div class="view" id="v-profile">
+    <div class="card">
+      <h3>My Profile</h3>
+      <div id="profContent"></div>
+    </div>
+  </div>
+
+  <!-- COMPANY VIEW (placeholder) -->
+  <div class="view" id="v-company">
+    <div class="card" style="text-align:center;padding:40px 20px;">
+      <h3>Company View</h3>
+      <p class="sub">Head office dashboard — see every base and roster across the company.</p>
+      <p class="fine">Coming soon.</p>
+    </div>
+  </div>
+
   <!-- MARKETPLACE (open shifts) -->
   <div class="view" id="v-marketplace">
     <div class="card">
@@ -723,7 +753,6 @@
       <h3 style="margin-top:16px;">My applications</h3>
       <div id="mkMine"></div>
     </div>
-    <button class="btn ghost" onclick="mkBack()">Back</button>
   </div>
 
   <!-- MY SHIFTS (employee view) -->
@@ -746,7 +775,6 @@
       </div>
       <div id="msContent" style="margin-top:10px;"></div>
     </div>
-    <button class="btn ghost" onclick="msBack()">Back</button>
   </div>
 
   <!-- BASE VIEW -->
@@ -847,7 +875,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-0647';
+var BUILD='20261013-0703';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2934,6 +2962,59 @@ function mkDecline(appId){
   toast('Application declined.');
   renderBase();
 }
+/* ---------- Staff profile tab ---------- */
+function renderStaffProfile(){
+  var wrap=document.getElementById('profContent');
+  if(!msPerson){ wrap.innerHTML='<p class="fine">Pick a staff member in Settings.</p>'; return; }
+  var st=(S.base.staff||[]).find(function(s){ return s.name===msPerson; })||{};
+  var pic=st.pic||'';
+  var qualName=(baseQuals().find(function(q){return q.id===st.qual;})||{}).name||'—';
+  /* count upcoming shifts */
+  var now=new Date(); now.setHours(0,0,0,0);
+  var upcoming=0;
+  loadSaved();
+  (S.rosters||[]).forEach(function(u){
+    var R=u.roster; if(!R||R.kind!=='month') return;
+    for(var d=1; d<=daysInMonth(R.year,R.month); d++){
+      var dt=new Date(R.year,R.month,d);
+      if(dt<now) continue;
+      var dateISO=R.year+'-'+String(R.month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      var info=calRosterDay(R,R.year,R.month,d);
+      if(!info) continue;
+      calSlotCrews(R,info.dayIdx).forEach(function(ps){
+        ps.list.forEach(function(x){
+          if(effShiftMembers(R,dateISO,ps.sl.id,x.c).indexOf(msPerson)>=0) upcoming++;
+        });
+      });
+    }
+  });
+  var h='<div style="text-align:center;margin-bottom:16px;">'
+    +'<div style="width:90px;height:90px;border-radius:50%;margin:0 auto 10px;overflow:hidden;background:#eee;display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:800;color:var(--accent);">'
+    +(pic?'<img src="'+pic+'" style="width:100%;height:100%;object-fit:cover;" alt="">':escapeHtml(msPerson.charAt(0).toUpperCase()))
+    +'</div>'
+    +'<div style="font-weight:800;font-size:20px;">'+escapeHtml(msPerson)+'</div>'
+    +'<div style="color:var(--muted);">'+escapeHtml(qualName)+'</div></div>'
+    +'<div class="dshift"><div class="dh"><span class="t">Employee no.</span><span class="c">'+escapeHtml(st.empNo||'—')+'</span></div></div>'
+    +'<div class="dshift"><div class="dh"><span class="t">Upcoming shifts</span><span class="c">'+upcoming+'</span></div></div>'
+    +'<div class="btnrow" style="margin-top:12px;"><label class="btn ghost" style="cursor:pointer;">Change picture'
+    +'<input type="file" accept="image/*" style="display:none;" onchange="msPicPickTab(this)"></label></div>';
+  wrap.innerHTML=h;
+}
+function msPicPickTab(input){
+  var f=input.files&&input.files[0];
+  if(!f) return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    var st=(S.base.staff||[]).find(function(s){ return s.name===msPerson; });
+    if(st){ st.pic=rd.result; persistBase(); }
+    renderStaffProfile();
+    toast('Profile picture updated.');
+  };
+  rd.readAsDataURL(f);
+}
+function renderCompany(){
+  /* placeholder — head office view comes later */
+}
 /* ---------- Employee export ---------- */
 function msExport(){
   var data=msMonthData(msYear,msMonth);
@@ -3856,11 +3937,16 @@ function offlineNote(on){
 }
 function enterApp(){
   var tabs=document.querySelector('.tabs'); if(tabs) tabs.classList.add('show');
-  switchTab('home');
+  renderTabs();
+  var r=appRole();
+  if(r==='staff'&&msPerson){ switchTab('myshifts'); }
+  else if(r==='company'){ switchTab('company'); }
+  else { switchTab('home'); }
 }
 
 /* ---------- navigation ---------- */
-var TAB_VIEWS={home:'v-home', rosters:'v-rosters', onduty:'v-base', staff:'v-staff', settings:'v-settings'};
+var TAB_VIEWS={home:'v-home', rosters:'v-rosters', onduty:'v-base', staff:'v-staff', settings:'v-settings',
+  myshifts:'v-myshifts', openshifts:'v-marketplace', profile:'v-profile', company:'v-company'};
 var BACK_IDS=['v-basesetup','v-newroster','v-anchor','v-cal','v-base','v-rotbuilder'];
 function show(id){
   document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
@@ -3872,13 +3958,104 @@ function show(id){
   });
   window.scrollTo(0,0);
 }
+/* ---------- Role switcher ---------- */
+function appRole(){ return S.role||'manager'; }
+function setRole(r){
+  if(r==='staff'){
+    /* pick which staff member */
+    var names=allStaffNames();
+    if(!names.length){ toast('No staff members yet'); return; }
+    var pick=document.getElementById('roleStaffPick');
+    var h='<label class="f">View as</label><select id="roleStaffSel" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);">'
+      +names.map(function(n){ return '<option value="'+escapeHtml(n)+'"'+(n===msPerson?' selected':'')+'>'+escapeHtml(n)+'</option>'; }).join('')
+      +'</select><button class="btn" style="margin-top:8px;" onclick="confirmStaffRole()">Switch to Staff view</button>';
+    pick.innerHTML=h;
+    /* highlight staff button */
+    document.getElementById('roleStaff').style.background='#1c1c1e';
+    document.getElementById('roleStaff').style.color='#fff';
+    return;
+  }
+  S.role=r;
+  document.getElementById('roleStaffPick').innerHTML='';
+  persistBase();
+  renderTabs();
+  syncRoleSeg();
+  if(r==='manager') switchTab('home');
+  else if(r==='company') switchTab('company');
+  toast(r==='manager'?'Manager view':r==='company'?'Company view (coming soon)':'Staff view');
+}
+function confirmStaffRole(){
+  var sel=document.getElementById('roleStaffSel');
+  msPerson=sel?sel.value:msPerson;
+  if(!msPerson){ toast('Pick a staff member'); return; }
+  S.role='staff';
+  persistBase();
+  renderTabs();
+  syncRoleSeg();
+  /* init staff view */
+  var now=new Date(); msYear=now.getFullYear(); msMonth=now.getMonth();
+  msScope='me'; msView='cal'; msSyncSeg();
+  switchTab('myshifts');
+  toast('Staff view — '+msPerson);
+}
+function syncRoleSeg(){
+  var r=appRole();
+  ['roleMgr','roleStaff','roleCo'].forEach(function(id){ 
+    var el=document.getElementById(id);
+    if(el){ el.style.background='transparent'; el.style.color='#6e6e73'; }
+  });
+  var map={manager:'roleMgr',staff:'roleStaff',company:'roleCo'};
+  var active=document.getElementById(map[r]);
+  if(active){ active.style.background='#1c1c1e'; active.style.color='#fff'; }
+}
+/* dynamic tab bar per role */
+function renderTabs(){
+  var nav=document.querySelector('nav.tabs');
+  if(!nav) return;
+  var r=appRole();
+  var tabs;
+  if(r==='staff'){
+    tabs=[
+      {id:'myshifts', icon:'\uD83D\uDCC5', label:'My Shifts'},
+      {id:'openshifts', icon:'\uD83D\uDCB0', label:'Open Shifts'},
+      {id:'profile', icon:'\uD83D\uDC64', label:'Profile'},
+      {id:'settings', icon:'\u2699\uFE0F', label:'Settings'}
+    ];
+  }else if(r==='company'){
+    tabs=[
+      {id:'company', icon:'\uD83C\uDFE2', label:'Company'},
+      {id:'settings', icon:'\u2699\uFE0F', label:'Settings'}
+    ];
+  }else{
+    tabs=[
+      {id:'home', icon:'\uD83C\uDFE0', label:'Home'},
+      {id:'onduty', icon:'\uD83D\uDC41', label:'On Duty'},
+      {id:'rosters', icon:'\uD83D\uDCC7', label:'Rosters'},
+      {id:'staff', icon:'\uD83D\uDC65', label:'Staff'},
+      {id:'settings', icon:'\u2699\uFE0F', label:'Settings'}
+    ];
+  }
+  nav.innerHTML=tabs.map(function(t){
+    return '<button data-tab="'+t.id+'" onclick="switchTab(\''+t.id+'\')"><span class="ti">'+t.icon+'</span>'+t.label+'</button>';
+  }).join('');
+}
 function switchTab(name){
   if(name==='home') renderHome();
   if(name==='onduty'){ S.baseDateISO=toISO(new Date()); renderBase(); }
   if(name==='rosters') renderAllRosters();
   if(name==='staff'){ renderStaffQuals(); renderStaffTab(); }
-  if(name==='settings') renderSettings();
+  if(name==='settings'){ renderSettings(); syncRoleSeg(); }
+  if(name==='myshifts'){
+    if(!msPerson){ toast('Pick a staff member in Settings first'); switchTab('settings'); return; }
+    msRender();
+  }
+  if(name==='openshifts'){ renderMarketplace(); }
+  if(name==='profile'){ renderStaffProfile(); }
+  if(name==='company'){ renderCompany(); }
   show(TAB_VIEWS[name]);
+  document.querySelectorAll('nav.tabs button').forEach(function(b){
+    b.classList.toggle('active', b.getAttribute('data-tab')===name);
+  });
 }
 function goBack(){
   var av=document.querySelector('.view.active');
@@ -4365,6 +4542,78 @@ function setPills(elId, opts, cur, cb){
     (function(k, v){ k.onclick=function(){ if(v!==cur) cb(v); }; })(kids[i], opts[i].v);
   }
 }
+/* ---------- Test data generator ---------- */
+function genTestData(){
+  if(!confirm('Generate 6 months of test rosters with leave, sick leave and open shifts?')) return;
+  loadSaved();
+  var now=new Date();
+  var vehicles=S.base.vehicles||[];
+  if(!vehicles.length){ toast('Set up a team first'); return; }
+  var vid=vehicles[0].id;
+  var v=vehicleById(vid)||{};
+  /* ensure staff exist */
+  if(!(S.base.staff||[]).length){
+    ['Thabo M','Sarah K','Mike D','Lisa P','James N','Anna S'].forEach(function(nm,i){
+      S.base.staff.push({id:'s'+Date.now()+i, name:nm, empNo:'E'+(1001+i)});
+    });
+  }
+  /* assign staff to crews if not already */
+  var crews=v.crews||[];
+  S.base.staff.forEach(function(s,i){
+    if(!staffCrewOf(s.id)&&crews.length){
+      assignStaffToCrew(s.id, crews[i%crews.length].id);
+    }
+  });
+  var leaveTypes=['Annual leave','Sick leave','Family responsibility'];
+  for(var mi=0; mi<6; mi++){
+    var d=new Date(now.getFullYear(), now.getMonth()+mi, 1);
+    var y=d.getFullYear(), m=d.getMonth();
+    /* skip if roster already exists */
+    var exists=(S.rosters||[]).some(function(u){
+      return u.roster&&u.roster.vehicleId===vid&&u.roster.year===y&&u.roster.month===m;
+    });
+    if(exists) continue;
+    /* create a simple roster */
+    var dim=daysInMonth(y,m);
+    var R={
+      id:'r'+Date.now()+mi, kind:'month', vehicleId:vid,
+      name:(v.name||'Team')+' · '+MN[m]+' '+y,
+      year:y, month:m, anchorAbs:0,
+      startISO:y+'-'+String(m+1).padStart(2,'0')+'-01', days:dim,
+      crews:JSON.parse(JSON.stringify(crews)),
+      rotation:'224', overrides:{}, memberOverrides:{}, leaveLog:[]
+    };
+    /* sprinkle leave, sick, open shifts */
+    var staffNames=S.base.staff.map(function(s){ return s.name; });
+    for(var k=0; k<8; k++){
+      var rd=1+Math.floor(Math.random()*dim);
+      var dateISO=y+'-'+String(m+1).padStart(2,'0')+'-'+String(rd).padStart(2,'0');
+      var person=staffNames[Math.floor(Math.random()*staffNames.length)];
+      var lt=leaveTypes[Math.floor(Math.random()*leaveTypes.length)];
+      if(!R.memberOverrides[dateISO]) R.memberOverrides[dateISO]={};
+      /* find a shift with this person and mark open */
+      var dt=parseISO(dateISO), di=dayDiff(parseISO(R.startISO),dt);
+      try{
+        calSlotCrews(R,di).forEach(function(ps){
+          if(!ps.list.length) return;
+          var mems=effShiftMembers(R,dateISO,ps.sl.id,ps.list[0].c);
+          if(mems.indexOf(person)>=0&&!R.memberOverrides[dateISO][ps.sl.id]){
+            var idx=mems.indexOf(person);
+            /* 50% leave as open, 50% sick with open */
+            mems[idx]=OPEN_MARK;
+            R.memberOverrides[dateISO][ps.sl.id]=mems;
+            R.leaveLog.push({date:dateISO, shift:ps.sl.id, person:person, type:lt, cover:'OPEN', ts:Date.now()});
+          }
+        });
+      }catch(e){}
+    }
+    if(!S.rosters) S.rosters=[];
+    S.rosters.push({id:R.id, name:R.name, roster:R});
+  }
+  persistBase(); saveSaved();
+  toast('Test data generated — 6 months with leave and open shifts.');
+}
+/* ---------- Test data generator ---------- */
 function saveSettingsProfile(){
   var name=document.getElementById('setName').value.trim();
   if(!name){ toast('Name is required'); return; }
