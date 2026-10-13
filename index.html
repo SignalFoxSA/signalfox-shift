@@ -873,7 +873,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-1453';
+var BUILD='20261013-1456';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -5118,6 +5118,7 @@ function expGridEl(E, mode, variant){
         try{
           if(s.start&&s.end) tLine='<div style="color:#666;">'+escapeHtml(fmtTime(s.start)+'\u2013'+fmtTime(s.end))+'</div>';
         }catch(_){}
+        var _dbg='nm:'+nm.length+' pm:'+((pm[i]||[]).length)+' pr:'+pr[i]+' crews:'+(E.crews||[]).length;
         var nLines='';
         for(var k=0;k<nm.length;k++){
           try{ nLines+='<div>'+escapeHtml(dispMemberQual(nm[k]))+'</div>'; }
@@ -5126,7 +5127,7 @@ function expGridEl(E, mode, variant){
         var crewDark=(E.crews[pr[i]]&&E.crews[pr[i]].dark)||'#333';
         rows+='<div style="font-size:'+F(12.5)+'px;margin-top:'+F(3)+'px;color:'+crewDark+';">'
           +'<div><b style="color:#1c1c1e;">'+escapeHtml(shiftBandShort(s.name))+'</b></div>'
-          +tLine+nLines+'</div>';
+          +tLine+nLines+'<div style="font-size:9px;color:#999;">'+_dbg+'</div></div>';
       });
       h+=open+'background:'+(firstCrew?firstCrew.tintNames:'transparent')+';">'
         +'<div style="font-size:'+F(14)+'px;font-weight:700;">'+c.date+'</div>'
