@@ -875,7 +875,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-0722';
+var BUILD='20261013-0723';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2881,7 +2881,11 @@ function renderMarketplace(){
     wrap.innerHTML='<p class="fine">No open shifts right now. Check back later.</p>';
   }else{
     var h='';
+    var shown=0;
     open.forEach(function(s,i){
+      /* hide shifts that would double-book or create 24h stretches */
+      if(msPerson&&mkHasConflict(msPerson, s.dateISO)) return;
+      shown++;
       var already=(S.shiftApps||[]).some(function(a){
         return a.rosterId===s.rosterId&&a.dateISO===s.dateISO&&a.shiftId===s.shiftId
           &&a.applicant===msPerson&&a.status==='pending';
@@ -2897,6 +2901,7 @@ function renderMarketplace(){
           :'<button class="btn" onclick="mkApply('+i+')">Apply</button>')
         +'</div></div>';
     });
+    if(!shown&&open.length) h='<p class="fine">No available shifts — you are already rostered on all open dates.</p>';
     wrap.innerHTML=h;
   }
   /* my applications */
@@ -2919,9 +2924,35 @@ function renderMarketplace(){
   /* stash for apply */
   S._mkOpen=open;
 }
+/* check if person is already rostered on a date (any shift) — prevents double-booking and 24h stretches */
+function mkHasConflict(personName, dateISO){
+  loadSaved();
+  for(var ri=0; ri<(S.rosters||[]).length; ri++){
+    var R=S.rosters[ri].roster;
+    if(!R||R.kind!=='month') continue;
+    var parts=dateISO.split('-');
+    if(R.year!==parseInt(parts[0],10)||R.month!==parseInt(parts[1],10)-1) continue;
+    var d=parseInt(parts[2],10);
+    var info=calRosterDay(R,R.year,R.month,d);
+    if(!info) continue;
+    var found=false;
+    calSlotCrews(R,info.dayIdx).forEach(function(ps){
+      ps.list.forEach(function(x){
+        if(effShiftMembers(R,dateISO,ps.sl.id,x.c).indexOf(personName)>=0) found=true;
+      });
+    });
+    if(found) return true;
+  }
+  return false;
+}
 function mkApply(i){
   var s=(S._mkOpen||[])[i];
   if(!s||!msPerson) return;
+  /* block double-rostering and 24-hour stretches */
+  if(mkHasConflict(msPerson, s.dateISO)){
+    toast('You are already rostered on that date.');
+    return;
+  }
   if(!S.shiftApps) S.shiftApps=[];
   S.shiftApps.push({
     id:'app'+Date.now(),
@@ -4615,7 +4646,17 @@ function genTestData(){
   });
   var leaveTypes=['Annual leave','Sick leave','Family responsibility'];
   var staffNames=S.base.staff.map(function(s){ return s.name; });
-  S.base.vehicles.forEach(function(vv, vvi){
+  /* one vehicle per click: pick the first vehicle without generated rosters */
+  var targetV=null;
+  (S.base.vehicles||[]).forEach(function(vv){
+    if(targetV) return;
+    var hasGen=(S.rosters||[]).some(function(u){
+      return u.roster&&u.roster.vehicleId===vv.id&&u.roster._testGen;
+    });
+    if(!hasGen) targetV=vv;
+  });
+  if(!targetV){ toast('All vehicles already have test rosters.'); return; }
+  [targetV].forEach(function(vv, vvi){
     var vid=vv.id;
     var crews=vv.crews||[];
     for(var mi=0; mi<6; mi++){
@@ -4634,7 +4675,7 @@ function genTestData(){
         }
       });
       var R={
-        id:'r'+t+vvi+'_'+mi, kind:'month', vehicleId:vid,
+        id:'r'+t+vvi+'_'+mi, kind:'month', vehicleId:vid, _testGen:true,
         name:(vv.name||'Team')+' \u00b7 '+MN[m]+' '+y,
         year:y, month:m, anchorAbs:0,
         startISO:y+'-'+String(m+1).padStart(2,'0')+'-01', days:dim,
