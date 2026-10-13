@@ -714,6 +714,18 @@
     <button class="btn ghost" onclick="goBack()">Back</button>
   </div>
 
+  <!-- MARKETPLACE (open shifts) -->
+  <div class="view" id="v-marketplace">
+    <div class="card">
+      <h3>Open Shifts</h3>
+      <p class="sub">Overtime available — tap Apply to request a shift.</p>
+      <div id="mkList"></div>
+      <h3 style="margin-top:16px;">My applications</h3>
+      <div id="mkMine"></div>
+    </div>
+    <button class="btn ghost" onclick="mkBack()">Back</button>
+  </div>
+
   <!-- MY SHIFTS (employee view) -->
   <div class="view" id="v-myshifts">
     <div class="card">
@@ -728,6 +740,7 @@
         <button id="msViewList" onclick="msSetView('list')">List</button>
       </div>
       <div class="btnrow" style="margin-top:8px;">
+        <button class="btn" onclick="msOpenMarket()">&#128176; Open shifts</button>
         <button class="btn" onclick="msExport()">&#8681; Export</button>
         <button class="btn ghost" onclick="msProfile()">&#128100; Profile</button>
       </div>
@@ -834,7 +847,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-0637';
+var BUILD='20261013-0647';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2788,6 +2801,139 @@ function msRenderList(){
   if(!data.length) h+='<p class="fine">No shifts this month.</p>';
   wrap.innerHTML=h;
 }
+/* ---------- Open Shifts Marketplace ---------- */
+function msOpenMarket(){
+  renderMarketplace();
+  show('v-marketplace');
+}
+function mkBack(){ show('v-myshifts'); }
+/* find all open shifts across saved rosters */
+function mkFindOpen(){
+  var out=[];
+  loadSaved();
+  (S.rosters||[]).forEach(function(u){
+    var R=u.roster;
+    if(!R||R.kind!=='month'||!R.memberOverrides) return;
+    Object.keys(R.memberOverrides).forEach(function(dateISO){
+      var per=R.memberOverrides[dateISO];
+      if(!per) return;
+      Object.keys(per).forEach(function(shiftId){
+        var mems=per[shiftId];
+        if(!Array.isArray(mems)||mems.indexOf(OPEN_MARK)<0) return;
+        /* find crew + shift details */
+        var dt=parseISO(dateISO);
+        var di=dayDiff(parseISO(R.startISO),dt);
+        var slotInfo=null, crewName='', crewColor='#999';
+        try{
+          calSlotCrews(R,di).forEach(function(ps){
+            if(ps.sl.id===shiftId&&ps.list.length){
+              slotInfo=ps.sl;
+              crewName=ps.list[0].c.name||'';
+              crewColor=ps.list[0].c.color||'#999';
+            }
+          });
+        }catch(e){}
+        out.push({
+          rosterId:u.id, dateISO:dateISO, dt:dt,
+          shiftId:shiftId, shift:slotInfo?slotInfo.name:shiftId,
+          crew:crewName, color:crewColor, team:u.name
+        });
+      });
+    });
+  });
+  /* future only, sorted */
+  var today=new Date(); today.setHours(0,0,0,0);
+  return out.filter(function(s){ return s.dt>=today; })
+    .sort(function(a,b){ return a.dt-b.dt; });
+}
+function renderMarketplace(){
+  var open=mkFindOpen();
+  var wrap=document.getElementById('mkList');
+  if(!open.length){
+    wrap.innerHTML='<p class="fine">No open shifts right now. Check back later.</p>';
+  }else{
+    var h='';
+    open.forEach(function(s,i){
+      var already=(S.shiftApps||[]).some(function(a){
+        return a.rosterId===s.rosterId&&a.dateISO===s.dateISO&&a.shiftId===s.shiftId
+          &&a.applicant===msPerson&&a.status==='pending';
+      });
+      h+='<div class="dshift" style="border-left:5px solid '+s.color+'">'
+        +'<div class="dh"><span class="t">'+s.dt.toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'})+'</span>'
+        +'<span class="c">'+escapeHtml(s.team)+'</span></div>'
+        +'<div style="font-weight:700;margin:4px 0;">'+escapeHtml(s.shift)+'</div>'
+        +'<div style="color:var(--muted);font-size:13px;">Crew '+escapeHtml(s.crew)+'</div>'
+        +'<div class="btnrow" style="margin-top:6px;">'
+        +(already
+          ?'<span class="fine">Applied — waiting for approval</span>'
+          :'<button class="btn" onclick="mkApply('+i+')">Apply</button>')
+        +'</div></div>';
+    });
+    wrap.innerHTML=h;
+  }
+  /* my applications */
+  var mine=(S.shiftApps||[]).filter(function(a){ return a.applicant===msPerson; })
+    .sort(function(a,b){ return b.ts-a.ts; });
+  var mh=document.getElementById('mkMine');
+  if(!mine.length){
+    mh.innerHTML='<p class="fine">No applications yet.</p>';
+  }else{
+    var h2='';
+    mine.forEach(function(a){
+      var st=a.status==='pending'?'⏳ Pending':a.status==='approved'?'✅ Approved':'❌ Declined';
+      h2+='<div class="dshift"><div class="dh"><span class="t">'
+        +new Date(a.ts).toLocaleDateString('en-ZA',{day:'numeric',month:'short'})+' — '+escapeHtml(a.shift)
+        +'</span><span class="c">'+st+'</span></div>'
+        +'<div style="color:var(--muted);font-size:13px;">'+escapeHtml(a.dateISO)+' · Crew '+escapeHtml(a.crew)+'</div></div>';
+    });
+    mh.innerHTML=h2;
+  }
+  /* stash for apply */
+  S._mkOpen=open;
+}
+function mkApply(i){
+  var s=(S._mkOpen||[])[i];
+  if(!s||!msPerson) return;
+  if(!S.shiftApps) S.shiftApps=[];
+  S.shiftApps.push({
+    id:'app'+Date.now(),
+    rosterId:s.rosterId, dateISO:s.dateISO, shiftId:s.shiftId,
+    shift:s.shift, crew:s.crew, team:s.team,
+    applicant:msPerson, status:'pending', ts:Date.now()
+  });
+  persistBase();
+  toast('Applied — the manager will review it.');
+  renderMarketplace();
+}
+/* manager: approve / decline a shift application */
+function mkApprove(appId){
+  var a=(S.shiftApps||[]).find(function(x){ return x.id===appId; });
+  if(!a) return;
+  loadSaved();
+  var u=(S.rosters||[]).find(function(x){ return x.id===a.rosterId; });
+  if(u&&u.roster){
+    var R=u.roster;
+    if(!R.memberOverrides) R.memberOverrides={};
+    if(!R.memberOverrides[a.dateISO]) R.memberOverrides[a.dateISO]={};
+    var mems=R.memberOverrides[a.dateISO][a.shiftId]||[];
+    var idx=mems.indexOf(OPEN_MARK);
+    if(idx>=0) mems[idx]=a.applicant;
+    else if(mems.indexOf(a.applicant)<0) mems.push(a.applicant);
+    R.memberOverrides[a.dateISO][a.shiftId]=mems;
+  }
+  a.status='approved';
+  persistBase(); saveSaved();
+  toast(a.applicant+' approved for '+a.shift+'.');
+  renderBase();
+}
+function mkDecline(appId){
+  var a=(S.shiftApps||[]).find(function(x){ return x.id===appId; });
+  if(!a) return;
+  a.status='declined';
+  persistBase();
+  toast('Application declined.');
+  renderBase();
+}
 /* ---------- Employee export ---------- */
 function msExport(){
   var data=msMonthData(msYear,msMonth);
@@ -2955,6 +3101,23 @@ function renderBase(){
           +'</div>';
       }).join('')+'</div>';
     wrap.innerHTML=outHtml;
+  }
+  /* pending shift applications (from marketplace) */
+  var pendApps=(S.shiftApps||[]).filter(function(a){ return a.status==='pending'; });
+  if(pendApps.length){
+    var appHtml='<div class="card" style="border-left:3px solid #4DABF7;margin-bottom:10px;padding:10px 12px;">'
+      +'<div style="font-size:13px;font-weight:700;margin-bottom:6px;">Shift applications ('+pendApps.length+')</div>';
+    pendApps.forEach(function(a){
+      appHtml+='<div style="font-size:13px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--line);">'
+        +'<b>'+escapeHtml(a.applicant)+'</b> wants <b>'+escapeHtml(a.shift)+'</b>'
+        +'<div style="color:var(--muted);font-size:12px;">'+escapeHtml(a.dateISO)+' · Crew '+escapeHtml(a.crew)+' · '+escapeHtml(a.team)+'</div>'
+        +'<div class="btnrow" style="margin-top:4px;">'
+        +'<button class="btn" style="padding:6px 12px;font-size:13px;" onclick="mkApprove(\''+a.id+'\')">Approve</button>'
+        +'<button class="btn ghost" style="padding:6px 12px;font-size:13px;" onclick="mkDecline(\''+a.id+'\')">Decline</button>'
+        +'</div></div>';
+    });
+    appHtml+='</div>';
+    wrap.innerHTML+=appHtml;
   }
   if(!S.base.vehicles.length){
     wrap.innerHTML='<p class="fine">No teams yet.<br>Go to <b>Set up my workplace</b> and add your first team.</p>';
@@ -3925,14 +4088,10 @@ function renderStaffTab(){
     row.appendChild(top); row.appendChild(bot);
     var meta=document.createElement('div'); meta.className='sline';
     var empNo=document.createElement('input'); empNo.type='text'; empNo.maxLength=20; empNo.value=s.empNo||'';
-    empNo.placeholder='Employee no.'; empNo.title='Employee number (for login linking)';
-    empNo.style.maxWidth='110px';
+    empNo.placeholder='Employee no.'; empNo.title='Employee number — links the staff login';
+    empNo.style.flex='1'; empNo.style.minWidth='0';
     empNo.oninput=function(){ s.empNo=this.value.trim(); persistBase(); };
-    var em=document.createElement('input'); em.type='email'; em.maxLength=60; em.value=s.email||'';
-    em.placeholder='Email (for login)'; em.title='Email address (for employee login)';
-    em.style.flex='1'; em.style.minWidth='0';
-    em.oninput=function(){ s.email=this.value.trim(); persistBase(); };
-    meta.appendChild(empNo); meta.appendChild(em);
+    meta.appendChild(empNo);
     row.appendChild(meta);
     wrap.appendChild(row);
   });
