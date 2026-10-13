@@ -875,7 +875,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-0723';
+var BUILD='20261013-0734';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -4644,7 +4644,7 @@ function genTestData(){
       if(crew.members.indexOf(s.name)<0) crew.members.push(s.name);
     }
   });
-  var leaveTypes=['Annual leave','Sick leave','Family responsibility'];
+  var leaveTypes=['Annual leave','Sick leave','Family responsibility','Maternity leave','Study leave','Unpaid leave'];
   var staffNames=S.base.staff.map(function(s){ return s.name; });
   /* one vehicle per click: pick the first vehicle without generated rosters */
   var targetV=null;
@@ -4656,6 +4656,10 @@ function genTestData(){
     if(!hasGen) targetV=vv;
   });
   if(!targetV){ toast('All vehicles already have test rosters.'); return; }
+  /* clear any old rosters for this vehicle so we rebuild clean */
+  S.rosters=(S.rosters||[]).filter(function(u){
+    return !(u.roster&&u.roster.vehicleId===targetV.id);
+  });
   [targetV].forEach(function(vv, vvi){
     var vid=vv.id;
     var crews=vv.crews||[];
@@ -4681,25 +4685,49 @@ function genTestData(){
         startISO:y+'-'+String(m+1).padStart(2,'0')+'-01', days:dim,
         crews:snapCrews, rotation:'224', overrides:{}, memberOverrides:{}, leaveLog:[]
       };
-      for(var k=0; k<8; k++){
-        var rd=1+Math.floor(Math.random()*dim);
-        var dateISO=y+'-'+String(m+1).padStart(2,'0')+'-'+String(rd).padStart(2,'0');
-        var person=staffNames[Math.floor(Math.random()*staffNames.length)];
-        var lt=leaveTypes[Math.floor(Math.random()*leaveTypes.length)];
-        if(!R.memberOverrides[dateISO]) R.memberOverrides[dateISO]={};
-        var dt=parseISO(dateISO), di=dayDiff(parseISO(R.startISO),dt);
-        try{
-          calSlotCrews(R,di).forEach(function(ps){
-            if(!ps.list.length||R.memberOverrides[dateISO][ps.sl.id]) return;
-            var mems=effShiftMembers(R,dateISO,ps.sl.id,ps.list[0].c);
-            if(mems.indexOf(person)>=0){
-              mems[mems.indexOf(person)]=OPEN_MARK;
-              R.memberOverrides[dateISO][ps.sl.id]=mems;
-              R.leaveLog.push({date:dateISO, shift:ps.sl.id, person:person, type:lt, cover:'OPEN', ts:Date.now()});
-            }
-          });
-        }catch(e){}
+      /* realistic leave: mix of single sick days, multi-day annual blocks, occasional long leave */
+      var events=[];
+      /* 3-5 single sick days */
+      var nSick=3+Math.floor(Math.random()*3);
+      for(var sk=0; sk<nSick; sk++){
+        events.push({type:'Sick leave', days:1,
+          person:staffNames[Math.floor(Math.random()*staffNames.length)]});
       }
+      /* 2 annual leave blocks (3-7 days) */
+      for(var al=0; al<2; al++){
+        events.push({type:'Annual leave', days:3+Math.floor(Math.random()*5),
+          person:staffNames[Math.floor(Math.random()*staffNames.length)]});
+      }
+      /* 1 family responsibility (1-2 days) */
+      events.push({type:'Family responsibility', days:1+Math.floor(Math.random()*2),
+        person:staffNames[Math.floor(Math.random()*staffNames.length)]});
+      /* occasional long leave (maternity/study) */
+      if(Math.random()<0.3){
+        events.push({type:Math.random()<0.5?'Maternity leave':'Study leave',
+          days:10+Math.floor(Math.random()*10),
+          person:staffNames[Math.floor(Math.random()*staffNames.length)]});
+      }
+      events.forEach(function(ev){
+        var startD=1+Math.floor(Math.random()*(dim-ev.days));
+        for(var dd=0; dd<ev.days; dd++){
+          var rd=startD+dd;
+          if(rd>dim) break;
+          var dateISO=y+'-'+String(m+1).padStart(2,'0')+'-'+String(rd).padStart(2,'0');
+          if(!R.memberOverrides[dateISO]) R.memberOverrides[dateISO]={};
+          var dt=parseISO(dateISO), di=dayDiff(parseISO(R.startISO),dt);
+          try{
+            calSlotCrews(R,di).forEach(function(ps){
+              if(!ps.list.length||R.memberOverrides[dateISO][ps.sl.id]) return;
+              var mems=effShiftMembers(R,dateISO,ps.sl.id,ps.list[0].c);
+              if(mems.indexOf(ev.person)>=0){
+                mems[mems.indexOf(ev.person)]=OPEN_MARK;
+                R.memberOverrides[dateISO][ps.sl.id]=mems;
+                R.leaveLog.push({date:dateISO, shift:ps.sl.id, person:ev.person, type:ev.type, cover:'OPEN', ts:Date.now()});
+              }
+            });
+          }catch(e){}
+        }
+      });
       if(!S.rosters) S.rosters=[];
       S.rosters.push({id:R.id, name:R.name, roster:R});
     }
