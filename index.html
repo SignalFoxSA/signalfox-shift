@@ -873,7 +873,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-0920';
+var BUILD='20261013-0922';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -3113,42 +3113,7 @@ function msPicPickTab(input){
 function renderCompany(){
   /* placeholder — head office view comes later */
 }
-/* ---------- Employee export: use the standard manager export sheet ---------- */
-function msExport(){
-  /* ask: full roster or just mine? */
-  var panel=document.getElementById('msScopePanel');
-  if(!panel){
-    panel=document.createElement('div');
-    panel.id='msScopePanel';
-    document.getElementById('v-myshifts').appendChild(panel);
-  }
-  panel.innerHTML='<div class="card" style="border:2px solid var(--accent);margin-top:10px;">'
-    +'<h3>Export</h3><p class="sub">Full base roster, or just your shifts?</p>'
-    +'<div class="btnrow"><button class="btn" onclick="msExportGo(false)">Full roster</button>'
-    +'<button class="btn" onclick="msExportGo(true)">My shifts</button></div>'
-    +'<div class="btnrow"><button class="btn ghost" onclick="document.getElementById(\'msScopePanel\').innerHTML=\'\'">Cancel</button></div></div>';
-  panel.scrollIntoView({behavior:'smooth'});
-}
-function msExportGo(onlyMine){
-  document.getElementById('msScopePanel').innerHTML='';
-  loadSaved();
-  var vid=null;
-  (S.rosters||[]).forEach(function(u){
-    if(vid) return;
-    var R=u.roster;
-    if(R&&R.year===msYear&&R.month===msMonth) vid=R.vehicleId;
-  });
-  if(!vid){ toast('No roster for this month yet'); return; }
-  if(!S.cal) S.cal={};
-  S.cal.vehicleId=vid; S.cal.y=msYear; S.cal.m=msMonth;
-  if(onlyMine&&msPerson){
-    /* stash the person filter for the export generators */
-    S.expPerson=msPerson;
-  } else {
-    S.expPerson=null;
-  }
-  openExportSheet();
-}
+
 
 /* ---------- Employee profile ---------- */
 function msProfile(){
