@@ -873,7 +873,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-1001';
+var BUILD='20261013-1006';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -5090,7 +5090,7 @@ function expGridEl(E, mode, variant){
       E.shifts.forEach(function(s,i){
         if(pr[i]<0) return;
         var band=(E.crews[pr[i]]&&E.crews[pr[i]].color)||'#888888', bt=textOnBand(band);
-        var pTime=(S.expPerson&&s.start)?'<div style="font-size:'+F(11)+'px;font-weight:600;opacity:0.85;">'+escapeHtml(shortShiftTime(s))+'</div>':'';
+        var pTime=(S.expPerson&&s.start)?' '+escapeHtml(fmtTime(s.start)+'\u2013'+fmtTime(s.end)):'';
         bands+='<div style="background:'+band+';border-radius:'+F(5)+'px;text-align:center;font-size:'+F(13)+'px;font-weight:800;color:'+bt+';padding:'+P+'px 0;margin-top:'+F(4)+'px;">'+escapeHtml(shiftBandShort(s.band).toUpperCase())+': '+escapeHtml(E.crews[pr[i]].name)+pTime+'</div>';
       });
       h+=open+'">'
@@ -5102,7 +5102,7 @@ function expGridEl(E, mode, variant){
       E.shifts.forEach(function(s,i){
         if(pr[i]<0) return;
         var nm=(pm[i]&&pm[i].length)?pm[i].map(dispMember):E.crews[pr[i]].names;
-        var pTime2=(S.expPerson&&s.start)?' <span style="color:#999;">('+escapeHtml(shortShiftTime(s))+')</span>':'';
+        var pTime2=(S.expPerson&&s.start)?' <span style="color:#999;">'+escapeHtml(fmtTime(s.start)+'\u2013'+fmtTime(s.end))+'</span>':'';
         rows+='<div style="font-size:'+F(12.5)+'px;margin-top:'+F(3)+'px;"><b>'+escapeHtml(shiftBandShort(s.name))+':</b> <span style="color:'+E.crews[pr[i]].dark+';">'+escapeHtml(nm.join(', '))+'</span>'+pTime2+'</div>';
       });
       h+=open+'background:'+(firstCrew?firstCrew.tintNames:'transparent')+';">'
