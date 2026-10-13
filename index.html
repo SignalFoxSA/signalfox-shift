@@ -875,7 +875,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-0751';
+var BUILD='20261013-0800';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -4248,16 +4248,20 @@ function fillCrewSelect(sel, teamId, current){
   sel.disabled=!teamId;
 }
 /* save a staff name change and propagate to all rosters */
-function staffSaveName(ss){
-  var oldName=ss._origName, newName=(ss.name||'').trim();
+function staffSaveName(sid, oldName, newName){
+  newName=(newName||'').trim();
   if(!newName){ toast('Name cannot be empty'); return; }
+  if(!sid){ toast('Staff record not found'); return; }
+  var ss=(S.base.staff||[]).find(function(x){ return x.id===sid; });
+  if(!ss){ toast('Staff record not found'); return; }
   ss.name=newName;
   if(oldName&&oldName!==newName){
+    var count=0;
     var renameIn=function(R){
       if(!R||!R.crews) return;
       R.crews.forEach(function(c){
         (c.members||[]).forEach(function(nm,i){
-          if(nm===oldName) c.members[i]=newName;
+          if(nm===oldName){ c.members[i]=newName; count++; }
         });
       });
       if(R.memberOverrides){
@@ -4265,15 +4269,15 @@ function staffSaveName(ss){
           Object.keys(R.memberOverrides[dk]).forEach(function(sk){
             var mems=R.memberOverrides[dk][sk];
             if(Array.isArray(mems)) mems.forEach(function(nm,i){
-              if(nm===oldName) mems[i]=newName;
+              if(nm===oldName){ mems[i]=newName; count++; }
             });
           });
         });
       }
       if(R.leaveLog){
         R.leaveLog.forEach(function(lg){
-          if(lg.person===oldName) lg.person=newName;
-          if(lg.cover===oldName) lg.cover=newName;
+          if(lg.person===oldName){ lg.person=newName; count++; }
+          if(lg.cover===oldName){ lg.cover=newName; count++; }
         });
       }
     };
@@ -4282,10 +4286,11 @@ function staffSaveName(ss){
     if(S.draft) renameIn(S.draft);
     saveSaved();
     try{ if(document.getElementById('v-cal')&&document.getElementById('v-cal').classList.contains('active')) renderCalendar(); }catch(e){}
+    toast('Saved — '+count+' roster entr'+(count===1?'y':'ies')+' updated.');
+  } else {
+    toast('Saved.');
   }
-  ss._origName=newName;
   persistBase(); renderStaffTab();
-  toast('Saved — rosters updated.');
 }
 function renderStaffTab(){
   var wrap=document.getElementById('staffList'); wrap.innerHTML='';
@@ -4296,21 +4301,20 @@ function renderStaffTab(){
     var row=document.createElement('div'); row.className='prow';
     var top=document.createElement('div'); top.className='sline';
     var inp=document.createElement('input'); inp.type='text'; inp.maxLength=24; inp.value=s.name; inp.placeholder='Staff name';
-    /* track original name for rename propagation on save */
-    if(!s._origName) s._origName=s.name;
-    inp.oninput=(function(ss, el){ return function(){
-      ss.name=this.value;
-      /* show save button when name differs from original */
-      var btn=el.parentNode.querySelector('.savebtn');
-      if(btn) btn.style.display=(ss.name!==ss._origName)?'':'none';
-      persistBase();
-    }; })(s, inp);
+    inp.setAttribute('data-orig', s.name||'');
+    inp.setAttribute('data-sid', s.id||'');
+    inp.oninput=function(){
+      var btn=this.parentNode.querySelector('.savebtn');
+      if(btn) btn.style.display=(this.value!==this.getAttribute('data-orig'))?'':'none';
+    };
     var saveBtn=document.createElement('button'); saveBtn.className='savebtn'; saveBtn.textContent='\u2713';
     saveBtn.title='Save name change'; saveBtn.style.display='none';
     saveBtn.style.cssText+=';background:#51CF66;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-weight:800;cursor:pointer;margin-left:4px;';
-    saveBtn.onclick=(function(ss){ return function(){
-      staffSaveName(ss);
-    }; })(s);
+    saveBtn.onclick=function(){
+      var row=this.parentNode;
+      var input=row.querySelector('input[type=text]');
+      staffSaveName(input.getAttribute('data-sid'), input.getAttribute('data-orig'), input.value);
+    };
     var q=document.createElement('select'); q.className='qsel'; q.title='Qualification';
     q.setAttribute('aria-label','Qualification for '+(s.name||'staff member'));
     var q0=document.createElement('option'); q0.value=''; q0.textContent='Qual.';
