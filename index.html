@@ -713,8 +713,20 @@
   <div class="view" id="v-myshifts">
     <div class="card">
       <h3 id="msTitle">My Shifts</h3>
-      <p class="sub" id="msSub">Your upcoming shifts.</p>
-      <div id="msList"></div>
+      <p class="sub" id="msSub">Your roster.</p>
+      <div class="seg" id="msScopeSeg" style="margin:8px 0;">
+        <button id="msScopeMe" class="on" onclick="msSetScope('me')">Me</button>
+        <button id="msScopeBase" onclick="msSetScope('base')">Whole base</button>
+      </div>
+      <div class="seg" id="msViewSeg" style="margin:8px 0;">
+        <button id="msViewCal" class="on" onclick="msSetView('cal')">Calendar</button>
+        <button id="msViewList" onclick="msSetView('list')">List</button>
+      </div>
+      <div class="btnrow" style="margin-top:8px;">
+        <button class="btn" onclick="msExport()">&#8681; Export</button>
+        <button class="btn ghost" onclick="msProfile()">&#128100; Profile</button>
+      </div>
+      <div id="msContent" style="margin-top:10px;"></div>
     </div>
     <button class="btn ghost" onclick="msBack()">Back</button>
   </div>
@@ -817,7 +829,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261012-1758';
+var BUILD='20261013-0632';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2600,7 +2612,7 @@ function deleteRoster(id){
 function dayDiff(a,b){ return Math.round((b.getTime()-a.getTime())/86400000); }
 function fmtLong(d){ return d.toLocaleDateString('en-ZA',{weekday:'long', day:'numeric', month:'long'}); }
 /* ---------- My Shifts (employee view) ---------- */
-var msPerson=null;
+var msPerson=null, msScope='me', msView='cal', msYear=null, msMonth=null;
 function msPickPerson(){
   var names=allStaffNames();
   if(!names.length){ toast('No staff members yet'); return; }
@@ -2622,65 +2634,271 @@ function msPickPerson(){
   panel.scrollIntoView({behavior:'smooth'});
 }
 function openMyShifts(personName){
-  msPerson=personName;
-  renderMyShifts();
+  msPerson=personName; msScope='me'; msView='cal';
+  var now=new Date(); msYear=now.getFullYear(); msMonth=now.getMonth();
+  msSyncSeg();
+  msRender();
   show('v-myshifts');
 }
-function msBack(){
-  /* return to where we came from */
-  show('v-home');
+function msBack(){ show('v-home'); }
+function msSyncSeg(){
+  document.getElementById('msScopeMe').className=msScope==='me'?'on':'';
+  document.getElementById('msScopeBase').className=msScope==='base'?'on':'';
+  document.getElementById('msViewCal').className=msView==='cal'?'on':'';
+  document.getElementById('msViewList').className=msView==='list'?'on':'';
 }
-function renderMyShifts(){
-  if(!msPerson) return;
-  document.getElementById('msTitle').textContent=msPerson+"'s Shifts";
-  var wrap=document.getElementById('msList');
-  wrap.innerHTML='';
+function msSetScope(s){ msScope=s; msSyncSeg(); msRender(); }
+function msSetView(v){ msView=v; msSyncSeg(); msRender(); }
+function msShiftNav(d){
+  msMonth+=d;
+  if(msMonth<0){ msMonth=11; msYear--; }
+  if(msMonth>11){ msMonth=0; msYear++; }
+  msRender();
+}
+/* collect all shift assignments for the employee's base rosters in a given month */
+function msMonthData(y,m){
+  var out=[];
   loadSaved();
-  var shifts=[];
   (S.rosters||[]).forEach(function(u){
     var R=u.roster;
-    if(R.kind!=='month') return;
-    for(var d=1; d<=daysInMonth(R.year, R.month); d++){
-      var dateISO=R.year+'-'+String(R.month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-      var info=calRosterDay(R, R.year, R.month, d);
+    if(R.kind!=='month'||R.year!==y||R.month!==m) return;
+    for(var d=1; d<=daysInMonth(y,m); d++){
+      var dateISO=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      var info=calRosterDay(R,y,m,d);
       if(!info) continue;
-      var per=calSlotCrews(R, info.dayIdx);
-      per.forEach(function(ps){
+      calSlotCrews(R,info.dayIdx).forEach(function(ps){
         if(!ps.list.length) return;
         ps.list.forEach(function(x){
-          var mems=effShiftMembers(R, dateISO, ps.sl.id, x.c);
-          if(mems.indexOf(msPerson)>=0){
-            var tm=''; try{ tm=slotTime(R, ps.sl.id); }catch(e){}
-            shifts.push({
-              date:dateISO, d:d,
-              dt:new Date(R.year, R.month, d),
-              shift:ps.sl.name, time:tm,
-              crew:x.c.name, color:x.c.color,
-              team:u.name
-            });
-          }
+          var mems=effShiftMembers(R,dateISO,ps.sl.id,x.c);
+          var tm=''; try{ tm=slotTime(R,ps.sl.id); }catch(e){}
+          out.push({
+            date:dateISO, d:d, dt:new Date(y,m,d),
+            shift:ps.sl.name, time:tm,
+            crew:x.c.name, color:x.c.color||'#999',
+            team:u.name, members:mems.slice()
+          });
         });
       });
     }
   });
-  shifts.sort(function(a,b){ return a.dt-b.dt; });
-  /* only upcoming (today onwards) */
+  return out;
+}
+function msRender(){
+  if(!msPerson) return;
+  document.getElementById('msTitle').textContent=msScope==='me'?msPerson+"'s Shifts":'Base Roster';
+  document.getElementById('msSub').textContent=msScope==='me'?'Your roster for '+MN[msMonth]+' '+msYear+'.':'Whole base roster for '+MN[msMonth]+' '+msYear+'.';
+  if(msView==='cal') msRenderCal(); else msRenderList();
+}
+function msRenderCal(){
+  var wrap=document.getElementById('msContent');
+  var data=msMonthData(msYear,msMonth);
+  var myData=msScope==='me'?data.filter(function(s){ return s.members.indexOf(msPerson)>=0; }):data;
+  /* nav */
+  var h='<div class="btnrow" style="align-items:center;justify-content:space-between;margin-bottom:8px;">'
+    +'<button class="btn ghost" onclick="msShiftNav(-1)">‹ Prev</button>'
+    +'<b>'+MN[msMonth]+' '+msYear+'</b>'
+    +'<button class="btn ghost" onclick="msShiftNav(1)">Next ›</button></div>';
+  /* grid */
+  h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:11px;color:var(--muted);margin-bottom:4px;">'
+    +['M','T','W','T','F','S','S'].map(function(x){return '<div>'+x+'</div>';}).join('')+'</div>';
+  h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;">';
+  var first=new Date(msYear,msMonth,1);
+  var startDay=(first.getDay()+6)%7; /* Monday=0 */
+  for(var i=0;i<startDay;i++) h+='<div></div>';
+  var dim=daysInMonth(msYear,msMonth);
   var today=new Date(); today.setHours(0,0,0,0);
-  shifts=shifts.filter(function(s){ return s.dt>=today; });
-  document.getElementById('msSub').textContent=shifts.length?shifts.length+' upcoming shift'+(shifts.length>1?'s':''):'No upcoming shifts.';
-  var html='';
-  shifts.forEach(function(s){
-    var wd=s.dt.toLocaleDateString('en-ZA',{weekday:'short'});
-    var md=s.dt.toLocaleDateString('en-ZA',{day:'numeric', month:'short'});
-    html+='<div class="dshift" style="border-left:5px solid '+s.color+'">'
-      +'<div class="dh"><span class="t">'+wd+' '+md+'</span>'
+  for(var d=1; d<=dim; d++){
+    var dt=new Date(msYear,msMonth,d);
+    var isToday=dt.getTime()===today.getTime();
+    var dayShifts=myData.filter(function(s){ return s.d===d; });
+    var blocks='';
+    dayShifts.forEach(function(s){
+      var lbl=msScope==='me'?s.shift+' '+s.time:s.crew;
+      blocks+='<div style="background:'+s.color+';color:#111;font-size:9px;font-weight:700;border-radius:3px;padding:1px 2px;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+escapeHtml(s.shift+' — Crew '+s.crew+(s.time?' ('+s.time+')':''))+'">'+escapeHtml(lbl)+'</div>';
+    });
+    h+='<div onclick="msDayTap('+d+')" style="min-height:44px;border:1px solid '+(isToday?'var(--accent)':'#e0e0e0')+';border-radius:6px;padding:2px;font-size:12px;'+(isToday?'background:#fff8e6;':'')+'">'
+      +'<div style="font-weight:'+(isToday?'800':'400')+';">'+d+'</div>'+blocks+'</div>';
+  }
+  h+='</div>';
+  if(!myData.length) h+='<p class="fine" style="margin-top:8px;">No shifts this month.</p>';
+  h+='<div id="msDayDetail" style="margin-top:10px;"></div>';
+  wrap.innerHTML=h;
+}
+function msDayTap(d){
+  var det=document.getElementById('msDayDetail');
+  if(!det) return;
+  var data=msMonthData(msYear,msMonth).filter(function(s){ return s.d===d; });
+  if(msScope==='me') data=data.filter(function(s){ return s.members.indexOf(msPerson)>=0; });
+  var dt=new Date(msYear,msMonth,d);
+  var h='<div class="card" style="margin:0;"><h3>'+dt.toLocaleDateString('en-ZA',{weekday:'long',day:'numeric',month:'long'})+'</h3>';
+  if(!data.length) h+='<p class="fine">Nothing rostered.</p>';
+  data.forEach(function(s){
+    h+='<div class="dshift" style="border-left:5px solid '+s.color+'">'
+      +'<div class="dh"><span class="t">'+escapeHtml(s.shift)+'</span>'
       +'<span class="c">'+escapeHtml(s.team)+'</span></div>'
-      +'<div style="font-weight:700;margin:4px 0;">'+escapeHtml(s.shift)+'</div>'
       +(s.time?'<div style="color:var(--muted);font-size:13px;">'+escapeHtml(s.time)+'</div>':'')
       +'<div style="color:var(--muted);font-size:13px;">Crew '+escapeHtml(s.crew)+'</div>'
+      +'<div style="margin-top:4px;font-size:13px;">'+s.members.map(escapeHtml).join(', ')+'</div>'
       +'</div>';
   });
-  wrap.innerHTML=html||'<p class="fine">Nothing rostered.</p>';
+  h+='</div>';
+  det.innerHTML=h;
+  det.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function msRenderList(){
+  var wrap=document.getElementById('msContent');
+  var data=msMonthData(msYear,msMonth);
+  if(msScope==='me') data=data.filter(function(s){ return s.members.indexOf(msPerson)>=0; });
+  data.sort(function(a,b){ return a.dt-b.dt||a.shift.localeCompare(b.shift); });
+  var h='<div class="btnrow" style="align-items:center;justify-content:space-between;margin-bottom:8px;">'
+    +'<button class="btn ghost" onclick="msShiftNav(-1)">‹ Prev</button>'
+    +'<b>'+MN[msMonth]+' '+msYear+'</b>'
+    +'<button class="btn ghost" onclick="msShiftNav(1)">Next ›</button></div>';
+  h+='<p class="sub">'+data.length+' shift'+(data.length===1?'':'s')+' this month.</p>';
+  var lastDate='';
+  data.forEach(function(s){
+    if(s.date!==lastDate){
+      lastDate=s.date;
+      h+='<div style="font-weight:800;margin:10px 0 4px;">'+s.dt.toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'})+'</div>';
+    }
+    h+='<div class="dshift" style="border-left:5px solid '+s.color+'">'
+      +'<div class="dh"><span class="t">'+escapeHtml(s.shift)+'</span>'
+      +'<span class="c">'+escapeHtml(s.team)+'</span></div>'
+      +(s.time?'<div style="color:var(--muted);font-size:13px;">'+escapeHtml(s.time)+'</div>':'')
+      +'<div style="color:var(--muted);font-size:13px;">Crew '+escapeHtml(s.crew)+'</div>'
+      +(msScope==='base'?'<div style="margin-top:4px;font-size:13px;">'+s.members.map(escapeHtml).join(', ')+'</div>':'')
+      +'</div>';
+  });
+  if(!data.length) h+='<p class="fine">No shifts this month.</p>';
+  wrap.innerHTML=h;
+}
+/* ---------- Employee export ---------- */
+function msExport(){
+  var data=msMonthData(msYear,msMonth);
+  if(msScope==='me') data=data.filter(function(s){ return s.members.indexOf(msPerson)>=0; });
+  if(!data.length){ toast('Nothing to export'); return; }
+  var scopeLbl=msScope==='me'?msPerson+"'s shifts":'Base roster';
+  var title=scopeLbl+' — '+MN[msMonth]+' '+msYear;
+  var panel=document.getElementById('msExpPanel');
+  if(!panel){
+    panel=document.createElement('div');
+    panel.id='msExpPanel';
+    document.getElementById('v-myshifts').appendChild(panel);
+  }
+  var h='<div class="card" style="border:2px solid var(--accent);margin-top:10px;">'
+    +'<h3>Export</h3><p class="sub">'+escapeHtml(title)+'</p>'
+    +'<div class="btnrow">'
+    +'<button class="btn" onclick="msDoExport(\'txt\')">Text</button>'
+    +'<button class="btn" onclick="msDoExport(\'xlsx\')">Excel</button>'
+    +'<button class="btn" onclick="msDoExport(\'pdf\')">PDF</button>'
+    +'</div>'
+    +'<div class="btnrow"><button class="btn ghost" onclick="document.getElementById(\'msExpPanel\').innerHTML=\'\'">Cancel</button></div></div>';
+  panel.innerHTML=h;
+  panel.scrollIntoView({behavior:'smooth'});
+}
+function msDoExport(fmt){
+  var data=msMonthData(msYear,msMonth);
+  if(msScope==='me') data=data.filter(function(s){ return s.members.indexOf(msPerson)>=0; });
+  data.sort(function(a,b){ return a.dt-b.dt||a.shift.localeCompare(b.shift); });
+  var title=(msScope==='me'?msPerson+"'s shifts":'Base roster')+' — '+MN[msMonth]+' '+msYear;
+  if(fmt==='txt'){
+    var txt=title+'\n'+'='.repeat(title.length)+'\n\n';
+    var lastDate='';
+    data.forEach(function(s){
+      if(s.date!==lastDate){
+        lastDate=s.date;
+        txt+='\n'+s.dt.toLocaleDateString('en-ZA',{weekday:'long',day:'numeric',month:'long'})+'\n';
+      }
+      txt+='  '+s.shift+(s.time?' ('+s.time+')':'')+' — Crew '+s.crew+' ['+s.team+']';
+      if(msScope==='base') txt+='\n    '+s.members.join(', ');
+      txt+='\n';
+    });
+    try{ navigator.clipboard.writeText(txt); }catch(e){}
+    var blob=new Blob([txt],{type:'text/plain'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='myshifts-'+msYear+'-'+String(msMonth+1).padStart(2,'0')+'.txt';
+    document.body.appendChild(a); a.click(); a.remove();
+    toast('Text exported — copied to clipboard too.');
+  }else if(fmt==='xlsx'){
+    try{
+      var rows=[['Date','Day','Shift','Time','Crew','Team'].concat(msScope==='base'?['Members']:[])];
+      data.forEach(function(s){
+        rows.push([
+          s.dt.toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'}),
+          s.dt.toLocaleDateString('en-ZA',{weekday:'long'}),
+          s.shift, s.time||'', s.crew, s.team
+        ].concat(msScope==='base'?[s.members.join(', ')] : []));
+      });
+      var ws=XLSX.utils.aoa_to_sheet([[title],[]].concat(rows));
+      var wb=XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb,ws,'Shifts');
+      XLSX.writeFile(wb,'myshifts-'+msYear+'-'+String(msMonth+1).padStart(2,'0')+'.xlsx');
+      toast('Excel file downloaded.');
+    }catch(e){ toast('Excel export needs internet (library).'); }
+  }else if(fmt==='pdf'){
+    try{
+      var doc=new jspdf.jsPDF();
+      doc.setFontSize(14); doc.text(title,10,12);
+      var y=22; doc.setFontSize(10);
+      var lastD='';
+      data.forEach(function(s){
+        if(y>270){ doc.addPage(); y=12; }
+        if(s.date!==lastD){
+          lastD=s.date; y+=4;
+          doc.setFont(undefined,'bold');
+          doc.text(s.dt.toLocaleDateString('en-ZA',{weekday:'long',day:'numeric',month:'long'}),10,y);
+          doc.setFont(undefined,'normal'); y+=6;
+        }
+        doc.text('  '+s.shift+(s.time?' ('+s.time+')':'')+' — Crew '+s.crew+' ['+s.team+']',10,y);
+        y+=6;
+        if(msScope==='base'&&s.members.length){
+          doc.setFontSize(9); doc.setTextColor(100);
+          doc.text('    '+s.members.join(', '),10,y); y+=5;
+          doc.setFontSize(10); doc.setTextColor(0);
+        }
+      });
+      doc.save('myshifts-'+msYear+'-'+String(msMonth+1).padStart(2,'0')+'.pdf');
+      toast('PDF downloaded.');
+    }catch(e){ toast('PDF export needs internet (library).'); }
+  }
+  document.getElementById('msExpPanel').innerHTML='';
+}
+/* ---------- Employee profile ---------- */
+function msProfile(){
+  var st=(S.base.staff||[]).find(function(s){ return s.name===msPerson; })||{};
+  var panel=document.getElementById('msProfPanel');
+  if(!panel){
+    panel=document.createElement('div');
+    panel.id='msProfPanel';
+    document.getElementById('v-myshifts').appendChild(panel);
+  }
+  var pic=st.pic||'';
+  var h='<div class="card" style="border:2px solid var(--accent);margin-top:10px;text-align:center;">'
+    +'<h3>Profile</h3>'
+    +'<div style="width:80px;height:80px;border-radius:50%;margin:0 auto 10px;overflow:hidden;background:#eee;display:flex;align-items:center;justify-content:center;font-size:32px;">'
+    +(pic?'<img src="'+pic+'" style="width:100%;height:100%;object-fit:cover;" alt="">':escapeHtml((msPerson||'?').charAt(0).toUpperCase()))
+    +'</div>'
+    +'<div style="font-weight:800;font-size:18px;">'+escapeHtml(msPerson||'')+'</div>'
+    +(st.empNo?'<div style="color:var(--muted);">Employee no. '+escapeHtml(st.empNo)+'</div>':'')
+    +(st.qual?'<div style="color:var(--muted);">'+escapeHtml((baseQuals().find(function(q){return q.id===st.qual;})||{}).name||'')+'</div>':'')
+    +'<div style="margin-top:10px;"><label class="btn ghost" style="cursor:pointer;">Change picture'
+    +'<input type="file" accept="image/*" style="display:none;" onchange="msPicPick(this)"></label></div>'
+    +'<div class="btnrow" style="margin-top:8px;"><button class="btn ghost" onclick="document.getElementById(\'msProfPanel\').innerHTML=\'\'">Close</button></div></div>';
+  panel.innerHTML=h;
+  panel.scrollIntoView({behavior:'smooth'});
+}
+function msPicPick(input){
+  var f=input.files&&input.files[0];
+  if(!f) return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    var st=(S.base.staff||[]).find(function(s){ return s.name===msPerson; });
+    if(st){ st.pic=rd.result; persistBase(); }
+    msProfile();
+    toast('Profile picture updated.');
+  };
+  rd.readAsDataURL(f);
 }
 function openBase(){
   S.baseDateISO=toISO(new Date());
