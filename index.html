@@ -873,7 +873,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-0916';
+var BUILD='20261013-0917';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -3046,6 +3046,22 @@ function renderCompany(){
 }
 /* ---------- Employee export: use the standard manager export sheet ---------- */
 function msExport(){
+  /* ask: full roster or just mine? */
+  var panel=document.getElementById('msScopePanel');
+  if(!panel){
+    panel=document.createElement('div');
+    panel.id='msScopePanel';
+    document.getElementById('v-myshifts').appendChild(panel);
+  }
+  panel.innerHTML='<div class="card" style="border:2px solid var(--accent);margin-top:10px;">'
+    +'<h3>Export</h3><p class="sub">Full base roster, or just your shifts?</p>'
+    +'<div class="btnrow"><button class="btn" onclick="msExportGo(false)">Full roster</button>'
+    +'<button class="btn" onclick="msExportGo(true)">My shifts</button></div>'
+    +'<div class="btnrow"><button class="btn ghost" onclick="document.getElementById(\'msScopePanel\').innerHTML=\'\'">Cancel</button></div></div>';
+  panel.scrollIntoView({behavior:'smooth'});
+}
+function msExportGo(onlyMine){
+  document.getElementById('msScopePanel').innerHTML='';
   loadSaved();
   var vid=null;
   (S.rosters||[]).forEach(function(u){
@@ -3056,6 +3072,12 @@ function msExport(){
   if(!vid){ toast('No roster for this month yet'); return; }
   if(!S.cal) S.cal={};
   S.cal.vehicleId=vid; S.cal.y=msYear; S.cal.m=msMonth;
+  if(onlyMine&&msPerson){
+    /* stash the person filter for the export generators */
+    S.expPerson=msPerson;
+  } else {
+    S.expPerson=null;
+  }
   openExportSheet();
 }
 
@@ -4863,7 +4885,22 @@ function expData(){
     });
     pairs.push(row); pairsMembers.push(mrow);
   }
-  var title=vname+' \u2014 '+MN[m]+' '+y, sub;
+  /* personal filter: blank out days/slots where S.expPerson is not rostered */
+  if(S.expPerson){
+    for(var fd=0; fd<pairs.length; fd++){
+      var hasPerson=false;
+      (pairsMembers[fd]||[]).forEach(function(mems){ if(mems&&mems.indexOf(S.expPerson)>=0) hasPerson=true; });
+      if(!hasPerson){
+        pairs[fd]=null; pairsMembers[fd]=null;
+      } else {
+        /* keep only the person's slots */
+        pairsMembers[fd]=(pairsMembers[fd]||[]).map(function(mems){
+          return (mems||[]).filter(function(nm){ return nm===S.expPerson; });
+        });
+      }
+    }
+  }
+  var title=(S.expPerson?S.expPerson+' \u2014 ':'')+vname+' \u2014 '+MN[m]+' '+y, sub;
   try{
     var stT={rotation:R.rotation, startTime:v.startTime||'06:00', shiftLen:rot.hours||12};
     sub=rot.name+' rotation \u00b7 '+((nsh===1&&shifts[0].id==='X')
