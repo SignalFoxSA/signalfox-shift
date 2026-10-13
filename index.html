@@ -875,7 +875,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-0703';
+var BUILD='20261013-0708';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -4547,69 +4547,73 @@ function genTestData(){
   if(!confirm('Generate 6 months of test rosters with leave, sick leave and open shifts?')) return;
   loadSaved();
   var now=new Date();
-  var vehicles=S.base.vehicles||[];
-  if(!vehicles.length){ toast('Set up a team first'); return; }
-  var vid=vehicles[0].id;
-  var v=vehicleById(vid)||{};
-  /* ensure staff exist */
+  if(!S.base) S.base={};
+  if(!S.base.name) S.base.name='Demo Base';
+  /* build demo workplace from scratch if empty */
+  if(!(S.base.vehicles||[]).length){
+    var t=Date.now();
+    var mkc=function(nm,color){ return {id:'c'+t+nm+Math.floor(Math.random()*999), name:nm, color:color, members:[]}; };
+    S.base.vehicles=[
+      {id:'v'+t+'a', name:'Ambulance 1', crews:[mkc('A','#FFC13E'),mkc('B','#4DABF7'),mkc('C','#51CF66'),mkc('D','#FF8787')]},
+      {id:'v'+t+'b', name:'Ambulance 2', crews:[mkc('A','#FFC13E'),mkc('B','#4DABF7'),mkc('C','#51CF66'),mkc('D','#FF8787')]}
+    ];
+  }
   if(!(S.base.staff||[]).length){
-    ['Thabo M','Sarah K','Mike D','Lisa P','James N','Anna S'].forEach(function(nm,i){
+    ['Thabo M','Sarah K','Mike D','Lisa P','James N','Anna S','Pieter V','Naledi K'].forEach(function(nm,i){
       S.base.staff.push({id:'s'+Date.now()+i, name:nm, empNo:'E'+(1001+i)});
     });
   }
-  /* assign staff to crews if not already */
-  var crews=v.crews||[];
-  S.base.staff.forEach(function(s,i){
-    if(!staffCrewOf(s.id)&&crews.length){
-      assignStaffToCrew(s.id, crews[i%crews.length].id);
+  var leaveTypes=['Annual leave','Sick leave','Family responsibility'];
+  var staffNames=S.base.staff.map(function(s){ return s.name; });
+  (S.base.vehicles||[]).forEach(function(vv, vvi){
+    var vid=vv.id;
+    var crews=vv.crews||[];
+    /* put members directly on the vehicle crews */
+    crews.forEach(function(c,ci){
+      if(!(c.members||[]).length){
+        c.members=[staffNames[(ci*2)%staffNames.length], staffNames[(ci*2+1)%staffNames.length]].filter(function(n){return n;});
+      }
+    });
+    for(var mi=0; mi<6; mi++){
+      var d=new Date(now.getFullYear(), now.getMonth()+mi, 1);
+      var y=d.getFullYear(), m=d.getMonth();
+      var exists=(S.rosters||[]).some(function(u){
+        return u.roster&&u.roster.vehicleId===vid&&u.roster.year===y&&u.roster.month===m;
+      });
+      if(exists) continue;
+      var dim=daysInMonth(y,m);
+      var snapCrews=JSON.parse(JSON.stringify(crews));
+      var R={
+        id:'r'+Date.now()+vvi+'_'+mi, kind:'month', vehicleId:vid,
+        name:(vv.name||'Team')+' \u00b7 '+MN[m]+' '+y,
+        year:y, month:m, anchorAbs:0,
+        startISO:y+'-'+String(m+1).padStart(2,'0')+'-01', days:dim,
+        crews:snapCrews, rotation:'224', overrides:{}, memberOverrides:{}, leaveLog:[]
+      };
+      /* sprinkle 8 leave/open entries per month */
+      for(var k=0; k<8; k++){
+        var rd=1+Math.floor(Math.random()*dim);
+        var dateISO=y+'-'+String(m+1).padStart(2,'0')+'-'+String(rd).padStart(2,'0');
+        var person=staffNames[Math.floor(Math.random()*staffNames.length)];
+        var lt=leaveTypes[Math.floor(Math.random()*leaveTypes.length)];
+        if(!R.memberOverrides[dateISO]) R.memberOverrides[dateISO]={};
+        var dt=parseISO(dateISO), di=dayDiff(parseISO(R.startISO),dt);
+        try{
+          calSlotCrews(R,di).forEach(function(ps){
+            if(!ps.list.length||R.memberOverrides[dateISO][ps.sl.id]) return;
+            var mems=effShiftMembers(R,dateISO,ps.sl.id,ps.list[0].c);
+            if(mems.indexOf(person)>=0){
+              mems[mems.indexOf(person)]=OPEN_MARK;
+              R.memberOverrides[dateISO][ps.sl.id]=mems;
+              R.leaveLog.push({date:dateISO, shift:ps.sl.id, person:person, type:lt, cover:'OPEN', ts:Date.now()});
+            }
+          });
+        }catch(e){}
+      }
+      if(!S.rosters) S.rosters=[];
+      S.rosters.push({id:R.id, name:R.name, roster:R});
     }
   });
-  var leaveTypes=['Annual leave','Sick leave','Family responsibility'];
-  for(var mi=0; mi<6; mi++){
-    var d=new Date(now.getFullYear(), now.getMonth()+mi, 1);
-    var y=d.getFullYear(), m=d.getMonth();
-    /* skip if roster already exists */
-    var exists=(S.rosters||[]).some(function(u){
-      return u.roster&&u.roster.vehicleId===vid&&u.roster.year===y&&u.roster.month===m;
-    });
-    if(exists) continue;
-    /* create a simple roster */
-    var dim=daysInMonth(y,m);
-    var R={
-      id:'r'+Date.now()+mi, kind:'month', vehicleId:vid,
-      name:(v.name||'Team')+' · '+MN[m]+' '+y,
-      year:y, month:m, anchorAbs:0,
-      startISO:y+'-'+String(m+1).padStart(2,'0')+'-01', days:dim,
-      crews:JSON.parse(JSON.stringify(crews)),
-      rotation:'224', overrides:{}, memberOverrides:{}, leaveLog:[]
-    };
-    /* sprinkle leave, sick, open shifts */
-    var staffNames=S.base.staff.map(function(s){ return s.name; });
-    for(var k=0; k<8; k++){
-      var rd=1+Math.floor(Math.random()*dim);
-      var dateISO=y+'-'+String(m+1).padStart(2,'0')+'-'+String(rd).padStart(2,'0');
-      var person=staffNames[Math.floor(Math.random()*staffNames.length)];
-      var lt=leaveTypes[Math.floor(Math.random()*leaveTypes.length)];
-      if(!R.memberOverrides[dateISO]) R.memberOverrides[dateISO]={};
-      /* find a shift with this person and mark open */
-      var dt=parseISO(dateISO), di=dayDiff(parseISO(R.startISO),dt);
-      try{
-        calSlotCrews(R,di).forEach(function(ps){
-          if(!ps.list.length) return;
-          var mems=effShiftMembers(R,dateISO,ps.sl.id,ps.list[0].c);
-          if(mems.indexOf(person)>=0&&!R.memberOverrides[dateISO][ps.sl.id]){
-            var idx=mems.indexOf(person);
-            /* 50% leave as open, 50% sick with open */
-            mems[idx]=OPEN_MARK;
-            R.memberOverrides[dateISO][ps.sl.id]=mems;
-            R.leaveLog.push({date:dateISO, shift:ps.sl.id, person:person, type:lt, cover:'OPEN', ts:Date.now()});
-          }
-        });
-      }catch(e){}
-    }
-    if(!S.rosters) S.rosters=[];
-    S.rosters.push({id:R.id, name:R.name, roster:R});
-  }
   persistBase(); saveSaved();
   toast('Test data generated — 6 months with leave and open shifts.');
 }
