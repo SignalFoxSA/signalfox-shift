@@ -873,7 +873,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261013-1516';
+var BUILD='20261014-1905';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -1907,7 +1907,7 @@ function renderCalendar(){
     var v0=(S.base.vehicles||[])[0];
     if(v0) cal.vehicleId=v0.id;
   }
-  if(cal.vehicleId && !cal.y){
+  if(!cal.y){
     var d=new Date(); cal.y=d.getFullYear(); cal.m=d.getMonth();
   }
   var old=document.getElementById('calEmptyPrompt'); if(old) old.remove();
@@ -2834,6 +2834,15 @@ function msOpenMarket(){
 }
 function mkBack(){ show('v-myshifts'); }
 /* find all open shifts across saved rosters */
+/* map a raw shift ID (D/N/X/S1...) to its display label — used as fallback when the slot lookup misses */
+function shiftIdLabel(id){
+  if(id==='D') return 'Day';
+  if(id==='N') return 'Night';
+  if(id==='X') return '24h shift';
+  var m=/^S(\d+)$/.exec(String(id||''));
+  if(m) return 'Shift '+m[1];
+  return id||'';
+}
 function mkFindOpen(){
   var out=[];
   loadSaved();
@@ -2861,7 +2870,7 @@ function mkFindOpen(){
         }catch(e){}
         out.push({
           rosterId:u.id, dateISO:dateISO, dt:dt,
-          shiftId:shiftId, shift:slotInfo?slotInfo.name:shiftId,
+          shiftId:shiftId, shift:slotInfo?(slotInfo.name||shiftIdLabel(shiftId)):shiftIdLabel(shiftId),
           crew:crewName, color:crewColor, team:u.name
         });
       });
@@ -4987,158 +4996,259 @@ function expMonthCells(y,m){
 function expWeekdayShort(y,m,d){
   return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(y,m,d).getDay()];
 }
-/* ---- WhatsApp text (locked format) ---- */
+/* ---- Text export (LOCKED 14 Oct 2026) ----
+   Personal: working days only. "Thu 1 Oct — Day, 06:00–18:00, Shift A"
+   Manager: all days. "Thu 1 Oct — Day: A, Night: D" */
 function expBuildText(E, mode){
-  var L=[], isNames=(mode==='names');
-  L.push('*'+E.title+'*'+(isNames?' ('+E.rotName+')':''), E.sub, '');
+  var L=[], isNames=(mode==='names'), isPersonal=!!E.expPerson;
+  L.push(E.title, E.sub, '');
   for(var d=1; d<=E.dim; d++){
     var pr=E.pairs[d-1]; if(!pr) continue;
     var pm=((E.pairsMembers||[])[d-1])||[];
-    var bits=[];
-    E.shifts.forEach(function(s,i){
-      var crew=pr[i]>=0?E.crews[pr[i]]:null;
-      var names=(pm[i]&&pm[i].length)?pm[i].map(dispMember):(crew?crew.names:[]);
-      bits.push(shiftBandShort(s.band)+': '+(crew?(isNames?names.join(', '):crew.name):'\u2014'));
-    });
-    L.push(expWeekdayShort(E.y,E.m,d)+' '+d+': '+(bits.join(' \u00b7 ')||'All off'));
+    var wd=expWeekdayShort(E.y,E.m,d)+' '+d+' '+MN[E.m].slice(0,3);
+    if(isPersonal){
+      // Personal: one shift per day (Day OR Night), with times
+      var found=null;
+      E.shifts.forEach(function(s,i){
+        if(pr[i]<0) return;
+        var crew=E.crews[pr[i]];
+        var names=(pm[i]&&pm[i].length)?pm[i].map(dispMember):crew.names;
+        var time=s.id==='D'?'06:00–18:00':s.id==='N'?'18:00–06:00':slotTime({startTime:'06:00'},s.id);
+        found=wd+' — '+shiftBandShort(s.band)+', '+time+', '+(isNames?names.join(', '):'Shift '+crew.name);
+      });
+      if(found) L.push(found);
+    }else{
+      // Manager: all days, Day + Night, no times
+      // Names: date on own line, then Day line, then Night line (not one long string)
+      if(isNames){
+        L.push(wd);
+        E.shifts.forEach(function(s,i){
+          var crew=pr[i]>=0?E.crews[pr[i]]:null;
+          var names=(pm[i]&&pm[i].length)?pm[i].map(dispMember):(crew?crew.names:[]);
+          L.push(shiftBandShort(s.band)+': '+(crew?names.join(', '):'—'));
+        });
+      }else{
+        var bits=[];
+        E.shifts.forEach(function(s,i){
+          var crew=pr[i]>=0?E.crews[pr[i]]:null;
+          bits.push(shiftBandShort(s.band)+': '+(crew?crew.name:'—'));
+        });
+        L.push(wd+' — '+bits.join(', '));
+      }
+    }
   }
-  L.push('', '*Crews*');
-  E.crews.forEach(function(c){ L.push(c.name+' \u2014 '+c.names.join(', ')); });
-  L.push('', '_'+E.footer+'_');
+  L.push('', 'Crews');
+  E.crews.forEach(function(c){ L.push('Crew '+c.name+' — '+c.names.join(', ')); });
+  L.push('', E.footer);
   return L.join('\n');
 }
-/* ---- Excel (SheetJS; spreadsheet keeps "A day" / "D night") ---- */
+/* ---- Excel export (LOCKED 14 Oct 2026) ----
+   Manager: date row + Day block row + Night block row per week. Full crew colours. No times.
+   Personal: date row + one block row per week. Profile colour. Times included. Off-days empty white.
+   All text black (FF000000). Thick borders around each day. */
 function expBuildWorkbook(E, mode){
-  var isNames=(mode==='names');
+  var isNames=(mode==='names'), isPersonal=!!E.expPerson;
   var cells=expMonthCells(E.y,E.m), weeks=Math.ceil(cells.length/7);
+  var rowsPerWeek=isPersonal?2:3;
+  var totalRows=3+weeks*rowsPerWeek+1+E.crews.length+1;
   var rows=[];
-  for(var r=0;r<3+weeks+2+E.crews.length+2;r++) rows.push(['','','','','','','']);
+  for(var r=0;r<totalRows;r++) rows.push(['','','','','','','']);
   var ws=XLSX.utils.aoa_to_sheet(rows);
   function set(addr,v,s){ ws[addr].v=v; ws[addr].t='s'; if(s) ws[addr].s=s; }
+  var BLACK='FF000000';
+  var bdrThin={style:'thin',color:{rgb:'FFBFBFBF'}};
+  var bdrMed={style:'medium',color:{rgb:'FF333333'}};
+  function dayBorder(col, isFirst, isLast, isTop, isBottom){
+    return {top:isTop?bdrMed:bdrThin, bottom:isBottom?bdrMed:bdrThin,
+      left:col===0?bdrMed:bdrThin, right:col===6?bdrMed:bdrThin};
+  }
   ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:6}},{s:{r:1,c:0},e:{r:1,c:6}}];
-  set('A1',E.title,{font:{bold:true,sz:16,color:{rgb:'FF222222'}}});
-  set('A2',E.subXlsx,{font:{sz:11,color:{rgb:'FF666666'}}});
-  var bdr={top:{style:'thin',color:{rgb:'FFBFBFBF'}},bottom:{style:'thin',color:{rgb:'FFBFBFBF'}},
-           left:{style:'thin',color:{rgb:'FFBFBFBF'}},right:{style:'thin',color:{rgb:'FFBFBFBF'}}};
+  set('A1',E.title,{font:{bold:true,sz:17,color:{rgb:BLACK}}});
+  set('A2',E.subXlsx,{font:{sz:12,color:{rgb:'FF666666'}}});
   dowOrder().forEach(function(d,i){
     set(String.fromCharCode(65+i)+'3',d,
-      {font:{bold:true,sz:11},alignment:{horizontal:'center',vertical:'center'},
-       fill:{patternType:'solid',fgColor:{rgb:isNames?'FFD9D9D9':'FFE8E8E8'}},
-       border:isNames?bdr:undefined});
+      {font:{bold:true,sz:12,color:{rgb:BLACK}},alignment:{horizontal:'center',vertical:'center'},
+       fill:{patternType:'solid',fgColor:{rgb:'FFE8E8E8'}},
+       border:{top:bdrThin,bottom:bdrThin,left:bdrThin,right:bdrThin}});
   });
-  cells.forEach(function(c,idx){
-    var r=3+Math.floor(idx/7), col=idx%7, addr=String.fromCharCode(65+col)+(r+1);
-    var pr=c.inMonth?E.pairs[c.date-1]:null;
-    var pm=c.inMonth?(((E.pairsMembers||[])[c.date-1])||[]):[];
-    if(!pr){
-      set(addr,String(c.date),{font:{sz:11,color:{rgb:'FF999999'}},
-        fill:{patternType:'solid',fgColor:{rgb:'FFF2F2F2'}},
-        border:isNames?bdr:undefined});
-      return;
+  // Calendar grid: each week = rowsPerWeek rows
+  for(var w=0;w<weeks;w++){
+    for(var col=0;col<7;col++){
+      var idx=w*7+col, c=cells[idx];
+      var dateRow=3+w*rowsPerWeek, blockRow=dateRow+1, nightRow=dateRow+2;
+      var dateAddr=String.fromCharCode(65+col)+(dateRow+1);
+      var blockAddr=String.fromCharCode(65+col)+(blockRow+1);
+      var nightAddr=String.fromCharCode(65+col)+(nightRow+1);
+      if(!c.inMonth){
+        set(dateAddr,String(c.date),{font:{sz:12,color:{rgb:'FF999999'}},
+          fill:{patternType:'solid',fgColor:{rgb:'FFF2F2F2'}},
+          border:dayBorder(col,true,false,true,false)});
+        set(blockAddr,'',{fill:{patternType:'solid',fgColor:{rgb:'FFF2F2F2'}},
+          border:dayBorder(col,false,false,false,!isPersonal)});
+        if(!isPersonal) set(nightAddr,'',{fill:{patternType:'solid',fgColor:{rgb:'FFF2F2F2'}},
+          border:dayBorder(col,false,true,false,true)});
+        continue;
+      }
+      var pr=E.pairs[c.date-1];
+      var pm=((E.pairsMembers||[])[c.date-1])||[];
+      // Date cell: always white
+      set(dateAddr,String(c.date),{font:{sz:12,bold:true,color:{rgb:BLACK}},
+        fill:{patternType:'solid',fgColor:{rgb:'FFFFFFFF'}},
+        border:dayBorder(col,true,false,true,false)});
+      if(isPersonal){
+        // Personal: ONE block — Day OR Night (person is only on one shift/day)
+        var foundIdx=-1, foundShift=null;
+        E.shifts.forEach(function(s,i){ if(pr&&pr[i]>=0&&foundIdx<0){ foundIdx=i; foundShift=s; } });
+        if(foundIdx>=0){
+          var crew=E.crews[pr[foundIdx]];
+          var names=(pm[foundIdx]&&pm[foundIdx].length)?pm[foundIdx].map(dispMember):crew.names;
+          var time=foundShift.id==='D'?'06:00–18:00':foundShift.id==='N'?'18:00–06:00':slotTime({startTime:'06:00'},foundShift.id);
+          var v=shiftBandShort(foundShift.band)+'\n'+time+'\n'+(isNames?names.join('\n'):'Shift '+crew.name);
+          var bg=E.expColor?('FF'+E.expColor.replace('#','')):('FF'+crew.color.replace('#',''));
+          set(blockAddr,v,{font:{sz:12,bold:true,color:{rgb:BLACK}},
+            alignment:{horizontal:'left',vertical:'top',wrapText:true},
+            fill:{patternType:'solid',fgColor:{rgb:bg}},
+            border:dayBorder(col,false,true,false,true)});
+        }else{
+          // Off day: empty white, NO black
+          set(blockAddr,'',{fill:{patternType:'solid',fgColor:{rgb:'FFFFFFFF'}},
+            border:dayBorder(col,false,true,false,true)});
+        }
+      }else{
+        // Manager: Day block + Night block, full crew colours, NO times
+        var dayIdx=-1, nightIdx=-1;
+        E.shifts.forEach(function(s,i){ if(s.id==='D'&&pr[i]>=0) dayIdx=i; if(s.id==='N'&&pr[i]>=0) nightIdx=i; });
+        // If no D/N slots (e.g. 24h), use first two shifts
+        if(dayIdx<0&&nightIdx<0&&E.shifts.length){ dayIdx=pr[0]>=0?0:-1; nightIdx=(E.shifts.length>1&&pr[1]>=0)?1:-1; }
+        if(dayIdx>=0){
+          var dcrew=E.crews[pr[dayIdx]];
+          var dnames=(pm[dayIdx]&&pm[dayIdx].length)?pm[dayIdx].map(dispMember):dcrew.names;
+          var dv=isNames?('Day\n'+dnames.join('\n')):('Day: '+dcrew.name);
+          set(blockAddr,dv,{font:{sz:12,bold:true,color:{rgb:BLACK}},
+            alignment:{horizontal:'left',vertical:'top',wrapText:true},
+            fill:{patternType:'solid',fgColor:{rgb:'FF'+dcrew.color.replace('#','')}},
+            border:dayBorder(col,false,false,false,false)});
+        }else{
+          set(blockAddr,'',{fill:{patternType:'solid',fgColor:{rgb:'FFFFFFFF'}},
+            border:dayBorder(col,false,false,false,false)});
+        }
+        if(nightIdx>=0){
+          var ncrew=E.crews[pr[nightIdx]];
+          var nnames=(pm[nightIdx]&&pm[nightIdx].length)?pm[nightIdx].map(dispMember):ncrew.names;
+          var nv=isNames?('Night\n'+nnames.join('\n')):('Night: '+ncrew.name);
+          set(nightAddr,nv,{font:{sz:12,bold:true,color:{rgb:BLACK}},
+            alignment:{horizontal:'left',vertical:'top',wrapText:true},
+            fill:{patternType:'solid',fgColor:{rgb:'FF'+ncrew.color.replace('#','')}},
+            border:dayBorder(col,false,true,false,true)});
+        }else{
+          set(nightAddr,'',{fill:{patternType:'solid',fgColor:{rgb:'FFFFFFFF'}},
+            border:dayBorder(col,false,true,false,true)});
+        }
+      }
     }
-    var firstCrew=null;
-    E.shifts.forEach(function(s,i){ if(!firstCrew&&pr[i]>=0) firstCrew=E.crews[pr[i]]; });
-    var tint=firstCrew?firstCrew.tintXLSX:'FFFFFFFF';
-    var v, fill={patternType:'solid',fgColor:{rgb:tint}};
-    if(isNames){
-      v=String(c.date);
-      E.shifts.forEach(function(s,i){
-        var nm=(pm[i]&&pm[i].length)?pm[i].map(dispMember):(pr[i]>=0?E.crews[pr[i]].names:[]);
-        v+='\n'+s.name+'\n'+(pr[i]>=0?nm.join(', '):'\u2014');
-      });
-      if(firstCrew) fill={patternType:'solid',fgColor:{rgb:'FF'+firstCrew.tintNames.replace('#','')}};
-    }else{
-      /* spreadsheet letter version keeps "A day" / "D night" */
-      v=String(c.date);
-      E.shifts.forEach(function(s,i){
-        var suf=s.id==='D'?(E.hasNight?'day':'on duty')
-              :s.id==='N'?'night'
-              :s.id==='X'?'on duty':shiftBandShort(s.band).toLowerCase();
-        v+='\n'+(pr[i]>=0?E.crews[pr[i]].name+' '+suf:'\u2014');
-      });
-    }
-    set(addr,v,{font:{sz:11},alignment:{horizontal:'left',vertical:'top',wrapText:true},
-      fill:fill, border:isNames?bdr:undefined});
-  });
-  var legRow=3+weeks+1;
+  }
+  var legRow=3+weeks*rowsPerWeek+1;
   E.crews.forEach(function(c,i){
-    set('B'+(legRow+i),'Crew '+c.name+' \u2014 '+c.names.join(', '),
-      {font:{sz:11,color:{rgb:'FF222222'}}});
+    set('B'+(legRow+i),'Crew '+c.name+' — '+c.names.join(', '),
+      {font:{sz:12,color:{rgb:BLACK}}});
     ws['!merges'].push({s:{r:legRow+i-1,c:1},e:{r:legRow+i-1,c:6}});
   });
   var fRow=legRow+E.crews.length;
-  set('A'+fRow,E.footer,{font:{sz:10,color:{rgb:'FF999999'}}});
+  set('A'+fRow,E.footer,{font:{sz:11,color:{rgb:'FF999999'}}});
   ws['!merges'].push({s:{r:fRow-1,c:0},e:{r:fRow-1,c:6}});
-  ws['!cols']=Array(7).fill({wch:isNames?26:15});
+  ws['!cols']=Array(7).fill({wch:26});
   ws['!rows']=[];
-  for(var rr=3;rr<3+weeks;rr++) ws['!rows'][rr]={hpt:isNames?(26+30*E.nsh):(15+15*E.nsh)};
+  for(var rr=3;rr<3+weeks*rowsPerWeek;rr++){
+    var isDateRow=((rr-3)%rowsPerWeek)===0;
+    ws['!rows'][rr]={hpt:isDateRow?22:(isNames?60:40)};
+  }
   ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:fRow-1,c:6}});
+  ws['!pageSetup']={orientation:'landscape',paperSize:9,fitToWidth:1,fitToHeight:1};
+  ws['!pageMargins']={left:0.3,right:0.3,top:0.3,bottom:0.3};
   var wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, isNames?'Roster':(MN[E.m]+' '+E.y).slice(0,31));
+  XLSX.utils.book_append_sheet(wb, ws, (MN[E.m]+' '+E.y).slice(0,31));
   return wb;
 }
-/* ---- PDF / WhatsApp image grid ---- */
+/* ---- PDF / WhatsApp image grid (LOCKED 14 Oct 2026) ----
+   Same layout as Excel: date on top (white), Day block + Night block (Manager, full crew colours),
+   or one block (Personal, profile colour, with times). All text black. */
 function expGridEl(E, mode, variant){
-  var isNames=(mode==='names');
-  var W=variant==='png'?1080:(isNames?1050:780);
-  var pad=Math.round(W*0.038), IW=W-pad*2;
-  var cw=Math.floor(IW/7), cwLast=IW-6*cw, k=W/780;
-  function F(n){ return Math.round(n*k); }
+  var isNames=(mode==='names'), isPersonal=!!E.expPerson;
+  var W=1080;
+  var pad=30, IW=W-pad*2;
+  var cw=Math.floor(IW/7), cwLast=IW-6*cw;
   var FF="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;";
-  var P=F(5);
-  var h='<div style="width:'+W+'px;background:#ffffff;color:#1c1c1e;'+FF+'padding:'+pad+'px;box-sizing:border-box;">'
-    +'<div style="font-size:'+F(30)+'px;font-weight:800;letter-spacing:-0.5px;">'+escapeHtml(E.title)+'</div>'
-    +'<div style="font-size:'+F(14)+'px;color:#666;margin:'+F(4)+'px 0 '+F(14)+'px;">'+escapeHtml(E.sub)+'</div>'
-    +'<div style="margin-bottom:'+F(14)+'px;font-size:0;">';
-  E.crews.forEach(function(c){
-    h+='<span style="display:inline-block;font-size:'+F(14)+'px;margin:0 '+F(26)+'px '+F(8)+'px 0;">'
-      +'<span style="display:inline-block;width:'+F(34)+'px;height:'+F(14)+'px;border-radius:'+F(7)+'px;background:'+c.color+';vertical-align:middle;margin-right:'+F(8)+'px;"></span>'
-      +'Crew '+escapeHtml(c.name)+' \u2014 '+escapeHtml(c.names.join(', '))+'</span>';
-  });
-  h+='</div><div style="font-size:0;border-left:1px solid #ddd;border-top:1px solid #ddd;">';
+  var BLACK='#000000';
+  var h='<div style="width:'+W+'px;background:#ffffff;color:'+BLACK+';'+FF+'padding:'+pad+'px;box-sizing:border-box;">'
+    +'<div style="font-size:30px;font-weight:800;">'+escapeHtml(E.title)+'</div>'
+    +'<div style="font-size:14px;color:#666;margin:4px 0 14px;">'+escapeHtml(E.sub)+'</div>'
+    +'<div style="font-size:0;border-left:2px solid #333;border-top:2px solid #333;">';
+  // Day headers
   dowOrder().map(function(d){ return d.toUpperCase(); }).forEach(function(d){
-    h+='<span style="display:inline-block;box-sizing:border-box;width:'+cw+'px;font-size:'+F(11)+'px;font-weight:700;color:#888;text-align:center;padding:'+F(6)+'px 0;border-right:1px solid #ddd;border-bottom:1px solid #ddd;">'+d+'</span>';
+    h+='<span style="display:inline-block;box-sizing:border-box;width:'+cw+'px;font-size:14px;font-weight:700;color:'+BLACK+';text-align:center;padding:8px 0;background:#E8E8E8;border-right:2px solid #333;border-bottom:2px solid #333;">'+d+'</span>';
   });
-  var cellH=F(isNames?(40+30*E.nsh):(32+30*E.nsh));
-  expMonthCells(E.y,E.m).forEach(function(c,idx){
+  var cells=expMonthCells(E.y,E.m);
+  cells.forEach(function(c,idx){
     var w=(idx%7===6)?cwLast:cw;
-    var open='<span style="display:inline-block;box-sizing:border-box;vertical-align:top;width:'+w+'px;min-height:'+cellH+'px;border-right:1px solid #ddd;border-bottom:1px solid #ddd;padding:'+P+'px;';
     var pr=c.inMonth?E.pairs[c.date-1]:null;
     var pm=c.inMonth?(((E.pairsMembers||[])[c.date-1])||[]):[];
+    var dayStyle='display:inline-block;box-sizing:border-box;vertical-align:top;width:'+w+'px;border-right:2px solid #333;border-bottom:2px solid #333;';
     if(!pr){
-      h+=open+'background:#f7f7f7;"><div style="font-size:'+F(14)+'px;font-weight:700;color:#bbb;">'+c.date+'</div></span>';
+      h+='<span style="'+dayStyle+'">'
+        +'<div style="font-size:14px;font-weight:700;padding:6px 8px;background:#F2F2F2;color:#999;">'+c.date+'</div>'
+        +'<div style="min-height:40px;background:#F2F2F2;"></div>'
+        +'</span>';
       return;
     }
-    var firstCrew=null;
-    E.shifts.forEach(function(s,i){ if(!firstCrew&&pr[i]>=0) firstCrew=E.crews[pr[i]]; });
-    if(!isNames){
-      /* dark or light text for readability — approved 11 Oct */
-      var bands='';
-      E.shifts.forEach(function(s,i){
-        if(pr[i]<0) return;
-        var band=(E.crews[pr[i]]&&E.crews[pr[i]].color)||'#888888', bt=textOnBand(band);
-        bands+='<div style="background:'+band+';border-radius:'+F(5)+'px;text-align:center;font-size:'+F(13)+'px;font-weight:800;color:'+bt+';padding:'+P+'px 0;margin-top:'+F(4)+'px;">'+escapeHtml(shiftBandShort(s.band).toUpperCase())+': '+escapeHtml(E.crews[pr[i]].name)+'</div>';
-      });
-      h+=open+'">'
-        +'<div style="font-size:'+F(14)+'px;font-weight:700;">'+c.date+'</div>'
-        +bands
-        +'</span>';
+    var dayHtml='<span style="'+dayStyle+'">'
+      +'<div style="font-size:14px;font-weight:700;padding:6px 8px;background:#FFFFFF;">'+c.date+'</div>';
+    if(isPersonal){
+      var foundIdx=-1, foundShift=null;
+      E.shifts.forEach(function(s,i){ if(pr[i]>=0&&foundIdx<0){ foundIdx=i; foundShift=s; } });
+      if(foundIdx>=0){
+        var crew=E.crews[pr[foundIdx]];
+        var names=(pm[foundIdx]&&pm[foundIdx].length)?pm[foundIdx].map(dispMember):crew.names;
+        var time=foundShift.id==='D'?'06:00–18:00':foundShift.id==='N'?'18:00–06:00':slotTime({startTime:'06:00'},foundShift.id);
+        var bg=E.expColor?E.expColor:crew.color;
+        var content=escapeHtml(shiftBandShort(foundShift.band))+'<br>'+escapeHtml(time)+'<br>'
+          +(isNames?names.map(escapeHtml).join('<br>'):escapeHtml('Shift '+crew.name));
+        dayHtml+='<div style="font-size:14px;font-weight:700;padding:6px 8px;background:'+bg+';color:'+BLACK+';min-height:50px;line-height:1.4;">'+content+'</div>';
+      }else{
+        dayHtml+='<div style="min-height:50px;background:#FFFFFF;"></div>';
+      }
     }else{
-      var rows='';
-      E.shifts.forEach(function(s,i){
-        if(pr[i]<0) return;
-        var nm=(pm[i]&&pm[i].length)?pm[i].map(dispMember):E.crews[pr[i]].names;
-        rows+='<div style="font-size:'+F(12.5)+'px;margin-top:'+F(3)+'px;"><b>'+escapeHtml(shiftBandShort(s.name))+':</b> <span style="color:'+E.crews[pr[i]].dark+';">'+escapeHtml(nm.join(', '))+'</span></div>';
-      });
-      var _bg=(firstCrew?firstCrew.tintNames:'transparent');
-      try{ if(E.expColor&&typeof expMix==='function'){ _bg=expMix(E.expColor,'#ffffff',0.86); } }catch(_){}
-      h+=open+'background:'+_bg+';">'
-        +'<div style="font-size:'+F(14)+'px;font-weight:700;">'+c.date+'</div>'
-        +rows
-        +'</span>';
+      // Manager: Day block + Night block
+      var dayIdx=-1, nightIdx=-1;
+      E.shifts.forEach(function(s,i){ if(s.id==='D'&&pr[i]>=0) dayIdx=i; if(s.id==='N'&&pr[i]>=0) nightIdx=i; });
+      if(dayIdx<0&&nightIdx<0&&E.shifts.length){ dayIdx=pr[0]>=0?0:-1; nightIdx=(E.shifts.length>1&&pr[1]>=0)?1:-1; }
+      if(dayIdx>=0){
+        var dcrew=E.crews[pr[dayIdx]];
+        var dnames=(pm[dayIdx]&&pm[dayIdx].length)?pm[dayIdx].map(dispMember):dcrew.names;
+        var dcontent=isNames?('Day<br>'+dnames.map(escapeHtml).join('<br>')):escapeHtml('Day: '+dcrew.name);
+        dayHtml+='<div style="font-size:14px;font-weight:700;padding:6px 8px;background:'+dcrew.color+';color:'+BLACK+';min-height:30px;line-height:1.4;border-top:1px solid #BFBFBF;">'+dcontent+'</div>';
+      }else{
+        dayHtml+='<div style="min-height:30px;background:#FFFFFF;border-top:1px solid #BFBFBF;"></div>';
+      }
+      if(nightIdx>=0){
+        var ncrew=E.crews[pr[nightIdx]];
+        var nnames=(pm[nightIdx]&&pm[nightIdx].length)?pm[nightIdx].map(dispMember):ncrew.names;
+        var ncontent=isNames?('Night<br>'+nnames.map(escapeHtml).join('<br>')):escapeHtml('Night: '+ncrew.name);
+        dayHtml+='<div style="font-size:14px;font-weight:700;padding:6px 8px;background:'+ncrew.color+';color:'+BLACK+';min-height:30px;line-height:1.4;border-top:1px solid #BFBFBF;">'+ncontent+'</div>';
+      }else{
+        dayHtml+='<div style="min-height:30px;background:#FFFFFF;border-top:1px solid #BFBFBF;"></div>';
+      }
     }
+    dayHtml+='</span>';
+    h+=dayHtml;
   });
-  h+='</div><div style="margin-top:'+F(12)+'px;font-size:'+F(11)+'px;color:#999;">'+escapeHtml(E.footer)+'</div></div>';
+  h+='</div>';
+  // Legend
+  h+='<div style="margin-top:14px;font-size:14px;">';
+  E.crews.forEach(function(c){
+    h+='<div style="margin-bottom:3px;">Crew '+escapeHtml(c.name)+' — '+escapeHtml(c.names.join(', '))+'</div>';
+  });
+  h+='</div>';
+  h+='<div style="margin-top:12px;font-size:12px;color:#999;">'+escapeHtml(E.footer)+'</div></div>';
   var div=document.createElement('div'); div.innerHTML=h;
   return div.firstChild;
 }
@@ -5151,9 +5261,8 @@ async function expRenderGridCanvas(E, mode, variant){
   return canvas;
 }
 async function expGeneratePDF(E, mode){
-  var isNames=(mode==='names');
   var canvas=await expRenderGridCanvas(E, mode, 'pdf');
-  var pdf=new window.jspdf.jsPDF({unit:'mm',format:'a4',orientation:isNames?'landscape':'portrait'});
+  var pdf=new window.jspdf.jsPDF({unit:'mm',format:'a4',orientation:'landscape'});
   var pw=pdf.internal.pageSize.getWidth(), ph=pdf.internal.pageSize.getHeight();
   var iw=pw-20, ih=canvas.height*iw/canvas.width;
   if(ih>ph-20){ var s=(ph-20)/ih; iw*=s; ih*=s; }
