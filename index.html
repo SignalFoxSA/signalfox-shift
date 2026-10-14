@@ -873,7 +873,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261014-1905';
+var BUILD='20261014-1915';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -5182,66 +5182,70 @@ function expGridEl(E, mode, variant){
   var h='<div style="width:'+W+'px;background:#ffffff;color:'+BLACK+';'+FF+'padding:'+pad+'px;box-sizing:border-box;">'
     +'<div style="font-size:30px;font-weight:800;">'+escapeHtml(E.title)+'</div>'
     +'<div style="font-size:14px;color:#666;margin:4px 0 14px;">'+escapeHtml(E.sub)+'</div>'
-    +'<div style="font-size:0;border-left:2px solid #333;border-top:2px solid #333;">';
-  // Day headers
+    +'<div style="border-left:2px solid #333;border-top:2px solid #333;">';
+  // Day headers — flex row, equal widths, no wrap
+  h+='<div style="display:flex;">';
   dowOrder().map(function(d){ return d.toUpperCase(); }).forEach(function(d){
-    h+='<span style="display:inline-block;box-sizing:border-box;width:'+cw+'px;font-size:14px;font-weight:700;color:'+BLACK+';text-align:center;padding:8px 0;background:#E8E8E8;border-right:2px solid #333;border-bottom:2px solid #333;">'+d+'</span>';
-  });
-  var cells=expMonthCells(E.y,E.m);
-  cells.forEach(function(c,idx){
-    var w=(idx%7===6)?cwLast:cw;
-    var pr=c.inMonth?E.pairs[c.date-1]:null;
-    var pm=c.inMonth?(((E.pairsMembers||[])[c.date-1])||[]):[];
-    var dayStyle='display:inline-block;box-sizing:border-box;vertical-align:top;width:'+w+'px;border-right:2px solid #333;border-bottom:2px solid #333;';
-    if(!pr){
-      h+='<span style="'+dayStyle+'">'
-        +'<div style="font-size:14px;font-weight:700;padding:6px 8px;background:#F2F2F2;color:#999;">'+c.date+'</div>'
-        +'<div style="min-height:40px;background:#F2F2F2;"></div>'
-        +'</span>';
-      return;
-    }
-    var dayHtml='<span style="'+dayStyle+'">'
-      +'<div style="font-size:14px;font-weight:700;padding:6px 8px;background:#FFFFFF;">'+c.date+'</div>';
-    if(isPersonal){
-      var foundIdx=-1, foundShift=null;
-      E.shifts.forEach(function(s,i){ if(pr[i]>=0&&foundIdx<0){ foundIdx=i; foundShift=s; } });
-      if(foundIdx>=0){
-        var crew=E.crews[pr[foundIdx]];
-        var names=(pm[foundIdx]&&pm[foundIdx].length)?pm[foundIdx].map(dispMember):crew.names;
-        var time=foundShift.id==='D'?'06:00–18:00':foundShift.id==='N'?'18:00–06:00':slotTime({startTime:'06:00'},foundShift.id);
-        var bg=E.expColor?E.expColor:crew.color;
-        var content=escapeHtml(shiftBandShort(foundShift.band))+'<br>'+escapeHtml(time)+'<br>'
-          +(isNames?names.map(escapeHtml).join('<br>'):escapeHtml('Shift '+crew.name));
-        dayHtml+='<div style="font-size:14px;font-weight:700;padding:6px 8px;background:'+bg+';color:'+BLACK+';min-height:50px;line-height:1.4;">'+content+'</div>';
-      }else{
-        dayHtml+='<div style="min-height:50px;background:#FFFFFF;"></div>';
-      }
-    }else{
-      // Manager: Day block + Night block
-      var dayIdx=-1, nightIdx=-1;
-      E.shifts.forEach(function(s,i){ if(s.id==='D'&&pr[i]>=0) dayIdx=i; if(s.id==='N'&&pr[i]>=0) nightIdx=i; });
-      if(dayIdx<0&&nightIdx<0&&E.shifts.length){ dayIdx=pr[0]>=0?0:-1; nightIdx=(E.shifts.length>1&&pr[1]>=0)?1:-1; }
-      if(dayIdx>=0){
-        var dcrew=E.crews[pr[dayIdx]];
-        var dnames=(pm[dayIdx]&&pm[dayIdx].length)?pm[dayIdx].map(dispMember):dcrew.names;
-        var dcontent=isNames?('Day<br>'+dnames.map(escapeHtml).join('<br>')):escapeHtml('Day: '+dcrew.name);
-        dayHtml+='<div style="font-size:14px;font-weight:700;padding:6px 8px;background:'+dcrew.color+';color:'+BLACK+';min-height:30px;line-height:1.4;border-top:1px solid #BFBFBF;">'+dcontent+'</div>';
-      }else{
-        dayHtml+='<div style="min-height:30px;background:#FFFFFF;border-top:1px solid #BFBFBF;"></div>';
-      }
-      if(nightIdx>=0){
-        var ncrew=E.crews[pr[nightIdx]];
-        var nnames=(pm[nightIdx]&&pm[nightIdx].length)?pm[nightIdx].map(dispMember):ncrew.names;
-        var ncontent=isNames?('Night<br>'+nnames.map(escapeHtml).join('<br>')):escapeHtml('Night: '+ncrew.name);
-        dayHtml+='<div style="font-size:14px;font-weight:700;padding:6px 8px;background:'+ncrew.color+';color:'+BLACK+';min-height:30px;line-height:1.4;border-top:1px solid #BFBFBF;">'+ncontent+'</div>';
-      }else{
-        dayHtml+='<div style="min-height:30px;background:#FFFFFF;border-top:1px solid #BFBFBF;"></div>';
-      }
-    }
-    dayHtml+='</span>';
-    h+=dayHtml;
+    h+='<div style="flex:1;box-sizing:border-box;font-size:14px;font-weight:700;color:'+BLACK+';text-align:center;padding:8px 0;background:#E8E8E8;border-right:2px solid #333;border-bottom:2px solid #333;">'+d+'</div>';
   });
   h+='</div>';
+  var cells=expMonthCells(E.y,E.m);
+  for(var wi=0;wi<cells.length;wi+=7){
+    h+='<div style="display:flex;">';
+    for(var ci=0;ci<7;ci++){
+      var idx=wi+ci, c=cells[idx];
+      var pr=c.inMonth?E.pairs[c.date-1]:null;
+      var pm=c.inMonth?(((E.pairsMembers||[])[c.date-1])||[]):[];
+      var dayStyle='flex:1;box-sizing:border-box;border-right:2px solid #333;border-bottom:2px solid #333;';
+      if(!pr){
+        h+='<div style="'+dayStyle+'">'
+          +'<div style="font-size:14px;font-weight:700;padding:6px 8px;background:#F2F2F2;color:#999;">'+c.date+'</div>'
+          +'<div style="min-height:40px;background:#F2F2F2;"></div>'
+          +'</div>';
+        continue;
+      }
+      var dayHtml='<div style="'+dayStyle+'">'
+        +'<div style="font-size:14px;font-weight:700;padding:6px 8px;background:#FFFFFF;">'+c.date+'</div>';
+      if(isPersonal){
+        var foundIdx=-1, foundShift=null;
+        E.shifts.forEach(function(s,i){ if(pr[i]>=0&&foundIdx<0){ foundIdx=i; foundShift=s; } });
+        if(foundIdx>=0){
+          var crew=E.crews[pr[foundIdx]];
+          var names=(pm[foundIdx]&&pm[foundIdx].length)?pm[foundIdx].map(dispMember):crew.names;
+          var time=foundShift.id==='D'?'06:00–18:00':foundShift.id==='N'?'18:00–06:00':slotTime({startTime:'06:00'},foundShift.id);
+          var bg=E.expColor?E.expColor:crew.color;
+          var content=escapeHtml(shiftBandShort(foundShift.band))+'<br>'+escapeHtml(time)+'<br>'
+            +(isNames?names.map(escapeHtml).join('<br>'):escapeHtml('Shift '+crew.name));
+          dayHtml+='<div style="font-size:14px;font-weight:700;padding:6px 8px;background:'+bg+';color:'+BLACK+';min-height:50px;line-height:1.4;">'+content+'</div>';
+        }else{
+          dayHtml+='<div style="min-height:50px;background:#FFFFFF;"></div>';
+        }
+      }else{
+        var dayIdx=-1, nightIdx=-1;
+        E.shifts.forEach(function(s,i){ if(s.id==='D'&&pr[i]>=0) dayIdx=i; if(s.id==='N'&&pr[i]>=0) nightIdx=i; });
+        if(dayIdx<0&&nightIdx<0&&E.shifts.length){ dayIdx=pr[0]>=0?0:-1; nightIdx=(E.shifts.length>1&&pr[1]>=0)?1:-1; }
+        if(dayIdx>=0){
+          var dcrew=E.crews[pr[dayIdx]];
+          var dnames=(pm[dayIdx]&&pm[dayIdx].length)?pm[dayIdx].map(dispMember):dcrew.names;
+          var dcontent=isNames?('Day<br>'+dnames.map(escapeHtml).join('<br>')):escapeHtml('Day: '+dcrew.name);
+          dayHtml+='<div style="font-size:14px;font-weight:700;padding:6px 8px;background:'+dcrew.color+';color:'+BLACK+';min-height:30px;line-height:1.4;border-top:1px solid #BFBFBF;">'+dcontent+'</div>';
+        }else{
+          dayHtml+='<div style="min-height:30px;background:#FFFFFF;border-top:1px solid #BFBFBF;"></div>';
+        }
+        if(nightIdx>=0){
+          var ncrew=E.crews[pr[nightIdx]];
+          var nnames=(pm[nightIdx]&&pm[nightIdx].length)?pm[nightIdx].map(dispMember):ncrew.names;
+          var ncontent=isNames?('Night<br>'+nnames.map(escapeHtml).join('<br>')):escapeHtml('Night: '+ncrew.name);
+          dayHtml+='<div style="font-size:14px;font-weight:700;padding:6px 8px;background:'+ncrew.color+';color:'+BLACK+';min-height:30px;line-height:1.4;border-top:1px solid #BFBFBF;">'+ncontent+'</div>';
+        }else{
+          dayHtml+='<div style="min-height:30px;background:#FFFFFF;border-top:1px solid #BFBFBF;"></div>';
+        }
+      }
+      dayHtml+='</div>';
+      h+=dayHtml;
+    }
+    h+='</div>';
+  }
   // Legend
   h+='<div style="margin-top:14px;font-size:14px;">';
   E.crews.forEach(function(c){
