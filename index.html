@@ -885,7 +885,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1350';
+var BUILD='20261015-1355';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -3679,10 +3679,10 @@ function baseSick(rosterId, shiftId, personName, leaveType){
   }else{
     cands.forEach(function(cnd){
       var q=qualName(cnd.qual);
-      var tag=cnd.rank===sickRank?'Same':(cnd.rank<sickRank?'Higher':'Lower');
+      var tag=(cnd.qual===sickQ)?'Same':'';
       h+='<div class="avail" onclick="basePickCover(\''+rosterId+'\',\''+shiftId+'\',\''+escapeHtml(personName).replace(/'/g,"\\'")+'\',\''+escapeHtml(cnd.name).replace(/'/g,"\\'")+'\',\''+escapeHtml(leaveType||'Leave')+'\')">'
         +'<span><span class="nm">'+escapeHtml(cnd.name)+'</span> '
-        +'<span class="meta">'+(q?escapeHtml(q)+' · ':'')+tag+'</span></span>'
+        +'<span class="meta">'+(q?escapeHtml(q):'')+(tag?' \u00b7 '+tag:'')+'</span></span>'
         +'<button class="pick">Pick</button></div>';
     });
   }
