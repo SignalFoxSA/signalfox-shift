@@ -551,15 +551,24 @@
   <div class="view" id="v-staff">
     <div class="card">
       <h3>Qualifications</h3>
-      <p class="sub">The skill levels your industry uses &mdash; BLS, ILS, ALS, or chef, waiter, barista, whatever. Set them here, then tick who each one can cover.</p>
-      <div id="staffQuals"></div>
-      <button class="addperson" onclick="qualAdd()">+ Add qualification</button>
+      <p class="sub">The skill levels your industry uses &mdash; BLS, ILS, ALS, or chef, waiter, barista, whatever. Set them up and tick who each one can cover.</p>
+      <button class="btn" onclick="openLadder()">Qualifications</button>
     </div>
     <div class="card">
       <h3>Staff <span class="countchip" id="staffCount"></span></h3>
       <p class="sub">Everyone at your workplace, in one list. Put each person into their team and crew below.</p>
       <div id="staffList"></div>
       <button class="addperson" onclick="staffAdd()">+ Add staff member</button>
+    </div>
+  </div>
+
+  <!-- QUALIFICATION LADDER (own screen — only reachable from the Staff tab Qualifications button) -->
+  <div class="view" id="v-ladder">
+    <div class="card">
+      <h3>Qualifications</h3>
+      <p class="sub">The skill levels your industry uses &mdash; BLS, ILS, ALS, or chef, waiter, barista, whatever. Tick who each one can cover.</p>
+      <div id="staffQuals"></div>
+      <button class="addperson" onclick="qualAdd()">+ Add qualification</button>
     </div>
   </div>
 
@@ -873,7 +882,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1310';
+var BUILD='20261015-1320';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -4035,7 +4044,7 @@ function enterApp(){
 /* ---------- navigation ---------- */
 var TAB_VIEWS={home:'v-home', rosters:'v-rosters', onduty:'v-base', staff:'v-staff', settings:'v-settings',
   myshifts:'v-myshifts', openshifts:'v-marketplace', profile:'v-profile', company:'v-company'};
-var BACK_IDS=['v-basesetup','v-newroster','v-anchor','v-cal','v-base','v-rotbuilder'];
+var BACK_IDS=['v-basesetup','v-newroster','v-anchor','v-cal','v-base','v-rotbuilder','v-ladder'];
 function show(id){
   document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
   document.getElementById(id).classList.add('active');
@@ -4149,6 +4158,7 @@ function goBack(){
   var av=document.querySelector('.view.active');
   var active=av&&av.id;
   if(active==='v-rotbuilder'){ openBaseSetup(); return; }
+  if(active==='v-ladder'){ switchTab('staff'); return; }
   if(active==='v-anchor'){ show('v-newroster'); return; }
   if(active==='v-cal'){
     var cal=ensureCal();
@@ -4247,6 +4257,7 @@ function renderBaseSetup(){
 /* Qualification Ladder: Cards view (edit who each qual can cover) + Grid view (quick check).
    Same qual always covers itself. Manager has full control — can tick anything. */
 var ladderView='cards';
+function openLadder(){ renderStaffQuals(); show('v-ladder'); }
 function ladderSetView(v){ ladderView=v; renderStaffQuals(); }
 function ladderToggleCover(qi, oj){
   var qs=baseQuals(), q=qs[qi], target=qs[oj];
@@ -4274,23 +4285,20 @@ function renderStaffQuals(){
       h+='<tr><td style="border:1px solid var(--line);padding:7px 4px;font-weight:700;text-align:left;background:var(--card2);">'+escapeHtml(row.name||'?')+'</td>'
         +qs.map(function(col){
           var ok=qualCanCover(row.id, col.id);
-          return '<td style="border:1px solid var(--line);padding:7px 4px;font-weight:800;font-size:15px;color:'+(ok?'#2E9E4F':'#CC0000')+';">'+(ok?'\u2713':'\u2715')+'</td>';
+          return '<td style="border:1px solid var(--line);padding:7px 4px;font-weight:800;font-size:15px;color:'+(ok?'#B8860B':'#CC0000')+';">'+(ok?'\u2713':'\u2715')+'</td>';
         }).join('')+'</tr>';
     });
     h+='</table></div>';
-    h+='<p class="fine" style="margin-top:8px;"><span style="color:#2E9E4F;font-weight:800;">\u2713 Can cover</span> &nbsp; <span style="color:#CC0000;font-weight:800;">\u2715 Cannot cover</span> &nbsp; Flip to Cards to change the ticks.</p>';
+    h+='<p class="fine" style="margin-top:8px;"><span style="color:#B8860B;font-weight:800;">\u2713 Can cover</span> &nbsp; <span style="color:#CC0000;font-weight:800;">\u2715 Cannot cover</span> &nbsp; Flip to Cards to change the ticks.</p>';
     wrap.innerHTML=h;
     return;
   }
   /* Cards view */
-  h+='<p class="fine" style="margin:0 0 6px;">Tick who each qualification can cover. Tick nothing and it covers only its own kind. Use \u2191 \u2193 to reorder.</p>';
+  h+='<p class="fine" style="margin:0 0 6px;">Tick who each qualification can cover. Tick nothing and it covers only its own kind.</p>';
   qs.forEach(function(q,qi){
     h+='<div style="border:2px solid var(--line);border-radius:14px;padding:11px 12px;margin-bottom:10px;">'
       +'<div style="display:flex;align-items:center;gap:8px;">'
-      +'<button class="qmv" '+(qi===0?'disabled':'')+' onclick="qualMove('+qi+',-1)" title="Move up">\u2191</button>'
-      +'<button class="qmv" '+(qi===qs.length-1?'disabled':'')+' onclick="qualMove('+qi+',1)" title="Move down">\u2193</button>'
       +'<input type="text" maxlength="24" value="'+escapeHtml(q.name)+'" placeholder="e.g. BLS" style="flex:1;" oninput="baseQuals()['+qi+'].name=this.value;persistBase();">'
-      +'<span style="font-size:11px;background:#111;color:#fff;border-radius:20px;padding:3px 9px;white-space:nowrap;">Rank '+(qi+1)+'</span>'
       +'<button class="rm" onclick="qualDel('+qi+')" title="Remove">\u2715</button>'
       +'</div>'
       +'<div style="margin-top:9px;font-size:12px;color:var(--muted);font-weight:700;">Can cover:</div>';
@@ -4298,10 +4306,10 @@ function renderStaffQuals(){
       if(oj===qi) return;
       var on=Array.isArray(q.canCover)&&q.canCover.indexOf(o.id)>=0;
       h+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:14px;cursor:pointer;" onclick="ladderToggleCover('+qi+','+oj+')">'
-        +'<span style="width:22px;height:22px;border-radius:6px;border:2px solid '+(on?'#2E9E4F':'var(--line)')+';background:'+(on?'#2E9E4F':'transparent')+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0;">'+(on?'\u2713':'')+'</span>'
+        +'<span style="width:22px;height:22px;border-radius:6px;border:2px solid '+(on?'#FFC13E':'var(--line)')+';background:'+(on?'#FFC13E':'transparent')+';color:#111;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0;">'+(on?'\u2713':'')+'</span>'
         +escapeHtml(o.name||'?')+'</div>';
     });
-    h+='<div style="margin-top:7px;font-size:12px;color:#2E9E4F;font-weight:700;">\u2713 Always covers its own kind'+(q.name?' ('+escapeHtml(q.name)+')':'')+'</div>';
+    h+='<div style="margin-top:7px;font-size:12px;color:#B8860B;font-weight:700;">\u2713 Always covers its own kind'+(q.name?' ('+escapeHtml(q.name)+')':'')+'</div>';
     h+='</div>';
   });
   wrap.innerHTML=h;
