@@ -658,8 +658,8 @@
     <p class="fine">SignalFox Shift &middot; V2 test build &middot; <span id="buildTag"></span></p>
     <div class="card">
       <h3>Testing</h3>
-      <p class="sub">Generate 6 months of rosters with leave, sick leave and open shifts.</p>
-      <button class="btn" onclick="genTestData()">Generate test data</button>
+      <p class="sub">Build a demo company: one fully-staffed ambulance, this month, with leave, replacements, an open shift and a swap.</p>
+      <button class="btn" onclick="genTestData()">Create demo data</button>
     </div>
   </div>
   <!-- BASE SETUP -->
@@ -889,7 +889,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1530';
+var BUILD='20261015-1545';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -5067,14 +5067,27 @@ function shiftAdd(){
 function shiftDel(id){
   var ss=wpShifts();
   if(ss.length<=1){ toast('You need at least one shift'); return; }
-  var used=null;
+  /* a custom rotation using this shift keeps working: the shift becomes
+     an off day in that rotation instead of blocking the delete */
+  var touched=[];
   Object.keys(ROTATIONS).forEach(function(k){
     var r=ROTATIONS[k];
-    if(r&&r.custom&&(r.pattern||[]).indexOf(id)>=0) used=r.name||'a rotation';
+    if(r&&r.custom&&(r.pattern||[]).indexOf(id)>=0){
+      r.pattern=r.pattern.map(function(p){ return p===id?0:p; });
+      touched.push(r.name||k);
+    }
   });
-  if(used){ toast('That shift is used by '+used); return; }
+  if(touched.length) persistCustomRotations();
+  /* drop it from any team's ticked shifts */
+  (S.base.vehicles||[]).forEach(function(v){
+    if(v.shiftIds){
+      v.shiftIds=v.shiftIds.filter(function(x){ return x!==id; });
+      if(!v.shiftIds.length) delete v.shiftIds;
+    }
+  });
   S.base.shifts=ss.filter(function(s){ return s.id!==id; });
   persistBase(); renderShifts(); renderCalendar();
+  if(touched.length) toast('Shift removed (also dropped from '+touched.join(', ')+')');
 }
 function setPills(elId, opts, cur, cb){
   var el=document.getElementById(elId); if(!el) return;
@@ -5088,161 +5101,211 @@ function setPills(elId, opts, cur, cb){
 }
 /* ---------- Test data generator ---------- */
 function genTestData(){
-  if(!confirm('Generate 6 months of test rosters with leave, sick leave and open shifts?')) return;
+  if(!confirm('Build a demo company? One ambulance (Ambulance 1), fully staffed, this month, with sick leave, replacements, an open shift and a swap \u2014 so you can see how everything works.')) return;
   loadSaved();
   var now=new Date();
-  if(!S.base) S.base={};
-  if(!S.base.name) S.base.name='Demo Base';
   var t=Date.now();
-  /* qualifications */
+  if(!S.base) S.base={};
+  if(!Array.isArray(S.base.staff)) S.base.staff=[];
+  if(!S.base.name) S.base.name='Demo Base';
+  /* qualifications with Ladder ticks: ALS covers all, ILS covers BLS + First Aider,
+     BLS covers First Aider, First Aider covers only itself */
+  var qALS='q'+t+'1', qILS='q'+t+'2', qBLS='q'+t+'3', qFA='q'+t+'4';
   if(!(S.base.quals||[]).length){
     S.base.quals=[
-      {id:'q'+t+'1', name:'ALS'},
-      {id:'q'+t+'2', name:'ILS'},
-      {id:'q'+t+'3', name:'BLS'}
+      {id:qALS, name:'ALS', canCover:[qILS,qBLS,qFA]},
+      {id:qILS, name:'ILS', canCover:[qBLS,qFA]},
+      {id:qBLS, name:'BLS', canCover:[qFA]},
+      {id:qFA, name:'First Aider', canCover:[]}
     ];
   }
   var quals=S.base.quals;
-  /* vehicles with crews (both nested and flat) */
-  if(!(S.base.vehicles||[]).length){
-    S.base.vehicles=[
-      {id:'v'+t+'a', name:'Ambulance 1', crews:[]},
-      {id:'v'+t+'b', name:'Ambulance 2', crews:[]}
-    ];
+  function qualIdByName(nm){
+    var q=quals.find(function(x){ return x.name===nm; });
+    return q?q.id:'';
   }
-  if(!(S.base.crews||[])) S.base.crews=[];
+  /* one team */
+  if(!(S.base.vehicles||[]).length){
+    S.base.vehicles=[{id:'v'+t+'a', name:'Ambulance 1', rotation:'224', coverage:24,
+      color:'#FFC13E', shiftIds:['D','N'], crews:[]}];
+  }
+  if(!Array.isArray(S.base.crews)) S.base.crews=[];
+  var v0=S.base.vehicles[0];
+  if(!Array.isArray(v0.crews)) v0.crews=[];
+  /* crews A-D on the first team */
   var crewColors=['#FFC13E','#4DABF7','#51CF66','#FF8787'];
   var crewNames=['A','B','C','D'];
-  S.base.vehicles.forEach(function(vv){
-    crewNames.forEach(function(cn,ci){
-      var existing=(vv.crews||[]).find(function(c){ return c.name===cn; });
-      if(!existing){
-        var cid='c'+t+vv.id+cn;
-        var crew={id:cid, vehicleId:vv.id, name:cn, color:crewColors[ci%4], members:[], memberIds:[]};
-        vv.crews.push(crew);
-        if(!S.base.crews.find(function(c){ return c.id===cid; })) S.base.crews.push(crew);
-      }
-    });
-    /* sync flat list */
-    (vv.crews||[]).forEach(function(c){
-      if(!S.base.crews.find(function(x){ return x.id===c.id; })){
-        c.vehicleId=vv.id;
-        S.base.crews.push(c);
-      }
-    });
+  crewNames.forEach(function(cn,ci){
+    var existing=(v0.crews||[]).find(function(c){ return c.name===cn; });
+    if(!existing){
+      var cid='c'+t+v0.id+cn;
+      var crew={id:cid, vehicleId:v0.id, name:cn, color:crewColors[ci%4], members:[], memberIds:[]};
+      v0.crews.push(crew);
+      if(!S.base.crews.find(function(c){ return c.id===cid; })) S.base.crews.push(crew);
+    }
   });
-  /* staff with qualifications and employee numbers */
+  /* staff: 2 per crew, quals + employee numbers + one partner pair */
   if(!(S.base.staff||[]).length){
-    var demoNames=['Thabo M','Sarah K','Mike D','Lisa P','James N','Anna S','Pieter V','Naledi K'];
-    demoNames.forEach(function(nm,i){
-      S.base.staff.push({
-        id:'s'+t+i, name:nm, empNo:'E'+(1001+i),
-        qual:quals[i%quals.length].id
-      });
+    var demo=[
+      {name:'Thabo M', qual:'ALS', empNo:'E1001'},
+      {name:'Sarah K', qual:'ILS', empNo:'E1002'},
+      {name:'Mike D', qual:'ALS', empNo:'E1003'},
+      {name:'Pieter V', qual:'ILS', empNo:'E1004'},
+      {name:'James N', qual:'ILS', empNo:'E1005'},
+      {name:'Lisa P', qual:'BLS', empNo:'E1006'},
+      {name:'Anna S', qual:'BLS', empNo:'E1007'},
+      {name:'Naledi K', qual:'BLS', empNo:'E1008'}
+    ];
+    demo.forEach(function(d,i){
+      S.base.staff.push({id:'s'+t+i, name:d.name, empNo:d.empNo, qual:qualIdByName(d.qual)||(quals[0]&&quals[0].id)||''});
     });
+    /* partners: Thabo + James (both Crew A) work together */
+    var thabo0=S.base.staff[0], james0=S.base.staff[4];
+    thabo0.partnerId=james0.id; james0.partnerId=thabo0.id;
   } else {
-    /* fill in missing quals on existing staff */
     S.base.staff.forEach(function(s,i){
       if(!s.qual&&quals.length) s.qual=quals[i%quals.length].id;
       if(!s.empNo) s.empNo='E'+(1001+i);
     });
   }
-  /* assign staff to crews via the proper function */
-  var v0=S.base.vehicles[0];
+  /* assign staff to crews (2 per crew) */
   S.base.staff.forEach(function(s,i){
     if(!staffCrewOf(s.id)&&v0&&v0.crews.length){
       var crew=v0.crews[i%v0.crews.length];
       assignStaffToCrew(s.id, crew.id);
-      /* also put the name on the nested crew members for roster rendering */
+      if(!Array.isArray(crew.members)) crew.members=[];
       if(crew.members.indexOf(s.name)<0) crew.members.push(s.name);
     }
   });
-  var leaveTypes=['Annual leave','Sick leave','Family responsibility','Maternity leave','Study leave','Unpaid leave'];
-  var staffNames=S.base.staff.map(function(s){ return s.name; });
-  /* one vehicle per click: pick the first vehicle without generated rosters */
-  var targetV=null;
-  (S.base.vehicles||[]).forEach(function(vv){
-    if(targetV) return;
-    var hasGen=(S.rosters||[]).some(function(u){
-      return u.roster&&u.roster.vehicleId===vv.id&&u.roster._testGen;
+  /* one requirement per shift so On Duty shows Fully staffed */
+  var blsId=qualIdByName('BLS');
+  if(blsId){
+    wpShifts().forEach(function(sh){
+      if(!sh.reqs) sh.reqs=[{qid:blsId, count:1, mode:'min'}];
     });
-    if(!hasGen) targetV=vv;
+  }
+  /* current-month roster for the first team */
+  var y=now.getFullYear(), m=now.getMonth();
+  var exists=(S.rosters||[]).some(function(u){
+    return u.roster&&u.roster.vehicleId===v0.id&&u.roster.year===y&&u.roster.month===m;
   });
-  if(!targetV){ toast('All vehicles already have test rosters.'); return; }
-  [targetV].forEach(function(vv, vvi){
-    var vid=vv.id;
-    var crews=vv.crews||[];
-    for(var mi=0; mi<6; mi++){
-      var d=new Date(now.getFullYear(), now.getMonth()+mi, 1);
-      var y=d.getFullYear(), m=d.getMonth();
-      var exists=(S.rosters||[]).some(function(u){
-        return u.roster&&u.roster.vehicleId===vid&&u.roster.year===y&&u.roster.month===m;
-      });
-      if(exists) continue;
-      var dim=daysInMonth(y,m);
-      var snapCrews=JSON.parse(JSON.stringify(crews));
-      /* ensure snapshot crews have members */
-      snapCrews.forEach(function(c,ci){
-        if(!(c.members||[]).length){
-          c.members=[staffNames[(ci*2)%staffNames.length], staffNames[(ci*2+1)%staffNames.length]].filter(function(n){return n;});
-        }
-      });
-      var R={
-        id:'r'+t+vvi+'_'+mi, kind:'month', vehicleId:vid, _testGen:true,
-        name:(vv.name||'Team')+' \u00b7 '+MN[m]+' '+y,
-        year:y, month:m, anchorAbs:0,
-        startISO:y+'-'+String(m+1).padStart(2,'0')+'-01', days:dim,
-        crews:snapCrews, rotation:'224', overrides:{}, memberOverrides:{}, leaveLog:[]
-      };
-      /* realistic leave: mix of single sick days, multi-day annual blocks, occasional long leave */
-      var events=[];
-      /* 3-5 single sick days */
-      var nSick=3+Math.floor(Math.random()*3);
-      for(var sk=0; sk<nSick; sk++){
-        events.push({type:'Sick leave', days:1,
-          person:staffNames[Math.floor(Math.random()*staffNames.length)]});
-      }
-      /* 2 annual leave blocks (3-7 days) */
-      for(var al=0; al<2; al++){
-        events.push({type:'Annual leave', days:3+Math.floor(Math.random()*5),
-          person:staffNames[Math.floor(Math.random()*staffNames.length)]});
-      }
-      /* 1 family responsibility (1-2 days) */
-      events.push({type:'Family responsibility', days:1+Math.floor(Math.random()*2),
-        person:staffNames[Math.floor(Math.random()*staffNames.length)]});
-      /* occasional long leave (maternity/study) */
-      if(Math.random()<0.3){
-        events.push({type:Math.random()<0.5?'Maternity leave':'Study leave',
-          days:10+Math.floor(Math.random()*10),
-          person:staffNames[Math.floor(Math.random()*staffNames.length)]});
-      }
-      events.forEach(function(ev){
-        var startD=1+Math.floor(Math.random()*(dim-ev.days));
-        for(var dd=0; dd<ev.days; dd++){
-          var rd=startD+dd;
-          if(rd>dim) break;
-          var dateISO=y+'-'+String(m+1).padStart(2,'0')+'-'+String(rd).padStart(2,'0');
-          if(!R.memberOverrides[dateISO]) R.memberOverrides[dateISO]={};
-          var dt=parseISO(dateISO), di=dayDiff(parseISO(R.startISO),dt);
-          try{
-            calSlotCrews(R,di).forEach(function(ps){
-              if(!ps.list.length||R.memberOverrides[dateISO][ps.sl.id]) return;
-              var mems=effShiftMembers(R,dateISO,ps.sl.id,ps.list[0].c);
-              if(mems.indexOf(ev.person)>=0){
-                mems[mems.indexOf(ev.person)]=OPEN_MARK;
-                R.memberOverrides[dateISO][ps.sl.id]=mems;
-                R.leaveLog.push({date:dateISO, shift:ps.sl.id, person:ev.person, type:ev.type, cover:'OPEN', ts:Date.now()});
-              }
-            });
-          }catch(e){}
-        }
-      });
-      if(!S.rosters) S.rosters=[];
-      S.rosters.push({id:R.id, name:R.name, roster:R});
+  if(exists){ persistBase(); persist(); toast('Demo data already exists for this month.'); return; }
+  var dim=daysInMonth(y,m);
+  var snapCrews=JSON.parse(JSON.stringify(v0.crews||[]));
+  snapCrews.forEach(function(c,ci){
+    if(!(c.members||[]).length){
+      var allNames=S.base.staff.map(function(s){ return s.name; });
+      c.members=[allNames[(ci*2)%allNames.length], allNames[(ci*2+1)%allNames.length]].filter(function(n){return n;});
     }
   });
+  var R={
+    id:'r'+t+'_demo', kind:'month', vehicleId:v0.id, _testGen:true,
+    name:(v0.name||'Team')+' \u00b7 '+MN[m]+' '+y,
+    year:y, month:m, anchorAbs:0,
+    startISO:y+'-'+String(m+1).padStart(2,'0')+'-01', days:dim,
+    crews:snapCrews, rotation:v0.rotation||'224', shiftIds:teamShiftIds(v0),
+    overrides:{}, memberOverrides:{}, leaveLog:[]
+  };
+  /* ---- leave scenario: replacements, one open shift, one swap ---- */
+  function namesWorkingOn(dateISO){
+    var dt=parseISO(dateISO), di=dayDiff(parseISO(R.startISO),dt);
+    var set={};
+    try{
+      calSlotCrews(R,di).forEach(function(ps){
+        if(!ps.list.length) return;
+        effShiftMembers(R,dateISO,ps.sl.id,ps.list[0].c).forEach(function(n){ set[n]=1; });
+      });
+    }catch(e){}
+    return set;
+  }
+  function qualOfName(nm){
+    var s=(S.base.staff||[]).find(function(x){ return x.name===nm; });
+    return s?s.qual:'';
+  }
+  function findCover(dateISO, needName, preferredName){
+    var working=namesWorkingOn(dateISO);
+    var needQ=qualOfName(needName);
+    var cands=[];
+    if(preferredName) cands.push(preferredName);
+    (S.base.staff||[]).forEach(function(s){ if(cands.indexOf(s.name)<0) cands.push(s.name); });
+    for(var i=0;i<cands.length;i++){
+      var cn=cands[i];
+      if(cn===needName) continue;
+      if(working[cn]) continue;
+      if(needQ && !qualCanCover(qualOfName(cn), needQ)) continue;
+      return cn;
+    }
+    return null;
+  }
+  function applyLeave(person, type, coverName, fromDay, toDay, maxDays){
+    var done=0;
+    for(var d=fromDay; d<=toDay && done<maxDays; d++){
+      if(d<1||d>dim) continue;
+      var dateISO=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      if(!R.memberOverrides[dateISO]) R.memberOverrides[dateISO]={};
+      var dt=parseISO(dateISO), di=dayDiff(parseISO(R.startISO),dt);
+      try{
+        calSlotCrews(R,di).forEach(function(ps){
+          if(done>=maxDays) return;
+          if(!ps.list.length||R.memberOverrides[dateISO][ps.sl.id]) return;
+          var mems=effShiftMembers(R,dateISO,ps.sl.id,ps.list[0].c);
+          if(mems.indexOf(person)<0) return;
+          var cover='OPEN';
+          if(coverName&&coverName!=='OPEN') cover=findCover(dateISO, person, coverName)||'OPEN';
+          mems[mems.indexOf(person)]=(cover==='OPEN'?OPEN_MARK:cover);
+          R.memberOverrides[dateISO][ps.sl.id]=mems;
+          R.leaveLog.push({date:dateISO, shift:ps.sl.id, person:person, type:type, cover:cover, ts:Date.now()});
+          done++;
+        });
+      }catch(e){}
+    }
+  }
+  function applySwap(p1, p2, fromDay, toDay){
+    for(var d=fromDay; d<=toDay; d++){
+      if(d<1||d>dim) continue;
+      var dateISO=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      if(!R.memberOverrides[dateISO]) R.memberOverrides[dateISO]={};
+      var dt=parseISO(dateISO), di=dayDiff(parseISO(R.startISO),dt);
+      var slot1=null, slot2=null, mems1=null, mems2=null;
+      try{
+        calSlotCrews(R,di).forEach(function(ps){
+          if(!ps.list.length||R.memberOverrides[dateISO][ps.sl.id]) return;
+          var mems=effShiftMembers(R,dateISO,ps.sl.id,ps.list[0].c);
+          if(mems.indexOf(p1)>=0){ slot1=ps.sl.id; mems1=mems; }
+          if(mems.indexOf(p2)>=0){ slot2=ps.sl.id; mems2=mems; }
+        });
+      }catch(e){}
+      if(slot1&&slot2&&slot1!==slot2){
+        mems1[mems1.indexOf(p1)]=p2;
+        mems2[mems2.indexOf(p2)]=p1;
+        R.memberOverrides[dateISO][slot1]=mems1;
+        R.memberOverrides[dateISO][slot2]=mems2;
+        R.leaveLog.push({date:dateISO, shift:slot1, person:p1, type:'Swap', cover:p2, ts:Date.now()});
+        R.leaveLog.push({date:dateISO, shift:slot2, person:p2, type:'Swap', cover:p1, ts:Date.now()});
+        return true;
+      }
+    }
+    return false;
+  }
+  var crewsByName={};
+  (v0.crews||[]).forEach(function(c){ crewsByName[c.name]=c; });
+  function memberOf(crewName, idx){
+    var c=crewsByName[crewName];
+    if(!c||!(c.members||[]).length) return null;
+    return c.members[idx]||c.members[0];
+  }
+  var thabo=memberOf('A',0), james=memberOf('A',1),
+      sarah=memberOf('B',0), mike=memberOf('C',0),
+      anna=memberOf('C',1), pieter=memberOf('D',0), naledi=memberOf('D',1);
+  if(thabo&&mike) applyLeave(thabo, 'Sick leave', mike, 17, 24, 2);
+  if(anna&&naledi) applyLeave(anna, 'Annual leave', naledi, 19, 26, 2);
+  if(james) applyLeave(james, 'Sick leave', 'OPEN', 21, 28, 1);
+  if(pieter&&james) applyLeave(pieter, 'Sick leave', james, 22, 29, 2);
+  if(thabo&&sarah) applySwap(thabo, sarah, 24, 31);
+  if(!S.rosters) S.rosters=[];
+  S.rosters.push({id:R.id, name:R.name, roster:R});
   persistBase(); persist();
-  toast('Test data generated — 6 months with leave and open shifts.');
+  toast('Demo company built \u2014 Ambulance 1, this month, fully staffed with leave, replacements, an open shift and a swap.');
 }
 /* ---------- Test data generator ---------- */
 function saveSettingsProfile(){
@@ -5280,7 +5343,7 @@ function importData(file){
 }
 function clearData(){
   if(!confirm('Delete ALL bases, rosters and staff \u2014 on this device and in your cloud account?')) return;
-  ['sfshift_base','sfshift_units','sfshift_rosters','sfshift_hero_logo','sfshift_profile_name','sfshift_mtime'].forEach(function(k){
+  ['sfshift_base','sfshift_units','sfshift_rosters','sfshift_hero_logo','sfshift_profile_name','sfshift_mtime','sfshift_custom_rot'].forEach(function(k){
     try{ localStorage.removeItem(k); }catch(e){}
   });
   try{
@@ -5289,6 +5352,7 @@ function clearData(){
     hk.forEach(function(k){ localStorage.removeItem(k); });
   }catch(e){}
   HOL_MEM={};
+  Object.keys(ROTATIONS).forEach(function(k){ if(ROTATIONS[k]&&ROTATIONS[k].custom) delete ROTATIONS[k]; });
   if(sb && sbUser){ try{ sb.from('app_state').delete().eq('user_id', sbUser.id).then(function(){}).catch(function(){}); }catch(e){} }
   loadBase(); loadSaved();
   renderHome(); renderAllRosters(); renderStaffTab(); renderSettings();
