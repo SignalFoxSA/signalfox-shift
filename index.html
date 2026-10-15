@@ -187,9 +187,9 @@
   .shiftrow input[type=time]{flex:none; width:96px; padding:10px 4px; font-size:14px;}
   .shiftrow .tdash{color:var(--muted); flex:none;}
   .shiftrow .rm{background:none; border:none; color:var(--red); font-size:16px; cursor:pointer; padding:6px; flex:none;}
-  .grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
+  .grid{display:grid; grid-template-columns:repeat(7,1fr); gap:4px;}
   .cell{
-    border-radius:10px; min-height:70px; padding:5px 4px; cursor:pointer; position:relative;
+    border-radius:10px; min-height:70px; padding:5px 2px; cursor:pointer; position:relative;
     border:1px solid var(--line); background:var(--card2); overflow:hidden;
   }
   .cell .dnum{font-size:12px; font-weight:800;}
@@ -353,7 +353,7 @@
   #calMode{margin:10px 0;}
   .cell{position:relative; min-height:76px;}
   .cell .band{display:block; border-radius:7px; font-weight:800;
-    padding:4px 2px; margin-top:4px; line-height:1.2; text-align:center; overflow:hidden;}
+    padding:4px 1px; margin-top:4px; line-height:1.2; text-align:center; overflow:hidden;}
   .cell .band .bs{display:block; font-size:8px; font-weight:700; opacity:.75; line-height:1.25;
     overflow-wrap:break-word;}
   .cell .band .bc{display:block; font-size:12px; font-weight:800; line-height:1.25; margin-top:1px;
@@ -361,8 +361,10 @@
   .cell .band .bm{display:block; font-size:8px; font-weight:600; opacity:.8; line-height:1.3; margin-top:1px;
     overflow-wrap:break-word;}
   .cell.out{opacity:.32; cursor:default;}
-  .cell .edot{position:absolute; top:5px; right:6px; width:7px; height:7px; border-radius:50%;
-    background:var(--accent); box-shadow:0 0 4px var(--accent);}
+  .cell.changed{box-shadow:inset 0 0 0 2px #FFC13E;}
+  .cell .hqtag{position:absolute; top:4px; right:6px; font-size:8px; font-weight:800; color:var(--text);
+    max-width:62%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .cell .band .bmn{display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .emptycal{text-align:center; padding:34px 18px; color:var(--muted);}
   .emptycal .btn{margin-top:14px;}
   /* agenda list */
@@ -889,7 +891,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1615';
+var BUILD='20261015-1625';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -921,6 +923,30 @@ function staffQualIdByName(name){
 function qualName(id){
   var q=baseQuals().find(function(x){ return x.id===id; });
   return q?q.name:'';
+}
+/* Highest qualification among a set of member names, from Ladder ticks:
+   Q is highest if it can cover every other qual in the set and no other qual
+   can cover it. If no single qual qualifies (no ticks / mutual cover / tie),
+   return '' so the corner stays blank — never guess a rank. */
+function highestQualNameForMembers(names){
+  var qids=[];
+  (names||[]).forEach(function(nm){
+    var q=staffQualIdByName(nm);
+    if(q&&qids.indexOf(q)<0) qids.push(q);
+  });
+  if(!qids.length) return '';
+  var best='', count=0;
+  qids.forEach(function(q){
+    var coversAll=true, coveredBy=false;
+    qids.forEach(function(o){
+      if(o===q) return;
+      if(!qualCanCover(q,o)) coversAll=false;
+      if(qualCanCover(o,q)) coveredBy=true;
+    });
+    if(coversAll&&!coveredBy){ best=q; count++; }
+  });
+  if(count!==1) return '';
+  return qualName(best)||'';
 }
 /* one-time migration: old hardcoded string quals -> seeded qual list, staff remapped to ids */
 function migrateQuals(){
@@ -2033,31 +2059,34 @@ function renderCalMonth(ctx){
     }else{
       var date=info.date;
       var hd=hol?hol[holISO(y,m,d)]:null;
-      var inner='<div class="dnum">'+d+(hd?'<span class="hdot" title="'+escapeHtml(hd)+'"></span>':'')+'</div>';
+      var dateISO=info.date?isoDate(info.date):null;
       var slots=rotSlots(R.rotation, R.shiftIds), nSlots=slots.length;
+      var blocksHtml='', dayNames=[];
       calSlotCrews(R,info.dayIdx).forEach(function(ps, sIdx){
         if(!ps.list.length) return;
-        var dateISO=info.date?isoDate(info.date):null;
         var crews=ps.list.map(function(x){ return escapeHtml(x.c.name); }).join(' / ');
         var memHtml=[], hasOpen=false;
         ps.list.forEach(function(x){
           var orig=x.c.members||[];
           effShiftMembers(R, dateISO, ps.sl.id, x.c).forEach(function(nm){
             if(nm===OPEN_MARK) hasOpen=true;
+            if(dayNames.indexOf(nm)<0) dayNames.push(nm);
             var mh=rosterMemberHtml(nm, orig);
             if(memHtml.indexOf(mh)<0) memHtml.push(mh);
           });
         });
-        var memLine=memHtml.length?'<span class="bm">'+memHtml.join(', ')+'</span>':'';
+        var memLine=memHtml.length?'<span class="bm">'+memHtml.map(function(mh){ return '<span class="bmn">'+mh+'</span>'; }).join('')+'</span>':'';
         var band=(ps.list[0]&&ps.list[0].c.color)||'#888888';
-        inner+='<span class="band" style="background:'+band+';color:'+textOnBand(band)+(hasOpen?';box-shadow:inset 0 0 0 2px #CC0000':'')+'">'+
+        blocksHtml+='<span class="band" style="background:'+band+';color:'+textOnBand(band)+(hasOpen?';box-shadow:inset 0 0 0 2px #CC0000':'')+'">'+
           '<span class="bs">'+escapeHtml(shiftBandShort(ps.sl.name))+'</span>'+
           '<span class="bc">'+crews+'</span>'+memLine+'</span>';
       });
+      var hq=highestQualNameForMembers(dayNames);
+      var inner='<div class="dnum">'+d+(hd?'<span class="hdot" title="'+escapeHtml(hd)+'"></span>':'')+'</div>'+
+        (hq?'<span class="hqtag" title="'+escapeHtml(hq)+'">'+escapeHtml(hq)+'</span>':'')+blocksHtml;
       var ed=R.crews.some(function(c,ci){ return R.overrides[info.dayIdx+':'+ci]; });
       var med=R.memberOverrides&&info.date&&R.memberOverrides[isoDate(info.date)];
-      if(ed||med) inner+='<span class="edot" title="Day changed — leave, replacement, swap or edit"></span>';
-      html+='<div class="cell'+(isToday(date)?' today':'')+'" data-d="'+d+'" title="Tap to view day">'+inner+'</div>';
+      html+='<div class="cell'+(isToday(date)?' today':'')+((ed||med)?' changed':'')+'" data-d="'+d+'" title="Tap to view day">'+inner+'</div>';
     }
   }
   for(var t=lead+dim;t<weeks*7;t++) html+='<div class="cell out"></div>';
