@@ -551,7 +551,7 @@
   <div class="view" id="v-staff">
     <div class="card">
       <h3>Qualifications</h3>
-      <p class="sub">The skill levels your industry uses &mdash; BLS, ILS, ALS, or chef, waiter, barista, whatever. They become the options on each staff member.</p>
+      <p class="sub">The skill levels your industry uses &mdash; BLS, ILS, ALS, or chef, waiter, barista, whatever. Set them here, then tick who each one can cover.</p>
       <div id="staffQuals"></div>
       <button class="addperson" onclick="qualAdd()">+ Add qualification</button>
     </div>
@@ -873,7 +873,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1250';
+var BUILD='20261015-1310';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -884,6 +884,15 @@ function qualRank(qid){
   var qs=baseQuals();
   for(var i=0;i<qs.length;i++) if(qs[i].id===qid) return i;
   return 999;
+}
+/* Qualification Ladder: explicit coverage. Each qual has canCover = [qual ids it can cover].
+   Same qualification always covers itself. Manager has full control — can tick anything. */
+function qualCanCover(coverQid, needQid){
+  if(!coverQid||!needQid) return false;
+  if(coverQid===needQid) return true;
+  var q=baseQuals().find(function(x){ return x.id===coverQid; });
+  if(!q||!Array.isArray(q.canCover)) return false;
+  return q.canCover.indexOf(needQid)>=0;
 }
 function qualName(qid){
   var q=baseQuals().find(function(x){ return x.id===qid; });
@@ -918,6 +927,11 @@ function migrateQuals(){
   }
   if(!Array.isArray(S.base.staff)) S.base.staff=[];
   S.base.staff.forEach(function(s){ if(s.qual==null) s.qual=''; });
+  /* Ladder migration: quals without canCover keep old behaviour (cover all below in the list) */
+  var qs2=S.base.quals||[];
+  qs2.forEach(function(q, qi){
+    if(!Array.isArray(q.canCover)) q.canCover=qs2.slice(qi+1).map(function(x){ return x.id; });
+  });
 }
 var OLD_CREW_COLORS = ['#22c55e','#3b82f6','#f97316','#a855f7']; /* pre-Oct-2026 palette, migrated on load */
 var OFF_COLOR = '#ef4444';
@@ -2893,10 +2907,15 @@ function mkFindOpen(){
             }
           });
         }catch(e){}
+        /* needed qual = the qual of the person on leave (from leave log); '' if unknown */
+        var needQid='';
+        (R.leaveLog||[]).forEach(function(lg){
+          if(!needQid&&lg.date===dateISO&&lg.shift===shiftId&&lg.cover==='OPEN'&&lg.type!=='Swap') needQid=staffQualIdByName(lg.person);
+        });
         out.push({
           rosterId:u.id, dateISO:dateISO, dt:dt,
           shiftId:shiftId, shift:slotInfo?(slotInfo.name||shiftIdLabel(shiftId)):shiftIdLabel(shiftId),
-          crew:crewName, color:crewColor, team:u.name
+          crew:crewName, color:crewColor, team:u.name, needQid:needQid
         });
       });
     });
@@ -2917,6 +2936,8 @@ function renderMarketplace(){
     open.forEach(function(s,i){
       /* hide shifts that would double-book or create 24h stretches */
       if(msPerson&&mkHasConflict(msPerson, s.dateISO)) return;
+      /* only offer shifts this person can cover (Qualification Ladder) */
+      if(msPerson&&s.needQid&&!qualCanCover(staffQualIdByName(msPerson), s.needQid)) return;
       shown++;
       var already=(S.shiftApps||[]).some(function(a){
         return a.rosterId===s.rosterId&&a.dateISO===s.dateISO&&a.shiftId===s.shiftId
@@ -2933,7 +2954,7 @@ function renderMarketplace(){
           :'<button class="btn" onclick="mkApply('+i+')">Apply</button>')
         +'</div></div>';
     });
-    if(!shown&&open.length) h='<p class="fine">No available shifts — you are already rostered on all open dates.</p>';
+    if(!shown&&open.length) h='<p class="fine">No open shifts you can cover right now.</p>';
     wrap.innerHTML=h;
   }
   /* my applications */
@@ -2983,6 +3004,11 @@ function mkApply(i){
   /* block double-rostering and 24-hour stretches */
   if(mkHasConflict(msPerson, s.dateISO)){
     toast('You are already rostered on that date.');
+    return;
+  }
+  /* only offer shifts this person can cover (Qualification Ladder) */
+  if(s.needQid&&!qualCanCover(staffQualIdByName(msPerson), s.needQid)){
+    toast('Your qualification cannot cover this shift.');
     return;
   }
   if(!S.shiftApps) S.shiftApps=[];
@@ -3611,17 +3637,16 @@ function baseSick(rosterId, shiftId, personName, leaveType){
   var cands=[];
   (S.base.staff||[]).forEach(function(s){
     if(!s.name||working[s.name]||s.name===personName) return;
-    var r=qualRank(s.qual);
-    if(r>sickRank) return;
-    cands.push({name:s.name, qual:s.qual, rank:r});
+    if(!qualCanCover(s.qual, sickQ)) return;
+    cands.push({name:s.name, qual:s.qual, rank:qualRank(s.qual)});
   });
   R.crews.forEach(function(c){
     (c.members||[]).forEach(function(nm){
       if(working[nm]||nm===personName) return;
       if(cands.some(function(x){ return x.name===nm; })) return;
-      var q=staffQualIdByName(nm), r=qualRank(q);
-      if(r>sickRank) return;
-      cands.push({name:nm, qual:q, rank:r});
+      var q=staffQualIdByName(nm);
+      if(!qualCanCover(q, sickQ)) return;
+      cands.push({name:nm, qual:q, rank:qualRank(q)});
     });
   });
   cands.sort(function(a,b){
@@ -3632,16 +3657,16 @@ function baseSick(rosterId, shiftId, personName, leaveType){
   var qn=qualName(sickQ);
   var h='<div class="card" style="border:2px solid var(--accent);">'
     +'<h3>Cover for '+escapeHtml(personName)+(qn?' ('+escapeHtml(qn)+')':'')+'</h3>'
-    +'<p class="sub">'+escapeHtml(leaveType||'Leave')+' — same qualification first, then higher. Lower qualifications are not shown.</p>'
+    +'<p class="sub">'+escapeHtml(leaveType||'Leave')+' — only qualifications that can cover '+(qn?escapeHtml(qn):'this')+' are shown (set on the Qualification Ladder).</p>'
     +'<div class="avail" style="border-style:dashed;" onclick="basePickCover(\''+rosterId+'\',\''+shiftId+'\',\''+escapeHtml(personName).replace(/'/g,"\\'")+'\',\''+OPEN_MARK+'\',\''+escapeHtml(leaveType||'Leave')+'\')">'
     +'<span><span class="nm">Leave as open shift</span> <span class="meta">fill later</span></span>'
     +'<button class="pick" style="background:var(--accent);">Open</button></div>';
   if(!cands.length){
-    h+='<p class="fine">No suitable cover available — everyone is working or lower-qualified.</p>';
+    h+='<p class="fine">No suitable cover available — everyone is working or cannot cover this qualification.</p>';
   }else{
     cands.forEach(function(cnd){
       var q=qualName(cnd.qual);
-      var tag=cnd.rank===sickRank?'Same':'Higher';
+      var tag=cnd.rank===sickRank?'Same':(cnd.rank<sickRank?'Higher':'Lower');
       h+='<div class="avail" onclick="basePickCover(\''+rosterId+'\',\''+shiftId+'\',\''+escapeHtml(personName).replace(/'/g,"\\'")+'\',\''+escapeHtml(cnd.name).replace(/'/g,"\\'")+'\',\''+escapeHtml(leaveType||'Leave')+'\')">'
         +'<span><span class="nm">'+escapeHtml(cnd.name)+'</span> '
         +'<span class="meta">'+(q?escapeHtml(q)+' · ':'')+tag+'</span></span>'
@@ -3699,13 +3724,13 @@ function baseFillOpen(rosterId, shiftId){
   if(!u) return;
   var R=u.roster, dateISO=S.baseDateISO;
   /* find the qual of the person who was originally here (from leave log) */
-  var sickRank=999, qn='';
+  var sickQid='', qn='';
   if(R.leaveLog){
     for(var li=R.leaveLog.length-1; li>=0; li--){
       var lg=R.leaveLog[li];
       if(lg.date===dateISO&&lg.shift===shiftId&&lg.cover==='OPEN'){
-        sickRank=qualRank(staffQualIdByName(lg.person));
-        qn=qualName(staffQualIdByName(lg.person));
+        sickQid=staffQualIdByName(lg.person);
+        qn=qualName(sickQid);
         break;
       }
     }
@@ -3728,9 +3753,9 @@ function baseFillOpen(rosterId, shiftId){
   var cands=[];
   (S.base.staff||[]).forEach(function(s){
     if(!s.name||working[s.name]) return;
-    var r=qualRank(s.qual);
-    if(r>sickRank) return;
-    cands.push({name:s.name, qual:s.qual, rank:r});
+    /* no leave-log qual (slot opened manually) -> show everyone; else only those who can cover */
+    if(sickQid&&!qualCanCover(s.qual, sickQid)) return;
+    cands.push({name:s.name, qual:s.qual, rank:qualRank(s.qual)});
   });
   cands.sort(function(a,b){
     if(a.rank!==b.rank) return a.rank-b.rank;
@@ -3738,7 +3763,7 @@ function baseFillOpen(rosterId, shiftId){
   });
   var panel=document.getElementById('baseCoverPanel');
   var h='<div class="card" style="border:2px solid var(--accent);">'
-    +'<h3>Fill open shift'+(qn?' ('+escapeHtml(qn)+' or higher)':'')+'</h3>'
+    +'<h3>Fill open shift'+(qn?' ('+escapeHtml(qn)+')':'')+'</h3>'
     +'<p class="sub">Who can take this shift?</p>';
   if(!cands.length){
     h+='<p class="fine">No one available right now.</p>';
@@ -4219,23 +4244,67 @@ function renderBaseSetup(){
   renderBsVehicles(); renderBsCrews(); renderCustomList();
 }
 /* ---------- qualifications (managed on the Staff tab) ---------- */
+/* Qualification Ladder: Cards view (edit who each qual can cover) + Grid view (quick check).
+   Same qual always covers itself. Manager has full control — can tick anything. */
+var ladderView='cards';
+function ladderSetView(v){ ladderView=v; renderStaffQuals(); }
+function ladderToggleCover(qi, oj){
+  var qs=baseQuals(), q=qs[qi], target=qs[oj];
+  if(!q||!target||qi===oj) return;
+  if(!Array.isArray(q.canCover)) q.canCover=[];
+  var ix=q.canCover.indexOf(target.id);
+  if(ix>=0) q.canCover.splice(ix,1); else q.canCover.push(target.id);
+  persistBase(); renderStaffQuals();
+}
 function renderStaffQuals(){
-  var wrap=document.getElementById('staffQuals'); if(!wrap) return; wrap.innerHTML='';
+  var wrap=document.getElementById('staffQuals'); if(!wrap) return;
   var qs=baseQuals();
-  if(qs.length) wrap.innerHTML='<p class="fine" style="margin:0 0 6px;">Top = highest qualification. Use ↑ ↓ to order.</p>';
-  else wrap.innerHTML='<p class="fine">None yet &mdash; add the ones your industry uses.</p>';
+  var h='<div class="seg" style="display:flex;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:10px;">'
+    +'<button onclick="ladderSetView(\'cards\')" style="flex:1;border:none;background:'+(ladderView==='cards'?'var(--accent)':'transparent')+';color:'+(ladderView==='cards'?'#fff':'var(--muted)')+';border-radius:9px;padding:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Cards</button>'
+    +'<button onclick="ladderSetView(\'grid\')" style="flex:1;border:none;background:'+(ladderView==='grid'?'var(--accent)':'transparent')+';color:'+(ladderView==='grid'?'#fff':'var(--muted)')+';border-radius:9px;padding:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Grid</button>'
+    +'</div>';
+  if(!qs.length){ wrap.innerHTML=h+'<p class="fine">None yet &mdash; add the ones your industry uses.</p>'; return; }
+  if(ladderView==='grid'){
+    /* Grid: rows = who covers, columns = shift that needs covering. Read-only. */
+    h+='<p class="fine" style="margin:0 0 6px;">Rows = who covers. Columns = the shift that needs covering.</p>';
+    h+='<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;text-align:center;">';
+    h+='<tr><th style="border:1px solid var(--line);padding:7px 4px;background:var(--card2);text-align:left;">Cover \u2193 / Shift \u2192</th>'
+      +qs.map(function(q){ return '<th style="border:1px solid var(--line);padding:7px 4px;background:#111;color:#fff;">'+escapeHtml(q.name||'?')+'</th>'; }).join('')+'</tr>';
+    qs.forEach(function(row){
+      h+='<tr><td style="border:1px solid var(--line);padding:7px 4px;font-weight:700;text-align:left;background:var(--card2);">'+escapeHtml(row.name||'?')+'</td>'
+        +qs.map(function(col){
+          var ok=qualCanCover(row.id, col.id);
+          return '<td style="border:1px solid var(--line);padding:7px 4px;font-weight:800;font-size:15px;color:'+(ok?'#2E9E4F':'#CC0000')+';">'+(ok?'\u2713':'\u2715')+'</td>';
+        }).join('')+'</tr>';
+    });
+    h+='</table></div>';
+    h+='<p class="fine" style="margin-top:8px;"><span style="color:#2E9E4F;font-weight:800;">\u2713 Can cover</span> &nbsp; <span style="color:#CC0000;font-weight:800;">\u2715 Cannot cover</span> &nbsp; Flip to Cards to change the ticks.</p>';
+    wrap.innerHTML=h;
+    return;
+  }
+  /* Cards view */
+  h+='<p class="fine" style="margin:0 0 6px;">Tick who each qualification can cover. Tick nothing and it covers only its own kind. Use \u2191 \u2193 to reorder.</p>';
   qs.forEach(function(q,qi){
-    var row=document.createElement('div'); row.className='srow';
-    var up=document.createElement('button'); up.className='qmv'; up.textContent='↑'; up.title='Move up (higher)';
-    up.disabled=(qi===0); up.onclick=function(){ qualMove(qi,-1); };
-    var dn=document.createElement('button'); dn.className='qmv'; dn.textContent='↓'; dn.title='Move down (lower)';
-    dn.disabled=(qi===qs.length-1); dn.onclick=function(){ qualMove(qi,1); };
-    var inp=document.createElement('input'); inp.type='text'; inp.maxLength=24; inp.value=q.name; inp.placeholder='e.g. BLS';
-    inp.oninput=function(){ q.name=this.value; persistBase(); };
-    var rm=document.createElement('button'); rm.className='rm'; rm.textContent='\u2715'; rm.title='Remove';
-    rm.onclick=function(){ qualDel(qi); };
-    row.appendChild(up); row.appendChild(dn); row.appendChild(inp); row.appendChild(rm); wrap.appendChild(row);
+    h+='<div style="border:2px solid var(--line);border-radius:14px;padding:11px 12px;margin-bottom:10px;">'
+      +'<div style="display:flex;align-items:center;gap:8px;">'
+      +'<button class="qmv" '+(qi===0?'disabled':'')+' onclick="qualMove('+qi+',-1)" title="Move up">\u2191</button>'
+      +'<button class="qmv" '+(qi===qs.length-1?'disabled':'')+' onclick="qualMove('+qi+',1)" title="Move down">\u2193</button>'
+      +'<input type="text" maxlength="24" value="'+escapeHtml(q.name)+'" placeholder="e.g. BLS" style="flex:1;" oninput="baseQuals()['+qi+'].name=this.value;persistBase();">'
+      +'<span style="font-size:11px;background:#111;color:#fff;border-radius:20px;padding:3px 9px;white-space:nowrap;">Rank '+(qi+1)+'</span>'
+      +'<button class="rm" onclick="qualDel('+qi+')" title="Remove">\u2715</button>'
+      +'</div>'
+      +'<div style="margin-top:9px;font-size:12px;color:var(--muted);font-weight:700;">Can cover:</div>';
+    qs.forEach(function(o,oj){
+      if(oj===qi) return;
+      var on=Array.isArray(q.canCover)&&q.canCover.indexOf(o.id)>=0;
+      h+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:14px;cursor:pointer;" onclick="ladderToggleCover('+qi+','+oj+')">'
+        +'<span style="width:22px;height:22px;border-radius:6px;border:2px solid '+(on?'#2E9E4F':'var(--line)')+';background:'+(on?'#2E9E4F':'transparent')+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0;">'+(on?'\u2713':'')+'</span>'
+        +escapeHtml(o.name||'?')+'</div>';
+    });
+    h+='<div style="margin-top:7px;font-size:12px;color:#2E9E4F;font-weight:700;">\u2713 Always covers its own kind'+(q.name?' ('+escapeHtml(q.name)+')':'')+'</div>';
+    h+='</div>';
   });
+  wrap.innerHTML=h;
 }
 function qualMove(qi,dir){
   var qs=baseQuals(), j=qi+dir;
@@ -4244,7 +4313,7 @@ function qualMove(qi,dir){
   persistBase(); renderStaffQuals();
 }
 function qualAdd(){
-  baseQuals().push({id:'q'+Date.now()+''+Math.floor(Math.random()*1e6), name:''});
+  baseQuals().push({id:'q'+Date.now()+''+Math.floor(Math.random()*1e6), name:'', canCover:[]});
   persistBase(); renderStaffQuals();
   var inputs=document.querySelectorAll('#staffQuals input'); if(inputs.length) inputs[inputs.length-1].focus();
 }
@@ -4252,7 +4321,12 @@ function qualDel(qi){
   var q=baseQuals()[qi]; if(!q) return;
   var used=(S.base.staff||[]).filter(function(s){ return s.qual===q.id; }).length;
   if(used){ toast('Still used by '+used+' staff member'+(used>1?'s':'')+' \u2014 change them first'); return; }
-  baseQuals().splice(qi,1); persistBase(); renderStaffQuals(); renderStaffTab();
+  baseQuals().splice(qi,1);
+  /* remove the deleted qual from everyone else's cover list */
+  baseQuals().forEach(function(x){
+    if(Array.isArray(x.canCover)) x.canCover=x.canCover.filter(function(id){ return id!==q.id; });
+  });
+  persistBase(); renderStaffQuals(); renderStaffTab();
 }
 
 /* ---------- staff tab: people, qualifications, and putting people into crews ---------- */
