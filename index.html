@@ -873,7 +873,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1205';
+var BUILD='20261015-1240';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2005,14 +2005,15 @@ function renderCalMonth(ctx){
         if(!ps.list.length) return;
         var dateISO=info.date?isoDate(info.date):null;
         var crews=ps.list.map(function(x){ return escapeHtml(x.c.name); }).join(' / ');
-        var memNames=[];
+        var memHtml=[];
         ps.list.forEach(function(x){
+          var orig=x.c.members||[];
           effShiftMembers(R, dateISO, ps.sl.id, x.c).forEach(function(nm){
-            nm=dispMember(nm);
-            if(memNames.indexOf(nm)<0) memNames.push(nm);
+            var mh=rosterMemberHtml(nm, orig);
+            if(memHtml.indexOf(mh)<0) memHtml.push(mh);
           });
         });
-        var memLine=memNames.length?'<span class="bm">'+memNames.map(escapeHtml).join(', ')+'</span>':'';
+        var memLine=memHtml.length?'<span class="bm">'+memHtml.join(', ')+'</span>':'';
         var band=(ps.list[0]&&ps.list[0].c.color)||'#888888';
         inner+='<span class="band" style="background:'+band+';color:'+textOnBand(band)+'">'+
           '<span class="bs">'+escapeHtml(shiftBandShort(ps.sl.name))+'</span>'+
@@ -2026,6 +2027,13 @@ function renderCalMonth(ctx){
   }
   for(var t=lead+dim;t<weeks*7;t++) html+='<div class="cell out"></div>';
   grid.innerHTML=html;
+  /* Leave list at the bottom of the roster */
+  var lvWrap=document.getElementById('calLeaveWrap');
+  if(!lvWrap){
+    lvWrap=document.createElement('div'); lvWrap.id='calLeaveWrap';
+    grid.parentNode.appendChild(lvWrap);
+  }
+  lvWrap.innerHTML=rosterLeaveHtml(collectLeaveEntries(R,y,m,null));
   var cells=grid.querySelectorAll('.cell[data-d]');
   for(var i=0;i<cells.length;i++){
     (function(el){
@@ -2185,7 +2193,7 @@ function renderCalAgenda(ctx){
         if(!on.length) return '';
         var bit=on.map(function(x){
           var mems=effShiftMembers(R, dateISO, sl.id, x.c);
-          var nm=mems.length?' \u2014 '+mems.map(function(n){ return escapeHtml(dispMember(n)); }).join(', '):'';
+          var nm=mems.length?' \u2014 '+mems.map(function(n){ return rosterMemberHtml(n, x.c.members||[]); }).join(', '):'';
           return '<span class="cdot" style="background:'+x.c.color+'"></span> <b>Crew '+escapeHtml(x.c.name)+'</b>'+nm;
         }).join(' \u00b7 ');
         return '<div><b>'+escapeHtml(sl.name||sl.id)+':</b> '+bit+'</div>';
@@ -2405,7 +2413,7 @@ function renderDaySheet(){
         '<span class="c">· Crew '+ps.list.map(function(x){ return escapeHtml(x.c.name); }).join(', ')+'</span></div>';
       ps.list.forEach(function(x){
         var mems=effShiftMembers(R, dayCtx.dateISO, ps.sl.id, x.c);
-        html+='<div>'+mems.map(function(nm){ return '<span class="mchip">'+escapeHtml(dispMember(nm))+'</span>'; }).join('')+'</div>';
+        html+='<div>'+mems.map(function(nm){ return '<span class="mchip">'+rosterMemberHtml(nm, x.c.members||[])+'</span>'; }).join('')+'</div>';
       });
       html+='</div>';
     });
@@ -2719,7 +2727,8 @@ function msMonthData(y,m){
             date:dateISO, d:d, dt:new Date(y,m,d),
             shift:ps.sl.name, time:tm,
             crew:x.c.name, color:x.c.color||'#999',
-            team:u.name, members:mems.slice()
+            team:u.name, members:mems.slice(),
+            original:(x.c.members||[]).slice()
           });
         });
       });
@@ -2754,13 +2763,14 @@ function msRenderCal(){
     var inner='<div class="dnum">'+d+'</div>';
     dayShifts.forEach(function(s){
       var band=s.color||'#888888';
-      var mems=s.members.map(function(nm){ return escapeHtml(dispMember(nm)); }).join(', ');
+      var mems=s.members.map(function(nm){ return rosterMemberHtml(nm, s.original||[]); }).join(', ');
       /* in "me" mode highlight the employee's own name */
       if(msScope==='me'){
         inner+='<span class="band" style="background:'+band+';color:'+textOnBand(band)+'">'
           +'<span class="bs">'+escapeHtml(shiftBandShort(s.shift))+'</span>'
           +'<span class="bc">'+escapeHtml(s.crew)+'</span>'
           +(s.time?'<span class="bm">'+escapeHtml(s.time)+'</span>':'')
+          +(mems?'<span class="bm">'+mems+'</span>':'')
           +'</span>';
       }else{
         inner+='<span class="band" style="background:'+band+';color:'+textOnBand(band)+'">'
@@ -2775,6 +2785,20 @@ function msRenderCal(){
   var trail=(lead+dim)%7;
   if(trail) for(var t=trail;t<7;t++) h+='<div class="cell out"></div>';
   h+='</div>';
+  /* Leave list at the bottom of the roster — aggregated across rosters for this month */
+  (function(){
+    var leaveAll=[], seen={};
+    (S.rosters||[]).forEach(function(u){
+      var RR=u.roster;
+      if(!RR||RR.kind!=='month'||RR.year!==msYear||RR.month!==msMonth) return;
+      collectLeaveEntries(RR,msYear,msMonth, msScope==='me'?msPerson:null).forEach(function(e){
+        var k=e.date+'|'+e.person;
+        if(!seen[k]){ seen[k]=1; leaveAll.push(e); }
+      });
+    });
+    leaveAll.sort(function(a,b){ return a.date<b.date?-1:a.date>b.date?1:0; });
+    h+=rosterLeaveHtml(leaveAll);
+  })();
   if(!myData.length) h+='<p class="fine" style="margin-top:8px;text-align:center;">No shifts this month.</p>';
   h+='<div id="msDayDetail" style="margin-top:10px;"></div>';
   wrap.innerHTML=h;
@@ -2793,7 +2817,7 @@ function msDayTap(d){
       +'<span class="c">'+escapeHtml(s.team)+'</span></div>'
       +(s.time?'<div style="color:var(--muted);font-size:13px;">'+escapeHtml(s.time)+'</div>':'')
       +'<div style="color:var(--muted);font-size:13px;">Crew '+escapeHtml(s.crew)+'</div>'
-      +'<div style="margin-top:4px;font-size:13px;">'+s.members.map(escapeHtml).join(', ')+'</div>'
+      +'<div style="margin-top:4px;font-size:13px;">'+s.members.map(function(nm){ return rosterMemberHtml(nm, s.original||[]); }).join(', ')+'</div>'
       +'</div>';
   });
   h+='</div>';
@@ -2821,7 +2845,7 @@ function msRenderList(){
       +'<span class="c">'+escapeHtml(s.team)+'</span></div>'
       +(s.time?'<div style="color:var(--muted);font-size:13px;">'+escapeHtml(s.time)+'</div>':'')
       +'<div style="color:var(--muted);font-size:13px;">Crew '+escapeHtml(s.crew)+'</div>'
-      +(msScope==='base'?'<div style="margin-top:4px;font-size:13px;">'+s.members.map(escapeHtml).join(', ')+'</div>':'')
+      +(msScope==='base'?'<div style="margin-top:4px;font-size:13px;">'+s.members.map(function(nm){ return rosterMemberHtml(nm, s.original||[]); }).join(', ')+'</div>':'')
       +'</div>';
   });
   if(!data.length) h+='<p class="fine">No shifts this month.</p>';
@@ -4385,6 +4409,51 @@ function dispMemberQual(nm){
   var qn=(baseQuals().find(function(q){return q.id===qid;})||{}).name||'';
   return qn?nm+' ('+qn+')':nm;
 }
+/* Roster display markers (in-app views + exports):
+   Open shifts in red bold; replacement/cover names get a yellow highlight.
+   original = the crew's rostered member names before overrides — a name in the
+   effective list that is NOT in original is a replacement. */
+function rosterMemberHtml(nm, original){
+  if(nm===OPEN_MARK) return '<span style="color:#CC0000;font-weight:800;">Open</span>';
+  var label=escapeHtml(nm);
+  if(original&&original.indexOf(nm)<0){
+    return '<span style="background:#FFF176;color:#000;padding:0 3px;border-radius:3px;font-weight:700;">'+label+'</span>';
+  }
+  return label;
+}
+/* Leave entries for a roster + month (excluding swaps). personFilter limits to one person
+   (Personal exports / My Shifts). Shared by expData and the in-app roster leave lists. */
+function collectLeaveEntries(R,y,m,personFilter){
+  var entries=[];
+  (R.leaveLog||[]).forEach(function(lg){
+    if(!lg||lg.type==='Swap') return;
+    var parts=String(lg.date||'').split('-');
+    if(parts.length!==3) return;
+    var ly=+parts[0], lm=+parts[1]-1, ld=+parts[2];
+    if(ly!==y||lm!==m) return;
+    if(personFilter&&lg.person!==personFilter) return;
+    var isOpen=lg.cover==='OPEN'||!lg.cover;
+    entries.push({date:lg.date, d:ld,
+      dateLabel:expWeekdayShort(y,m,ld)+' '+ld+' '+MNS[m],
+      person:lg.person, personQual:dispMemberQual(lg.person),
+      type:lg.type||'Leave', isOpen:isOpen,
+      cover:lg.cover,
+      coverQual:(lg.cover&&lg.cover!=='OPEN')?dispMemberQual(lg.cover):null});
+  });
+  entries.sort(function(a,b){ return a.date<b.date?-1:a.date>b.date?1:0; });
+  return entries;
+}
+/* Leave list HTML for the bottom of a roster view (same content as the export Leave section). */
+function rosterLeaveHtml(entries){
+  if(!entries||!entries.length) return '';
+  var h='<div style="margin-top:16px;"><div style="font-size:15px;font-weight:800;margin-bottom:6px;">Leave</div>';
+  entries.forEach(function(lv){
+    var col=lv.isOpen?'#CC0000':'#B8860B';
+    h+='<div style="font-size:14px;color:'+col+';margin-bottom:2px;">'
+      +escapeHtml(lv.dateLabel+' — '+lv.personQual+', '+lv.type+', '+(lv.isOpen?'OPEN':'replaced by '+lv.coverQual))+'</div>';
+  });
+  return h+'</div>';
+}
 function isoDate(d){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
@@ -4977,25 +5046,8 @@ function expData(){
       : shifts.map(function(s){ return shiftBandShort(s.band)+' '+slotTime(stT,s.id); }).join(' \u00b7 '));
   }catch(e){ sub=rot.name+' rotation'; }
   var slug=(vname+'-'+MN[m]+'-'+y).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
-  /* Leave entries for this month (excluding swaps) — for the Leave section at the bottom.
-     Personal exports show only that person's own leave. */
-  var leaveEntries=[];
-  (R.leaveLog||[]).forEach(function(lg){
-    if(!lg||lg.type==='Swap') return;
-    var parts=String(lg.date||'').split('-');
-    if(parts.length!==3) return;
-    var ly=+parts[0], lm=+parts[1]-1, ld=+parts[2];
-    if(ly!==y||lm!==m) return;
-    if(expPerson&&lg.person!==expPerson) return;
-    var isOpen=lg.cover==='OPEN'||!lg.cover;
-    leaveEntries.push({date:lg.date, d:ld,
-      dateLabel:expWeekdayShort(y,m,ld)+' '+ld+' '+MNS[m],
-      person:lg.person, personQual:dispMemberQual(lg.person),
-      type:lg.type||'Leave', isOpen:isOpen,
-      cover:lg.cover,
-      coverQual:(lg.cover&&lg.cover!=='OPEN')?dispMemberQual(lg.cover):null});
-  });
-  leaveEntries.sort(function(a,b){ return a.date<b.date?-1:a.date>b.date?1:0; });
+  /* Leave entries for this month — for the Leave section at the bottom. */
+  var leaveEntries=collectLeaveEntries(R,y,m,expPerson||null);
   return {y:y, m:m, dim:dim, title:title, sub:sub, expPerson:expPerson, expColor:expColor, leave:leaveEntries,
     subXlsx:sub.replace(/ rotation/,''),
     footer:'Generated with SignalFox Shift · build '+BUILD,
