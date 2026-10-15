@@ -888,7 +888,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1445';
+var BUILD='20261015-1455';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -4499,6 +4499,8 @@ function staffSaveName(sid, oldName, newName){
   persistBase(); renderStaffTab();
 }
 function renderStaffTab(){
+  reconcilePartners();
+  renderBsVehicles(); /* headcounts may have shifted if partners were reconciled */
   var wrap=document.getElementById('staffList'); wrap.innerHTML='';
   document.getElementById('staffCount').textContent=S.base.staff.length+' people';
   if(!S.base.staff.length) wrap.innerHTML='<p class="fine">Nobody here yet &mdash; add your people below.</p>';
@@ -4617,13 +4619,33 @@ function setPartner(staffId, partnerId){
     }
   }
   /* partners always work together: put them in the same crew.
-     The picker's crew wins; if the picker has no crew, the partner's crew wins. */
+     The HIGHEST crew wins (earliest in the crew list — A beats D).
+     If only one of them has a crew, that crew wins. */
   if(partnerId){
     var aCrew=staffCrewOf(staffId), bCrew=staffCrewOf(partnerId);
-    if(aCrew&&(!bCrew||bCrew.id!==aCrew.id)) assignStaffToCrew(partnerId, aCrew.id);
+    if(aCrew&&bCrew&&aCrew.id!==bCrew.id){
+      var ai=(S.base.crews||[]).indexOf(aCrew), bi=(S.base.crews||[]).indexOf(bCrew);
+      if(ai<=bi) assignStaffToCrew(partnerId, aCrew.id);
+      else assignStaffToCrew(staffId, bCrew.id);
+    }
+    else if(aCrew&&!bCrew) assignStaffToCrew(partnerId, aCrew.id);
     else if(!aCrew&&bCrew) assignStaffToCrew(staffId, bCrew.id);
   }
-  persistBase(); renderStaffTab();
+  persistBase(); renderBsVehicles(); renderStaffTab();
+}
+/* Fix any partner pair left in different crews (e.g. paired before the auto-move
+   existed): move them to the highest crew. Only touches pairs where BOTH have
+   crews — a lone unassigned partner is left alone (manager may be mid-flow). */
+function reconcilePartners(){
+  (S.base.staff||[]).forEach(function(s){
+    var p=staffPartnerOf(s.id); if(!p) return;
+    var aCrew=staffCrewOf(s.id), bCrew=staffCrewOf(p.id);
+    if(aCrew&&bCrew&&aCrew.id!==bCrew.id){
+      var ai=(S.base.crews||[]).indexOf(aCrew), bi=(S.base.crews||[]).indexOf(bCrew);
+      if(ai<=bi) assignStaffToCrew(p.id, aCrew.id);
+      else assignStaffToCrew(s.id, bCrew.id);
+    }
+  });
 }
 function staffAdd(){
   S.base.staff.push({id:'s'+Date.now(), name:''}); persistBase(); renderStaffTab();
