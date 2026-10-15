@@ -556,10 +556,16 @@
       <input type="text" id="bsName" maxlength="40" oninput="S.base.name=this.value;persistBase();">
     </div>
     <div class="card">
-      <h3>Teams</h3>
-      <p class="sub">Each team runs its own rotation &mdash; 12-hour, 24-hour, whatever the workplace needs.</p>
-      <div id="bsVehicles"></div>
-      <button class="addperson" onclick="bsAddVehicle()">+ Add team</button>
+      <h3>Shifts</h3>
+      <p class="fine" style="margin:-4px 0 8px">Your shifts &mdash; name each one and set its hours. Add as many as the day needs. For a 24-hour shift, set start and end to the same time.</p>
+      <div id="shiftList"></div>
+      <button class="addperson" id="shiftAddBtn" type="button">+ Add shift</button>
+      <button class="btn" style="margin-top:10px;" onclick="openShiftReq()">Shift requirements</button>
+    </div>
+    <div class="card">
+      <h3>Qualifications</h3>
+      <p class="sub">The skill levels your industry uses &mdash; BLS, ILS, ALS, or chef, waiter, barista, whatever. Set them up and tick who each one can cover.</p>
+      <button class="btn" onclick="openLadder()">Qualifications</button>
     </div>
     <div class="card">
       <h3>Staff <span class="countchip" id="staffCount"></span></h3>
@@ -568,21 +574,15 @@
       <button class="addperson" onclick="staffAdd()">+ Add staff member</button>
     </div>
     <div class="card">
-      <h3>Qualifications</h3>
-      <p class="sub">The skill levels your industry uses &mdash; BLS, ILS, ALS, or chef, waiter, barista, whatever. Set them up and tick who each one can cover.</p>
-      <button class="btn" onclick="openLadder()">Qualifications</button>
+      <h3>Teams</h3>
+      <p class="sub">Each team runs its own rotation &mdash; 12-hour, 24-hour, whatever the workplace needs.</p>
+      <div id="bsVehicles"></div>
+      <button class="addperson" onclick="bsAddVehicle()">+ Add team</button>
     </div>
     <div class="card">
       <h3>Crews</h3>
       <p class="sub">The crews on each team &mdash; name them and set their colors.</p>
       <div id="bsCrews"></div>
-    </div>
-    <div class="card">
-      <h3>Shifts</h3>
-      <p class="fine" style="margin:-4px 0 8px">Your shifts &mdash; name each one and set its hours. Add as many as the day needs. For a 24-hour shift, set start and end to the same time.</p>
-      <div id="shiftList"></div>
-      <button class="addperson" id="shiftAddBtn" type="button">+ Add shift</button>
-      <button class="btn" style="margin-top:10px;" onclick="openShiftReq()">Shift requirements</button>
     </div>
     <div class="card">
       <h3>Rotations</h3>
@@ -893,7 +893,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1425';
+var BUILD='20261015-1435';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -4580,9 +4580,56 @@ function renderStaffTab(){
     empNo.style.flex='1'; empNo.style.minWidth='0';
     empNo.oninput=function(){ s.empNo=this.value.trim(); persistBase(); };
     meta.appendChild(empNo);
+    var psel=document.createElement('select'); psel.className='tsel'; psel.title='Partner — always works with this person';
+    psel.setAttribute('aria-label','Partner for '+(s.name||'staff member'));
+    psel.style.flex='1'; psel.style.minWidth='0';
+    var p0=document.createElement('option'); p0.value=''; p0.textContent='Partner \u2014'; psel.appendChild(p0);
+    (S.base.staff||[]).forEach(function(o){
+      if(o.id===s.id) return;
+      var oo=document.createElement('option'); oo.value=o.id; oo.textContent=o.name||'(unnamed)'; psel.appendChild(oo);
+    });
+    psel.value=s.partnerId||'';
+    psel.onchange=function(){ setPartner(s.id, this.value); };
+    meta.appendChild(psel);
     row.appendChild(meta);
+    /* partners should work together: flag it if they sit in different crews */
+    var _partner=staffPartnerOf(s.id);
+    if(_partner){
+      var _myCrew=staffCrewOf(s.id), _pCrew=staffCrewOf(_partner.id);
+      if(_myCrew&&_pCrew&&_myCrew.id!==_pCrew.id){
+        var _note=document.createElement('div'); _note.className='fine';
+        _note.style.cssText='margin:2px 0 0;color:var(--orange);font-weight:700;';
+        _note.textContent='\u26a0 Partner '+_partner.name+' is in a different crew';
+        row.appendChild(_note);
+      }
+    }
     wrap.appendChild(row);
   });
+}
+/* Partners: two people linked so they always work together. Pairing is mutual —
+   setting A's partner to B also sets B's partner to A, and re-pairing clears the
+   old links. A person has at most one partner. */
+function staffPartnerOf(sid){
+  var s=(S.base.staff||[]).find(function(x){ return x.id===sid; });
+  if(!s||!s.partnerId) return null;
+  return (S.base.staff||[]).find(function(x){ return x.id===s.partnerId; })||null;
+}
+function setPartner(staffId, partnerId){
+  var staff=S.base.staff||[];
+  var s=staff.find(function(x){ return x.id===staffId; }); if(!s) return;
+  if(partnerId===staffId) partnerId='';
+  var old=staff.find(function(x){ return x.id===s.partnerId; });
+  if(old&&old.partnerId===staffId) old.partnerId='';
+  s.partnerId='';
+  if(partnerId){
+    var p=staff.find(function(x){ return x.id===partnerId; });
+    if(p){
+      var po=staff.find(function(x){ return x.id===p.partnerId; });
+      if(po&&po.partnerId===partnerId) po.partnerId='';
+      p.partnerId=staffId; s.partnerId=partnerId;
+    }
+  }
+  persistBase(); renderStaffTab();
 }
 function staffAdd(){
   S.base.staff.push({id:'s'+Date.now(), name:''}); persistBase(); renderStaffTab();
@@ -4591,6 +4638,7 @@ function staffAdd(){
 function staffDel(si){
   var sid=S.base.staff[si].id;
   S.base.crews.forEach(function(c){ c.memberIds=(c.memberIds||[]).filter(function(id){ return id!==sid; }); });
+  S.base.staff.forEach(function(x){ if(x.partnerId===sid) x.partnerId=''; });
   S.base.staff.splice(si,1); persistBase(); renderStaffTab();
 }
 
