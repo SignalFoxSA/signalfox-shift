@@ -575,6 +575,15 @@
     </div>
   </div>
 
+  <!-- SHIFT REQUIREMENTS (own screen — only reachable from the Settings Shifts button) -->
+  <div class="view" id="v-shiftreq">
+    <div class="card">
+      <h3>Shift requirements</h3>
+      <p class="sub">What each shift needs to be properly staffed. Set how many of each qualification a shift needs &mdash; a minimum, or an exact number. The On Duty tab shows what&rsquo;s short.</p>
+      <div id="shiftReqList"></div>
+    </div>
+  </div>
+
   <!-- SETTINGS -->
   <div class="view" id="v-settings">
     <div class="card" style="border:2px solid var(--accent);">
@@ -610,6 +619,7 @@
       <p class="fine" style="margin:-4px 0 8px">Your shifts — name each one and set its hours. Add as many as the day needs. For a 24-hour shift, set start and end to the same time.</p>
       <div id="shiftList"></div>
       <button class="addperson" id="shiftAddBtn" type="button">+ Add shift</button>
+      <button class="btn" style="margin-top:10px;" onclick="openShiftReq()">Shift requirements</button>
     </div>
     <div class="card">
       <h3>Data</h3>
@@ -885,7 +895,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1355';
+var BUILD='20261015-1410';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -3318,6 +3328,7 @@ function renderBase(){
       var dateISO=S.baseDateISO;
       var buckets=slots.map(function(){ return []; });
       var shiftCounts=slots.map(function(){ return 0; });
+      var slotMems=slots.map(function(){ return []; });
       R.crews.forEach(function(c,ci){
         var st=cellState(R,dayIdx,ci);
         if(st==='OFF') return;
@@ -3340,7 +3351,7 @@ function renderBase(){
           if(st===sl.id){
             buckets[k].push(line);
             /* count real members (not open slots) for understaffed check */
-            mems.forEach(function(nm){ if(nm!==OPEN_MARK) shiftCounts[k]++; });
+            mems.forEach(function(nm){ if(nm!==OPEN_MARK){ shiftCounts[k]++; slotMems[k].push(nm); } });
           }
         });
       });
@@ -3348,6 +3359,7 @@ function renderBase(){
         var srow=document.createElement('div'); srow.className='urow';
         var tm=(sl.start&&sl.end)?'<div style="font-size:11px;color:var(--muted);font-weight:400;">'+escapeHtml(sl.start)+'–'+escapeHtml(sl.end)+'</div>':'';
         var sz=shiftSize(sl.shiftId||sl.id);
+        var reqHtml=shiftReqStatusHtml(sl, slotMems[k]);
         var warn='';
         if(sz&&shiftCounts[k]<sz){
           warn='<div style="font-size:11px;color:#FFC13E;font-weight:700;margin-top:2px;">⚠ Short by '+(sz-shiftCounts[k])+' ('+shiftCounts[k]+'/'+sz+')</div>';
@@ -3355,7 +3367,7 @@ function renderBase(){
           srow.style.paddingLeft='8px';
         }
         var addBtn='<div style="margin-top:6px;"><button class="coverbtn" style="font-size:11px;padding:4px 12px;" onclick="event.stopPropagation();baseAddStaff(\''+u.id+'\',\''+sl.id+'\')">+ Add staff</button></div>';
-        srow.innerHTML='<span class="ulab"><b>'+escapeHtml(sl.name||sl.id)+'</b>'+tm+'</span><span style="flex:1;">'+(buckets[k].join('')||'<span style="color:var(--muted)">–</span>')+warn+addBtn+'</span>';
+        srow.innerHTML='<span class="ulab"><b>'+escapeHtml(sl.name||sl.id)+'</b>'+tm+'</span><span style="flex:1;">'+(buckets[k].join('')||'<span style="color:var(--muted)">–</span>')+warn+reqHtml+addBtn+'</span>';
         card.appendChild(srow);
       });
     }
@@ -4048,7 +4060,7 @@ function enterApp(){
 /* ---------- navigation ---------- */
 var TAB_VIEWS={home:'v-home', rosters:'v-rosters', onduty:'v-base', staff:'v-staff', settings:'v-settings',
   myshifts:'v-myshifts', openshifts:'v-marketplace', profile:'v-profile', company:'v-company'};
-var BACK_IDS=['v-basesetup','v-newroster','v-anchor','v-cal','v-base','v-rotbuilder','v-ladder'];
+var BACK_IDS=['v-basesetup','v-newroster','v-anchor','v-cal','v-base','v-rotbuilder','v-ladder','v-shiftreq'];
 function show(id){
   document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
   document.getElementById(id).classList.add('active');
@@ -4163,6 +4175,7 @@ function goBack(){
   var active=av&&av.id;
   if(active==='v-rotbuilder'){ openBaseSetup(); return; }
   if(active==='v-ladder'){ switchTab('staff'); return; }
+  if(active==='v-shiftreq'){ switchTab('settings'); return; }
   if(active==='v-anchor'){ show('v-newroster'); return; }
   if(active==='v-cal'){
     var cal=ensureCal();
@@ -4343,6 +4356,95 @@ function qualDel(qi){
     if(Array.isArray(x.canCover)) x.canCover=x.canCover.filter(function(id){ return id!==q.id; });
   });
   persistBase(); renderStaffQuals(); renderStaffTab();
+}
+
+/* ---------- shift requirements: what each shift needs to be properly staffed ----------
+   Data: each workplace shift (S.base.shifts[]) carries reqs:[{qid,count,mode}],
+   mode 'min' (at least count) or 'exact' (exactly count). Only quals with count>0
+   are stored. A member counts toward a requirement if their qualification can
+   cover that requirement (Ladder ticks — qualCanCover). */
+function shiftReqsOf(shift){ return (shift&&Array.isArray(shift.reqs))?shift.reqs:[]; }
+function shiftReqCount(shift,qid){
+  var r=shiftReqsOf(shift).find(function(x){ return x.qid===qid; });
+  return r?r.count:0;
+}
+function shiftReqSet(shift,qid,count,mode){
+  if(!Array.isArray(shift.reqs)) shift.reqs=[];
+  var i=shiftReqsOf(shift).findIndex(function(x){ return x.qid===qid; });
+  if(count<=0){ if(i>=0) shift.reqs.splice(i,1); return; }
+  if(i>=0){ shift.reqs[i].count=count; if(mode) shift.reqs[i].mode=mode; }
+  else shift.reqs.push({qid:qid,count:count,mode:mode||'min'});
+}
+function openShiftReq(){ renderShiftReq(); show('v-shiftreq'); }
+function renderShiftReq(){
+  var wrap=document.getElementById('shiftReqList'); if(!wrap) return;
+  var qs=baseQuals();
+  var h='';
+  wpShifts().forEach(function(s){
+    h+='<div class="card" style="margin:10px 0;">'
+      +'<h4 style="margin:0 0 2px;">'+escapeHtml(s.name||'Shift')+'</h4>';
+    if(!qs.length){
+      h+='<p class="fine">No qualifications yet. Add them under Staff &rarr; Qualifications first.</p>';
+    }
+    qs.forEach(function(q){
+      var r=shiftReqsOf(s).find(function(x){ return x.qid===q.id; });
+      var cnt=r?r.count:0, mode=r?r.mode:'min';
+      h+='<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);">'
+        +'<span style="flex:1;font-size:14px;font-weight:700;">'+escapeHtml(q.name||'?')+'</span>'
+        +(cnt>0
+          ?'<span style="display:flex;background:var(--card2);border:1px solid var(--line);border-radius:20px;padding:2px;">'
+            +'<span onclick="shiftReqSetMode(\''+s.id+'\',\''+q.id+'\',\'min\')" style="padding:5px 10px;border-radius:16px;font-size:12px;font-weight:800;cursor:pointer;background:'+(mode==='min'?'var(--accent)':'transparent')+';color:'+(mode==='min'?'#111':'var(--muted)')+';">Min</span>'
+            +'<span onclick="shiftReqSetMode(\''+s.id+'\',\''+q.id+'\',\'exact\')" style="padding:5px 10px;border-radius:16px;font-size:12px;font-weight:800;cursor:pointer;background:'+(mode==='exact'?'var(--accent)':'transparent')+';color:'+(mode==='exact'?'#111':'var(--muted)')+';">Exact</span>'
+            +'</span>'
+          :'')
+        +'<span style="display:flex;align-items:center;gap:6px;">'
+        +'<button type="button" onclick="shiftReqBump(\''+s.id+'\',\''+q.id+'\',-1)" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:var(--card2);color:var(--text);font-size:16px;font-weight:800;cursor:pointer;line-height:1;">\u2212</button>'
+        +'<b style="font-size:15px;min-width:18px;text-align:center;">'+cnt+'</b>'
+        +'<button type="button" onclick="shiftReqBump(\''+s.id+'\',\''+q.id+'\',1)" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:var(--card2);color:var(--text);font-size:16px;font-weight:800;cursor:pointer;line-height:1;">+</button>'
+        +'</span>'
+        +'</div>';
+    });
+    h+='</div>';
+  });
+  wrap.innerHTML=h;
+}
+function shiftReqBump(shiftId,qid,d){
+  var s=wpShift(shiftId); if(!s) return;
+  shiftReqSet(s,qid,Math.max(0,shiftReqCount(s,qid)+d));
+  persistBase(); renderShiftReq();
+}
+function shiftReqSetMode(shiftId,qid,mode){
+  var s=wpShift(shiftId); if(!s) return;
+  var cur=shiftReqCount(s,qid); if(cur<=0) return;
+  shiftReqSet(s,qid,cur,mode);
+  persistBase(); renderShiftReq();
+}
+/* Requirement status for one On Duty shift slot: needed vs actual per qualification.
+   A member counts toward a requirement if their qualification can cover it
+   (Ladder ticks). Returns '' when the shift has no requirements. */
+function shiftReqStatusHtml(sl, memberNames){
+  var s=wpShift(sl.shiftId||sl.id);
+  var reqs=shiftReqsOf(s);
+  if(!reqs.length) return '';
+  var parts=[], short=[], over=[];
+  reqs.forEach(function(r){
+    var qn=qualName(r.qid)||'?';
+    var have=0;
+    (memberNames||[]).forEach(function(nm){
+      if(qualCanCover(staffQualIdByName(nm), r.qid)) have++;
+    });
+    var met=(r.mode==='exact') ? (have===r.count) : (have>=r.count);
+    parts.push('<span style="color:'+(met?'#B8860B':'#CC0000')+';font-weight:800;">'+(met?'\u2713':'\u2715')+'</span> '+escapeHtml(qn)+' '+have+'/'+r.count);
+    if(!met){
+      if(r.mode==='exact'&&have>r.count) over.push((have-r.count)+'\u00d7 '+qn+' extra');
+      else short.push((r.count-have)+'\u00d7 '+qn);
+    }
+  });
+  var line='';
+  if(short.length) line='<div style="font-size:11px;color:#CC0000;font-weight:700;margin-top:2px;">Short \u2014 needs '+escapeHtml(short.join(', '))+'</div>';
+  else if(over.length) line='<div style="font-size:11px;color:#CC0000;font-weight:700;margin-top:2px;">Over \u2014 '+escapeHtml(over.join(', '))+'</div>';
+  else line='<div style="font-size:11px;color:#B8860B;font-weight:700;margin-top:2px;">Fully staffed</div>';
+  return '<div style="font-size:11px;margin-top:2px;">'+parts.join(' &nbsp; ')+'</div>'+line;
 }
 
 /* ---------- staff tab: people, qualifications, and putting people into crews ---------- */
