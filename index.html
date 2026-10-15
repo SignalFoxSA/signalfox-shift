@@ -490,6 +490,11 @@
   #v-myshifts .seg button{flex:1; border:none; background:transparent; border-radius:9px; padding:10px;
     font-size:14px; font-weight:700; color:var(--muted); cursor:pointer; font-family:inherit;}
   #v-myshifts .seg button.on{background:var(--accent); color:var(--accent-ink);}
+  /* company view segmented controls — same pattern, tighter for 6 tabs */
+  #v-company .seg{display:flex; background:var(--card2); border:1px solid var(--line); border-radius:12px; padding:4px;}
+  #v-company .seg button{flex:1; border:none; background:transparent; border-radius:9px; padding:9px 2px;
+    font-size:12px; font-weight:700; color:var(--muted); cursor:pointer; font-family:inherit; white-space:nowrap;}
+  #v-company .seg button.on{background:var(--accent); color:var(--accent-ink);}
   #expSheet .seg{display:flex; background:#f1f0ed; border-radius:12px; padding:4px; margin-bottom:10px;}
   #expSheet .seg button{flex:1; border:none; background:transparent; border-radius:9px; padding:10px;
     font-size:14px; font-weight:700; color:#6e6e73; cursor:pointer;}
@@ -961,7 +966,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1865';
+var BUILD='20261015-1870';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -3838,7 +3843,7 @@ function renderCompany(){
   var el=document.getElementById('companyContent'); if(!el) return;
   if(c.drill){ el.innerHTML=companyDrillHtml(c.drill); return; }
   var tab=c.tab||'dash';
-  var tabs=[['dash','Dashboard'],['bases','Bases'],['people','People'],['open','Open shifts'],['rules','Rules']];
+  var tabs=[['dash','Dashboard'],['bases','Bases'],['people','People'],['open','Open'],['rules','Rules'],['stats','Stats']];
   var h='<div class="seg" style="margin-bottom:12px;">'+tabs.map(function(t){
     return '<button class="'+(tab===t[0]?'on':'')+'" onclick="companySetTab(\''+t[0]+'\')">'+t[1]+'</button>';
   }).join('')+'</div>';
@@ -3847,6 +3852,7 @@ function renderCompany(){
   else if(tab==='people') h+=companyPeopleHtml();
   else if(tab==='open') h+=companyOpenHtml();
   else if(tab==='rules') h+=companyRulesHtml();
+  else if(tab==='stats') h+=companyStatsHtml();
   el.innerHTML=h;
 }
 function companySetTab(t){
@@ -3876,11 +3882,13 @@ function rosterCoversDate(R, dateISO){
   }
   return false;
 }
-/* today's company-wide numbers, people deduped by name */
-function companyTodayStats(dateISO){
+/* today's company-wide numbers, people deduped by name.
+   Pass onlyWp (a workplace id) to scope the same numbers to one base. */
+function companyTodayStats(dateISO, onlyWp){
   var stats={teams:0, full:0, open:0, filled:0, openSlots:0, sick:[], leave:[], quals:{}};
   var seenQuals={}, seenSick={}, seenLeave={};
   companyWorkplaces().forEach(function(wp){
+    if(onlyWp && wp.id!==onlyWp) return;
     (wp.rosters||[]).forEach(function(u){
       var R=u.roster;
       if(!rosterCoversDate(R, dateISO)) return;
@@ -3918,16 +3926,33 @@ function companyTodayStats(dateISO){
   Object.keys(seenQuals).forEach(function(nm){ var q=seenQuals[nm]; stats.quals[q]=(stats.quals[q]||0)+1; });
   return stats;
 }
+function companyDashDateISO(){
+  var c=S.company;
+  if(c && c.dashDateISO) return c.dashDateISO;
+  return isoDate(new Date());
+}
+function companyDashNav(dir){
+  var c=companyEnsure(); if(!c) return;
+  var d=parseISO(companyDashDateISO()); d.setDate(d.getDate()+dir);
+  c.dashDateISO=isoDate(d); companyPersist(); renderCompany();
+}
+function companyDashToday(){
+  var c=companyEnsure(); if(!c) return;
+  c.dashDateISO=isoDate(new Date()); companyPersist(); renderCompany();
+}
 function companyDashHtml(){
   var c=S.company;
-  var today=new Date(); today.setHours(0,0,0,0);
-  var tISO=isoDate(today);
+  var tISO=companyDashDateISO();
   var st=companyTodayStats(tISO);
   var qualParts=Object.keys(st.quals).map(function(q){ return escapeHtml(q)+' '+st.quals[q]; }).join(' \u00b7 ');
   var h='<h3 style="margin-top:4px;">'+escapeHtml(c.name||'My Company')+'</h3>'
-    +'<div class="row" style="gap:6px;margin-bottom:8px;"><input id="coNameInp" value="'+escapeHtml(c.name||'')+'" placeholder="Company name" style="flex:1;">'
-    +'<button class="btn" onclick="companyNameSave()">Save name</button></div>'
-    +'<p class="sub">Today — '+escapeHtml(fmtDayTitle(tISO))+'</p>'
+    +'<div style="display:flex;gap:6px;margin-bottom:8px;"><input id="coNameInp" value="'+escapeHtml(c.name||'')+'" placeholder="Company name" style="flex:1;min-width:0;">'
+    +'<button class="btn" style="margin-top:0;width:auto;flex:none;padding:12px 16px;" onclick="companyNameSave()">Save name</button></div>'
+    +'<div class="daynav">'
+    +'<button class="btn ghost" onclick="companyDashNav(-1)" aria-label="Previous day">‹</button>'
+    +'<b>'+escapeHtml(fmtDayTitle(tISO))+'</b>'
+    +'<button class="btn ghost" onclick="companyDashNav(1)" aria-label="Next day">›</button></div>'
+    +'<button class="btn ghost" style="margin-top:6px;" onclick="companyDashToday()">Today</button>'
     +'<div class="card" style="padding:10px;">'
     +'<div class="avail" onclick="companySetDrill({type:\'openTeams\'})"><span><span class="nm">Teams on today</span> <span class="meta">'+st.teams+' team'+(st.teams===1?'':'s')+'</span></span><span class="meta">View</span></div>'
     +'<div class="avail" onclick="companySetDrill({type:\'openTeams\'})"><span><span class="nm">Fully staffed</span> <span class="meta">'+st.full+' team'+(st.full===1?'':'s')+'</span></span><span class="meta">View</span></div>'
@@ -3935,14 +3960,15 @@ function companyDashHtml(){
     +'<div class="avail" onclick="companySetDrill({type:\'quals\'})"><span><span class="nm">Qualifications on today</span> <span class="meta">'+(qualParts||'None on today')+'</span></span><span class="meta">View</span></div>'
     +'<div class="avail" onclick="companySetDrill({type:\'sick\'})"><span><span class="nm">Off sick</span> <span class="meta">'+st.sick.length+' person'+(st.sick.length===1?'':'s')+'</span></span><span class="meta">View</span></div>'
     +'<div class="avail" onclick="companySetDrill({type:\'leave\'})"><span><span class="nm">On leave</span> <span class="meta">'+st.leave.length+' person'+(st.leave.length===1?'':'s')+'</span></span><span class="meta">View</span></div>'
-    +'<div class="avail"><span><span class="nm">Shifts filled vs open</span> <span class="meta">'+st.filled+' filled \u00b7 '+st.openSlots+' open</span></span></div>'
+    +'<div class="avail" onclick="companySetDrill({type:\'filled\'})"><span><span class="nm">Shifts filled vs open</span> <span class="meta">'+st.filled+' filled \u00b7 '+st.openSlots+' open</span></span><span class="meta">View</span></div>'
     +'</div>'
     +'<h3 style="margin-top:14px;">Workplaces</h3>'
     +companyWorkplaces().map(function(wp){
       var staffN=(wp.base.staff||[]).length;
       var teamN=(wp.base.vehicles||[]).length;
       var isActive=(wp.id===S.company.activeId);
-      return '<div class="avail" onclick="companySetDrill({type:\'base\', id:\''+wp.id+'\'})"><span><span class="nm">'+escapeHtml(wp.name||'Workplace')+(isActive?' \u00b7 active':'')+'</span> <span class="meta">'+teamN+' team'+(teamN===1?'':'s')+' \u00b7 '+staffN+' staff</span></span><span class="meta">View</span></div>';
+      var bst=companyTodayStats(tISO, wp.id);
+      return '<div class="avail" onclick="companySetDrill({type:\'base\', id:\''+wp.id+'\'})"><span><span class="nm">'+escapeHtml(wp.name||'Workplace')+(isActive?' \u00b7 active':'')+'</span> <span class="meta">'+teamN+' team'+(teamN===1?'':'s')+' \u00b7 '+staffN+' staff \u00b7 '+bst.teams+' on \u00b7 '+bst.full+' staffed \u00b7 '+bst.open+' open \u00b7 '+bst.sick.length+' sick \u00b7 '+bst.leave.length+' leave</span></span><span class="meta">View</span></div>';
     }).join('')
     +'<div class="btnrow"><button class="btn" onclick="companySetTab(\'bases\')">Manage bases</button></div>';
   return h;
@@ -3954,16 +3980,19 @@ function companyBasesHtml(){
       var staffN=(wp.base.staff||[]).length;
       var teamN=(wp.base.vehicles||[]).length;
       var isActive=(wp.id===S.company.activeId);
-      return '<div class="card" style="padding:10px;"><div class="row" style="justify-content:space-between;"><b>'+escapeHtml(wp.name||'Workplace')+'</b>'
+      var bst=companyTodayStats(companyDashDateISO(), wp.id);
+      var qualParts2=Object.keys(bst.quals).map(function(q){ return escapeHtml(q)+' '+bst.quals[q]; }).join(' \u00b7 ');
+      return '<div class="card" style="padding:10px;"><div style="display:flex;justify-content:space-between;align-items:center;"><b>'+escapeHtml(wp.name||'Workplace')+'</b>'
         +(isActive?'<span class="fine">Active</span>':'')
         +'</div><p class="fine">'+teamN+' team'+(teamN===1?'':'s')+' \u00b7 '+staffN+' staff</p>'
+        +'<p class="fine">Today: '+bst.teams+' on \u00b7 '+bst.full+' staffed \u00b7 '+bst.open+' open \u00b7 '+bst.filled+' filled \u00b7 '+bst.openSlots+' open slots \u00b7 '+bst.sick.length+' sick \u00b7 '+bst.leave.length+' leave'+(qualParts2?' \u00b7 '+qualParts2:'')+'</p>'
         +'<div class="btnrow"><button class="btn" onclick="companySetDrill({type:\'base\', id:\''+wp.id+'\'})">View</button>'
         +(isActive?'':'<button class="btn" onclick="companySwitchWorkplace(\''+wp.id+'\'); switchTab(\'rosters\');">Open this base</button>')
         +'</div></div>';
     }).join('')
     +'<div class="card" style="padding:10px;"><h3>Add a workplace</h3>'
-    +'<div class="row" style="gap:6px;"><input id="coNewBaseInp" placeholder="New workplace name" style="flex:1;">'
-    +'<button class="btn" onclick="companyAddBase()">Add base</button></div></div>';
+    +'<div style="display:flex;gap:6px;"><input id="coNewBaseInp" placeholder="New workplace name" style="flex:1;min-width:0;">'
+    +'<button class="btn" style="margin-top:0;width:auto;flex:none;padding:12px 16px;" onclick="companyAddBase()">Add base</button></div></div>';
   return h;
 }
 function companyAddBase(){
@@ -4002,16 +4031,36 @@ function companyPersonTodayStatus(name, dateISO){
   });
   return st||'Off today';
 }
+function companyPeopleSetQ(v){
+  var c=companyEnsure(); if(!c) return;
+  c.peopleQ=(v||'').trim(); companyPersist(); renderCompany();
+}
+function companyPeopleSetFilter(v){
+  var c=companyEnsure(); if(!c) return;
+  c.peopleFilter=v||'all'; companyPersist(); renderCompany();
+}
 function companyPeopleHtml(){
   var today=isoDate(new Date());
+  var c=S.company;
+  var q=(c.peopleQ||'').toLowerCase();
+  var filt=c.peopleFilter||'all';
   var h='<h3 style="margin-top:4px;">People across the company</h3>'
-    +'<p class="sub">One record per person (same name at two bases = the same person).</p>';
+    +'<p class="sub">One record per person (same name at two bases = the same person).</p>'
+    +'<div style="display:flex;gap:6px;margin-bottom:8px;"><input id="coPeopleQ" value="'+escapeHtml(c.peopleQ||'')+'" placeholder="Search name…" style="flex:1;min-width:0;" onchange="companyPeopleSetQ(this.value)">'
+    +'<select onchange="companyPeopleSetFilter(this.value)" style="flex:none;"><option value="all"'+(filt==='all'?' selected':'')+'>All statuses</option><option value="working"'+(filt==='working'?' selected':'')+'>Working today</option><option value="sick"'+(filt==='sick'?' selected':'')+'>Sick</option><option value="leave"'+(filt==='leave'?' selected':'')+'>On leave</option><option value="off"'+(filt==='off'?' selected':'')+'>Off today</option></select></div>';
   var people=companyAllPeople();
   if(!people.length) h+='<p class="fine">No staff yet — add staff in Shift setup for a workplace.</p>';
+  var shown=0;
   people.forEach(function(p){
+    var st=companyPersonTodayStatus(p.name, today);
+    if(q && p.name.toLowerCase().indexOf(q)<0) return;
+    var sk=(st.indexOf('Working')===0)?'working':(st==='Sick'?'sick':(st.indexOf('On leave')===0?'leave':'off'));
+    if(filt!=='all' && sk!==filt) return;
+    shown++;
     h+='<div class="avail" onclick="companySetDrill({type:\'person\', name:\''+escapeHtml(p.name).replace(/\'/g,"\\'")+'\'})">'
-      +'<span><span class="nm">'+escapeHtml(p.name)+'</span> <span class="meta">'+(p.qual?escapeHtml(p.qual)+' \u00b7 ':'')+escapeHtml(p.home)+' \u00b7 '+escapeHtml(companyPersonTodayStatus(p.name, today))+'</span></span><span class="meta">View</span></div>';
+      +'<span><span class="nm">'+escapeHtml(p.name)+'</span> <span class="meta">'+(p.qual?escapeHtml(p.qual)+' \u00b7 ':'')+escapeHtml(p.home)+' \u00b7 '+escapeHtml(st)+'</span></span><span class="meta">View</span></div>';
   });
+  if(people.length && !shown) h+='<p class="fine">Nobody matches that search / filter.</p>';
   return h;
 }
 function companyPersonDrillHtml(name){
@@ -4029,7 +4078,7 @@ function companyPersonDrillHtml(name){
     +'<h3>Shifts this month (all bases)</h3>';
   if(!thisMonth.length) h+='<p class="fine">No shifts this month.</p>';
   else h+='<div class="card" style="padding:10px;">'+thisMonth.map(function(s){
-    return '<div class="row" style="justify-content:space-between;"><span>'+escapeHtml(s.dateISO)+' \u00b7 '+escapeHtml(s.slotName)+(s.isOvertime?' \u00b7 overtime':'')+'</span><span class="fine">'+escapeHtml(s.workplaceName||'')+'</span></div>';
+    return '<div style="display:flex;justify-content:space-between;gap:8px;"><span>'+escapeHtml(s.dateISO)+' \u00b7 '+escapeHtml(s.slotName)+(s.isOvertime?' \u00b7 overtime':'')+'</span><span class="fine">'+escapeHtml(s.workplaceName||'')+'</span></div>';
   }).join('')+'</div>';
   h+='<h3>Company rule check</h3>';
   if(!viols.length) h+='<p class="fine">No company-wide rule violations.</p>';
@@ -4067,13 +4116,55 @@ function companyOpenShifts(){
   out.sort(function(a,b){ return a.dateISO<b.dateISO?-1:a.dateISO>b.dateISO?1:0; });
   return out;
 }
+function companyOpenSetBase(v){
+  var c=companyEnsure(); if(!c) return;
+  c.openBase=v||'all'; companyPersist(); renderCompany();
+}
+function companyOpenSetQual(v){
+  var c=companyEnsure(); if(!c) return;
+  c.openQual=v||'all'; companyPersist(); renderCompany();
+}
+/* tap handler for the (possibly filtered) Open tab list */
+function companyOpenShiftGoFiltered(idx){
+  var list=S._coOpenFiltered||companyOpenShifts();
+  var o=list[idx]; if(!o) return;
+  if(o.workplaceId!==S.company.activeId) companySwitchWorkplace(o.workplaceId);
+  var u=(S.rosters||[]).find(function(x){ return x.id===o.rosterId; });
+  if(u) S.draft=u.roster;
+  switchTab('rosters');
+  openDaySheet(o.dateISO);
+}
 function companyOpenHtml(){
-  var list=companyOpenShifts();
+  var c=S.company;
+  var all=companyOpenShifts();
+  var baseF=c.openBase||'all', qualF=c.openQual||'all';
+  /* qualification options = every qual name across all bases */
+  var qualSeen={}, qualOpts=[];
+  companyWorkplaces().forEach(function(wp){
+    (wp.base.quals||[]).forEach(function(q){
+      if(q.name && !qualSeen[q.name]){ qualSeen[q.name]=1; qualOpts.push(q.name); }
+    });
+  });
+  qualOpts.sort();
+  var list=all.filter(function(o){
+    if(baseF!=='all' && o.workplaceId!==baseF) return false;
+    if(qualF!=='all' && o.qual!==qualF) return false;
+    return true;
+  });
+  S._coOpenFiltered=list;
   var h='<h3 style="margin-top:4px;">Open shifts across the company</h3>'
-    +'<p class="sub">Tap one to open it — on another base, the app switches to that base first.</p>';
-  if(!list.length) h+='<p class="fine">No open shifts anywhere. All shifts are filled.</p>';
+    +'<p class="sub">Tap one to open it — on another base, the app switches to that base first.</p>'
+    +'<div style="display:flex;gap:6px;margin-bottom:8px;">'
+    +'<select onchange="companyOpenSetBase(this.value)" style="flex:1;min-width:0;"><option value="all">All bases</option>'
+    +companyWorkplaces().map(function(wp){ return '<option value="'+wp.id+'"'+(baseF===wp.id?' selected':'')+'>'+escapeHtml(wp.name||'Workplace')+'</option>'; }).join('')
+    +'</select>'
+    +'<select onchange="companyOpenSetQual(this.value)" style="flex:1;min-width:0;"><option value="all">Any qualification</option>'
+    +qualOpts.map(function(q){ return '<option value="'+escapeHtml(q)+'"'+(qualF===q?' selected':'')+'>'+escapeHtml(q)+'</option>'; }).join('')
+    +'</select></div>';
+  if(!all.length) h+='<p class="fine">No open shifts anywhere. All shifts are filled.</p>';
+  else if(!list.length) h+='<p class="fine">No open shifts match those filters.</p>';
   list.forEach(function(o, i){
-    h+='<div class="avail" onclick="companyOpenShiftGo('+i+')">'
+    h+='<div class="avail" onclick="companyOpenShiftGoFiltered('+i+')">'
       +'<span><span class="nm">'+escapeHtml(o.dateISO)+' \u00b7 '+escapeHtml(o.shiftName)+(o.teamName?' \u00b7 '+escapeHtml(o.teamName):'')+'</span> '
       +'<span class="meta">'+escapeHtml(o.workplaceName)+' \u00b7 '+escapeHtml(o.crewName)+(o.qual?' \u00b7 needs '+escapeHtml(o.qual):'')+' \u00b7 '+o.openN+' open</span></span><span class="meta">Open</span></div>';
   });
@@ -4122,32 +4213,236 @@ function companyRulesHtml(){
       });
     }
     sel+='</select>';
-    h+='<div class="card" style="padding:10px;"><div class="row" style="justify-content:space-between;gap:8px;"><b>'+d.label+'</b>'+sel+'</div></div>';
+    h+='<div class="card" style="padding:10px;"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;"><b>'+d.label+'</b>'+sel+'</div></div>';
   });
   return h;
 }
+/* ================= COMPANY STATISTICS =================
+   Company-wide numbers for one month, computed from the actual rosters.
+   - Slots: one person-place on one shift (filled = real person, open = Open).
+   - Sick/leave days: per person per day (deduped), from leaveLog.
+   - Overtime: an assignment where the person is NOT in the slot's original
+     crew (same definition as the yellow replacement highlight + the
+     max-overtime rule). Cross-base overtime comes from the cross-base log
+     (a subset of overtime) and is shown separately.
+   - Violations: the same 9-rule engine (rulesCheckShifts) run on each
+     person's shifts within the selected month, with the merged
+     (stricter-wins) rules — labelled "this month's shifts". */
+function companyStatsYmGet(){
+  var c=S.company;
+  if(c && c.statsYm) return c.statsYm;
+  var n=new Date(); return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
+}
+function companyStatsNav(dir){
+  var c=companyEnsure(); if(!c) return;
+  var cur=companyStatsYmGet().split('-');
+  var d=new Date(+cur[0], +cur[1]-1+dir, 1);
+  c.statsYm=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  companyPersist(); renderCompany();
+}
+function companyStatsThisMonth(){
+  var c=companyEnsure(); if(!c) return;
+  var n=new Date(); c.statsYm=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
+  companyPersist(); renderCompany();
+}
+function companyMonthStats(y, m, withViol){
+  var ym=y+'-'+String(m+1).padStart(2,'0');
+  var st={ym:ym, label:MN[m]+' '+y, total:0, filled:0, open:0, sickDays:0, leaveDays:0,
+    overtime:0, crossBaseOT:0, people:0, violations:[], violItems:[], perBase:[], perQual:[]};
+  var sickSet={}, leaveSet={}, peopleSet={};
+  var qualByName={};
+  companyAllPeople().forEach(function(p){ if(p.name && !qualByName[p.name]) qualByName[p.name]=p.qual||''; });
+  var qualOn={}, qualSick={}, qualLeave={};
+  companyWorkplaces().forEach(function(wp){
+    var pb={name:wp.name||'Workplace', total:0, filled:0, open:0, sick:{}, leave:{}, ot:0};
+    (wp.rosters||[]).forEach(function(u){
+      var R=u.roster;
+      rulesRosterDays(R).forEach(function(dd){
+        if(dd.dateISO.slice(0,7)!==ym) return;
+        calSlotCrewsFor(wp.base, R, dd.dayIdx).forEach(function(ps){
+          ps.list.forEach(function(x){
+            var orig=x.c.members||[];
+            effShiftMembers(R, dd.dateISO, ps.sl.id, x.c).forEach(function(nm){
+              st.total++; pb.total++;
+              if(nm===OPEN_MARK){ st.open++; pb.open++; }
+              else{
+                st.filled++; pb.filled++; peopleSet[nm]=1;
+                var q0=qualByName[nm];
+                if(q0){ if(!qualOn[q0]) qualOn[q0]={}; qualOn[q0][nm]=1; }
+                if(orig.indexOf(nm)<0){ st.overtime++; pb.ot++; }
+              }
+            });
+          });
+        });
+      });
+      (R.leaveLog||[]).forEach(function(lg){
+        if(!lg.date || lg.date.slice(0,7)!==ym || !lg.person) return;
+        var t=(lg.type||'').toLowerCase();
+        var key=lg.person+'|'+lg.date;
+        var qq=qualByName[lg.person];
+        if(t.indexOf('sick')>=0){
+          if(!sickSet[key]){ sickSet[key]=1; st.sickDays++; }
+          if(!pb.sick[key]) pb.sick[key]=1;
+          if(qq){ if(!qualSick[qq]) qualSick[qq]={}; qualSick[qq][lg.person]=1; }
+        }else if(t!=='swap' && t!=='cover'){
+          if(!leaveSet[key]){ leaveSet[key]=1; st.leaveDays++; }
+          if(!pb.leave[key]) pb.leave[key]=1;
+          if(qq){ if(!qualLeave[qq]) qualLeave[qq]={}; qualLeave[qq][lg.person]=1; }
+        }
+      });
+    });
+    st.perBase.push({name:pb.name, total:pb.total, filled:pb.filled, open:pb.open,
+      sick:Object.keys(pb.sick).length, leave:Object.keys(pb.leave).length, ot:pb.ot});
+  });
+  (S.company.crossBaseLog||[]).forEach(function(l){
+    if(l.dateISO && l.dateISO.slice(0,7)===ym) st.crossBaseOT++;
+  });
+  var qualKeys={};
+  Object.keys(qualOn).forEach(function(k){ qualKeys[k]=1; });
+  Object.keys(qualSick).forEach(function(k){ qualKeys[k]=1; });
+  Object.keys(qualLeave).forEach(function(k){ qualKeys[k]=1; });
+  Object.keys(qualKeys).sort().forEach(function(q){
+    st.perQual.push({qual:q,
+      on:qualOn[q]?Object.keys(qualOn[q]).length:0,
+      sick:qualSick[q]?Object.keys(qualSick[q]).length:0,
+      leave:qualLeave[q]?Object.keys(qualLeave[q]).length:0});
+  });
+  st.people=Object.keys(peopleSet).length;
+  if(withViol){
+    var byLabel={}, items=[];
+    Object.keys(peopleSet).sort().forEach(function(nm){
+      var shifts=companyPersonShifts(nm).filter(function(s){ return s.dateISO.slice(0,7)===ym; });
+      if(!shifts.length) return;
+      var merged=(S.company&&S.company.rules)?JSON.parse(JSON.stringify(S.company.rules)):{};
+      var basesSeen={};
+      shifts.forEach(function(s){
+        if(s.workplaceId && !basesSeen[s.workplaceId]){
+          basesSeen[s.workplaceId]=1;
+          var wpx=companyWorkplaceById(s.workplaceId);
+          if(wpx && wpx.base) merged=rulesMergeStricter(merged, wpx.base.rules||{});
+        }
+      });
+      rulesCheckShifts(shifts, nm, merged).forEach(function(v){
+        var lab=v.split(':')[0]||'Rule';
+        byLabel[lab]=(byLabel[lab]||0)+1;
+        items.push(v);
+      });
+    });
+    st.violations=Object.keys(byLabel).sort().map(function(l){ return {label:l, count:byLabel[l]}; });
+    st.violItems=items;
+  }
+  return st;
+}
+/* months that have any roster days (for the trend), newest first, capped */
+function companyStatsMonthsPresent(){
+  var seen={};
+  companyWorkplaces().forEach(function(wp){
+    (wp.rosters||[]).forEach(function(u){
+      rulesRosterDays(u.roster).forEach(function(dd){ seen[dd.dateISO.slice(0,7)]=1; });
+    });
+  });
+  return Object.keys(seen).sort().reverse().slice(0,6);
+}
+function companyStatsHtml(){
+  var parts=companyStatsYmGet().split('-');
+  var y=+parts[0], m=+parts[1]-1;
+  var st=companyMonthStats(y, m, true);
+  var h='<h3 style="margin-top:4px;">Statistics</h3>'
+    +'<p class="sub">Company-wide, from your rosters. Counts are for the month shown.</p>'
+    +'<div class="daynav">'
+    +'<button class="btn ghost" onclick="companyStatsNav(-1)" aria-label="Previous month">‹</button>'
+    +'<b>'+escapeHtml(st.label)+'</b>'
+    +'<button class="btn ghost" onclick="companyStatsNav(1)" aria-label="Next month">›</button></div>'
+    +'<button class="btn ghost" style="margin-top:6px;" onclick="companyStatsThisMonth()">This month</button>';
+  var hasAny=false;
+  companyWorkplaces().forEach(function(wp){ if((wp.rosters||[]).length) hasAny=true; });
+  if(!hasAny){
+    h+='<p class="fine">No roster data yet — build a roster for a workplace to see statistics.</p>';
+    return h;
+  }
+  if(!st.total && !st.sickDays && !st.leaveDays && !st.overtime){
+    h+='<p class="fine">No rosters in '+escapeHtml(st.label)+'.</p>';
+  }
+  var violTotal=0;
+  st.violations.forEach(function(v){ violTotal+=v.count; });
+  h+='<div class="card" style="padding:10px;">'
+    +'<div class="avail"><span><span class="nm">Total shifts</span> <span class="meta">'+st.total+' slots \u00b7 '+st.people+' people</span></span></div>'
+    +'<div class="avail"><span><span class="nm">Filled</span> <span class="meta">'+st.filled+'</span></span></div>'
+    +'<div class="avail"><span><span class="nm">Open</span> <span class="meta">'+st.open+'</span></span></div>'
+    +'<div class="avail"><span><span class="nm">Sick days</span> <span class="meta">'+st.sickDays+'</span></span></div>'
+    +'<div class="avail"><span><span class="nm">Leave days</span> <span class="meta">'+st.leaveDays+'</span></span></div>'
+    +'<div class="avail"><span><span class="nm">Overtime shifts</span> <span class="meta">'+st.overtime+' \u00b7 '+st.crossBaseOT+' cross-base</span></span></div>'
+    +'<div class="avail" onclick="companySetDrill({type:\'statsViol\'})"><span><span class="nm">Rule violations</span> <span class="meta">'+violTotal+'</span></span><span class="meta">View</span></div>'
+    +'</div>';
+  if(st.violations.length){
+    h+='<h3 style="margin-top:14px;">Violations by rule</h3>'
+      +st.violations.map(function(v){
+        return '<div class="avail"><span><span class="nm">'+escapeHtml(v.label)+'</span> <span class="meta">'+v.count+'</span></span></div>';
+      }).join('');
+  }
+  h+='<h3 style="margin-top:14px;">Per base</h3>';
+  st.perBase.forEach(function(b){
+    h+='<div class="card" style="padding:10px;"><b>'+escapeHtml(b.name)+'</b>'
+      +'<div class="fine" style="margin-top:4px;">'+b.total+' shifts \u00b7 '+b.filled+' filled \u00b7 '+b.open+' open \u00b7 '+b.sick+' sick days \u00b7 '+b.leave+' leave days \u00b7 '+b.ot+' overtime</div></div>';
+  });
+  if(st.perQual.length){
+    h+='<h3 style="margin-top:14px;">Per qualification</h3>'
+      +st.perQual.map(function(q){
+        return '<div class="avail"><span><span class="nm">'+escapeHtml(q.qual)+'</span> <span class="meta">On: '+q.on+' \u00b7 Sick: '+q.sick+' \u00b7 Leave: '+q.leave+'</span></span></div>';
+      }).join('');
+  }
+  var months=companyStatsMonthsPresent();
+  h+='<h3 style="margin-top:14px;">Recent months</h3>';
+  if(months.length<=1){
+    h+='<p class="fine">Only one month of rosters so far — trends appear as you add months.</p>';
+  }else{
+    months.forEach(function(ym2){
+      if(ym2===st.ym) return;
+      var mp=ym2.split('-');
+      var t2=companyMonthStats(+mp[0], +mp[1]-1, false);
+      h+='<div class="avail"><span><span class="nm">'+escapeHtml(t2.label)+'</span> <span class="meta">Sick: '+t2.sickDays+' \u00b7 Leave: '+t2.leaveDays+' \u00b7 Overtime: '+t2.overtime+'</span></span></div>';
+    });
+  }
+  return h;
+}
 function companyDrillHtml(drill){
-  var today=isoDate(new Date());
+  var today=companyDashDateISO();
   var st=companyTodayStats(today);
+  var dateLbl=escapeHtml(fmtDayTitle(today));
   var h='<h3 style="margin-top:4px;">';
-  if(drill.type==='sick'){ h+='Off sick today</h3>';
-    if(!st.sick.length) h+='<p class="fine">Nobody off sick today.</p>';
+  if(drill.type==='sick'){ h+='Off sick — '+dateLbl+'</h3>';
+    if(!st.sick.length) h+='<p class="fine">Nobody off sick on this date.</p>';
     st.sick.forEach(function(x){ h+='<div class="avail"><span><span class="nm">'+escapeHtml(x.person)+'</span> <span class="meta">'+escapeHtml(x.base)+'</span></span></div>'; });
-  } else if(drill.type==='leave'){ h+='On leave today</h3>';
-    if(!st.leave.length) h+='<p class="fine">Nobody on leave today.</p>';
+  } else if(drill.type==='leave'){ h+='On leave — '+dateLbl+'</h3>';
+    if(!st.leave.length) h+='<p class="fine">Nobody on leave on this date.</p>';
     st.leave.forEach(function(x){ h+='<div class="avail"><span><span class="nm">'+escapeHtml(x.person)+'</span> <span class="meta">'+escapeHtml(x.base)+' \u00b7 '+escapeHtml(x.type||'')+'</span></span></div>'; });
-  } else if(drill.type==='quals'){ h+='Qualifications on today</h3>';
+  } else if(drill.type==='quals'){ h+='Qualifications on — '+dateLbl+'</h3>';
     var qs=Object.keys(st.quals);
-    if(!qs.length) h+='<p class="fine">Nobody on today.</p>';
-    qs.forEach(function(q){ h+='<div class="avail"><span><span class="nm">'+escapeHtml(q)+'</span> <span class="meta">'+st.quals[q]+' on today</span></span></div>'; });
-  } else if(drill.type==='open'){ h+='Open shifts today</h3>';
+    if(!qs.length) h+='<p class="fine">Nobody on on this date.</p>';
+    qs.forEach(function(q){ h+='<div class="avail"><span><span class="nm">'+escapeHtml(q)+'</span> <span class="meta">'+st.quals[q]+' on</span></span></div>'; });
+  } else if(drill.type==='filled'){ h+='Shifts filled vs open — '+dateLbl+'</h3>';
+    h+='<p class="fine">'+st.filled+' filled slots \u00b7 '+st.openSlots+' open slots across the company.</p>';
+    var fOpens=companyOpenShifts().filter(function(o){ return o.dateISO===today; });
+    if(!fOpens.length) h+='<p class="fine">No open shifts on this date.</p>';
+    fOpens.forEach(function(o){
+      var gi=companyOpenShifts().indexOf(o);
+      h+='<div class="avail" onclick="companyOpenShiftGo('+gi+')"><span><span class="nm">'+escapeHtml(o.shiftName)+(o.teamName?' \u00b7 '+escapeHtml(o.teamName):'')+'</span> <span class="meta">'+escapeHtml(o.workplaceName)+' \u00b7 '+escapeHtml(o.crewName)+(o.qual?' \u00b7 needs '+escapeHtml(o.qual):'')+' \u00b7 '+o.openN+' open</span></span><span class="meta">Open</span></div>';
+    });
+  } else if(drill.type==='statsViol'){
+    var sp=companyStatsYmGet().split('-');
+    var st2=companyMonthStats(+sp[0], +sp[1]-1, true);
+    h+='Rule violations — '+escapeHtml(st2.label)+'</h3>';
+    h+='<p class="sub">Violations found in this month\u2019s shifts (same 9-rule engine, stricter-wins rules).</p>';
+    if(!st2.violItems.length) h+='<p class="fine">No violations in this month.</p>';
+    st2.violItems.forEach(function(v){ h+='<div style="font-size:14px;color:#CC0000;margin-bottom:2px;">'+escapeHtml(v)+'</div>'; });
+  } else if(drill.type==='open'){ h+='Open shifts — '+dateLbl+'</h3>';
     var opens=companyOpenShifts().filter(function(o){ return o.dateISO===today; });
-    if(!opens.length) h+='<p class="fine">No open shifts today.</p>';
+    if(!opens.length) h+='<p class="fine">No open shifts on this date.</p>';
     opens.forEach(function(o, i){
       var gi=companyOpenShifts().indexOf(o);
       h+='<div class="avail" onclick="companyOpenShiftGo('+gi+')"><span><span class="nm">'+escapeHtml(o.shiftName)+(o.teamName?' \u00b7 '+escapeHtml(o.teamName):'')+'</span> <span class="meta">'+escapeHtml(o.workplaceName)+' \u00b7 '+escapeHtml(o.crewName)+(o.qual?' \u00b7 needs '+escapeHtml(o.qual):'')+' \u00b7 '+o.openN+' open</span></span><span class="meta">Open</span></div>';
     });
-  } else if(drill.type==='openTeams'){ h+='Teams on today</h3>';
+  } else if(drill.type==='openTeams'){ h+='Teams on — '+dateLbl+'</h3>';
     var seen={};
     companyWorkplaces().forEach(function(wp){
       (wp.rosters||[]).forEach(function(u){
@@ -4190,14 +4485,18 @@ function companyDrillHtml(drill){
         });
       });
       h+='<p class="sub">'+(wp.base.vehicles||[]).length+' team'+((wp.base.vehicles||[]).length===1?'':'s')+' \u00b7 '+(wp.base.staff||[]).length+' staff \u00b7 '+(wp.id===S.company.activeId?'active base':'')+'</p>';
-      h+='<h3>Today\u2019s open shifts</h3>';
-      if(!opens.length) h+='<p class="fine">No open shifts today at this base.</p>';
+      var bst2=companyTodayStats(today, wp.id);
+      var bQualParts2=Object.keys(bst2.quals).map(function(q){ return escapeHtml(q)+' '+bst2.quals[q]; }).join(' \u00b7 ');
+      h+='<h3>On '+dateLbl+'</h3>'
+        +'<div class="card" style="padding:10px;"><div class="fine">'+bst2.teams+' teams on \u00b7 '+bst2.full+' fully staffed \u00b7 '+bst2.open+' with open shifts \u00b7 '+bst2.filled+' filled \u00b7 '+bst2.openSlots+' open slots \u00b7 '+bst2.sick.length+' sick \u00b7 '+bst2.leave.length+' on leave'+(bQualParts2?' \u00b7 '+bQualParts2:'')+'</div></div>';
+      h+='<h3>Open shifts on '+dateLbl+'</h3>';
+      if(!opens.length) h+='<p class="fine">No open shifts on this date at this base.</p>';
       opens.forEach(function(o){
         var gi=companyOpenShifts().indexOf(o);
         h+='<div class="avail" onclick="companyOpenShiftGo('+gi+')"><span><span class="nm">'+escapeHtml(o.shiftName)+(o.teamName?' \u00b7 '+escapeHtml(o.teamName):'')+'</span> <span class="meta">'+escapeHtml(o.crewName)+(o.qual?' \u00b7 needs '+escapeHtml(o.qual):'')+' \u00b7 '+o.openN+' open</span></span><span class="meta">Open</span></div>';
       });
-      h+='<h3>People on today</h3>';
-      if(!onToday.length) h+='<p class="fine">Nobody on today at this base.</p>';
+      h+='<h3>People on '+dateLbl+'</h3>';
+      if(!onToday.length) h+='<p class="fine">Nobody on on this date at this base.</p>';
       onToday.forEach(function(nm){
         h+='<div class="avail" onclick="companySetDrill({type:\'person\', name:\''+escapeHtml(nm).replace(/\'/g,"\\'")+'\'})"><span><span class="nm">'+escapeHtml(nm)+'</span> <span class="meta">'+escapeHtml(staffQualNameFor(wp.base, nm)||'')+'</span></span><span class="meta">View</span></div>';
       });
