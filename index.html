@@ -914,7 +914,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1845';
+var BUILD='20261015-1850';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2561,6 +2561,7 @@ function allStaffNames(){
 }
 function openDayEdit(){
   dayCtx.edit=true;
+  dayCtx.removedNames=[]; /* people removed in this edit — never offered as replacements */
   /* snapshot current members per shift for editing */
   dayCtx.editData=daySheetShifts().map(function(ps){
     return {sl:ps.sl, idx:ps.list[0]?ps.list[0].ci:-1,
@@ -2568,10 +2569,36 @@ function openDayEdit(){
   });
   renderDayEdit();
 }
+/* RULES picker filter: staff names that can be added to THIS shift on THIS day
+   without breaking any rule (checked on a hypothetical copy with the current
+   edit applied as once-off overrides), minus anyone removed in this edit.
+   Free-text typing is NOT filtered — only this dropdown is. */
+function dayEditPickerNames(ed){
+  var names=allStaffNames().filter(function(nm){ return nm && nm!==OPEN_MARK; });
+  var removed=dayCtx.removedNames||[];
+  var hypo=rulesCopyRoster(dayCtx.R);
+  if(!hypo) return names.filter(function(nm){ return removed.indexOf(nm)<0; });
+  if(!hypo.memberOverrides) hypo.memberOverrides={};
+  (dayCtx.editData||[]).forEach(function(e2){
+    rulesSetOverride(hypo, dayCtx.dateISO, e2.sl.id, e2.members.slice());
+  });
+  var out=[];
+  names.forEach(function(nm){
+    if(removed.indexOf(nm)>=0) return; /* removed in this edit — never offered */
+    if(ed.members.indexOf(nm)>=0){ out.push(nm); return; } /* already on this shift */
+    var list=(hypo.memberOverrides[dayCtx.dateISO]||{})[ed.sl.id]||[];
+    var wasIn=list.indexOf(nm)>=0;
+    if(!wasIn) list.push(nm);
+    var viols=[];
+    try{ viols=rulesCheckPerson(hypo, nm); }catch(e){ viols=[]; }
+    if(!wasIn) list.splice(list.indexOf(nm),1);
+    if(!viols.length) out.push(nm);
+  });
+  return out;
+}
 function renderDayEdit(){
   var R=dayCtx.R;
   document.getElementById('daySheetSub').textContent='Change who works this day';
-  var staffNames=allStaffNames();
   var html='';
   dayCtx.editData.forEach(function(ed, si){
     var tm=''; try{ tm=slotTime(R, ed.sl.id); }catch(e){}
@@ -2580,11 +2607,13 @@ function renderDayEdit(){
     ed.members.forEach(function(nm, mi){
       html+='<span class="mchip">'+escapeHtml(dispMember(nm))+'<button type="button" onclick="dayEditRemove('+si+','+mi+')" aria-label="Remove">×</button></span>';
     });
+    var pickNames=dayEditPickerNames(ed);
     html+='</div><div style="margin-top:8px;">'+
       '<select id="deAddSel'+si+'" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--card2);color:var(--text);margin-bottom:8px;" onchange="dayEditSelPick('+si+')">'+
       '<option value="">— Pick from staff list —</option>'+
-      staffNames.map(function(n){ return '<option value="'+escapeHtml(n)+'">'+escapeHtml(n)+'</option>'; }).join('')+
+      pickNames.map(function(n){ return '<option value="'+escapeHtml(n)+'">'+escapeHtml(n)+'</option>'; }).join('')+
       '</select>'+
+      (pickNames.length?'':'<p class="fine" style="margin:0 0 8px;">No one on the staff list meets the rules for this shift — type a name to add someone for the day.</p>')+
       '<div style="display:flex;gap:8px;">'+
       '<input id="deAddNew'+si+'" placeholder="Or type a name…" style="flex:1;min-width:0;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--card2);color:var(--text);">'+
       '<button type="button" onclick="dayEditAdd('+si+')" style="flex:none;padding:10px 18px;border-radius:8px;border:1px solid var(--line);background:var(--card2);color:var(--text);font-weight:700;cursor:pointer;">Add</button></div></div></div>';
@@ -2594,7 +2623,7 @@ function renderDayEdit(){
     '<label><input type="radio" name="deScope" value="now"'+(dayCtx.scope==='now'?' checked':'')+' onchange="dayCtx.scope=\'now\'"> From now on<br><span style="color:var(--muted);font-size:12px;">Permanent crew change</span></label></div>';
   document.getElementById('daySheetBody').innerHTML=html;
   document.getElementById('daySheetFoot').innerHTML=
-    '<div class="btnrow"><button class="btn ghost" onclick="dayCtx.edit=false;renderDaySheet()">Back</button>'+
+    '<div class="btnrow"><button class="btn ghost" onclick="dayCtx.removedNames=[];dayCtx.edit=false;renderDaySheet()">Back</button>'+
     '<button class="btn" onclick="saveDayEdit()">Save</button></div>';
 }
 function dayEditSelPick(si){
@@ -2603,7 +2632,12 @@ function dayEditSelPick(si){
   if(sel.value) inp.value=sel.value;
 }
 function dayEditRemove(si, mi){
+  var nm=dayCtx.editData[si].members[mi];
   dayCtx.editData[si].members.splice(mi,1);
+  if(nm && nm!==OPEN_MARK){
+    if(!dayCtx.removedNames) dayCtx.removedNames=[];
+    if(dayCtx.removedNames.indexOf(nm)<0) dayCtx.removedNames.push(nm);
+  }
   renderDayEdit();
 }
 function dayEditAdd(si){
@@ -2611,6 +2645,11 @@ function dayEditAdd(si){
   var nm=(inp.value||'').trim();
   if(!nm) return;
   if(dayCtx.editData[si].members.indexOf(nm)<0) dayCtx.editData[si].members.push(nm);
+  /* back on the roster — no longer treated as "removed" */
+  if(dayCtx.removedNames){
+    var ri=dayCtx.removedNames.indexOf(nm);
+    if(ri>=0) dayCtx.removedNames.splice(ri,1);
+  }
   renderDayEdit();
 }
 function saveDayEdit(){
@@ -2667,6 +2706,7 @@ function saveDayEdit(){
   });
   syncLeaveLogFills(R);
   syncUnit();
+  dayCtx.removedNames=[];
   dayCtx.edit=false;
   renderDaySheet();
   renderCalendar();
