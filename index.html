@@ -889,7 +889,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1515';
+var BUILD='20261015-1530';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -1080,8 +1080,14 @@ function slotsFor(coverage, shiftLen){
   if(coverage===12 && shiftLen===6) return numbered(2);
   return [D]; /* 12h/12h, 8h/8h and anything else: one shift a day */
 }
-function rotSlots(key){
+/* slots a roster runs: the rotation's slots, filtered to the shifts the
+   team has ticked (shiftIds). No shiftIds = the rotation's full set. */
+function rotSlots(key, shiftIds){
   var r=ROTATIONS[key]||{};
+  function filt(out){
+    if(shiftIds && shiftIds.length) return out.filter(function(s){ return shiftIds.indexOf(s.id)>=0; });
+    return out;
+  }
   if(r.custom){
     /* custom rotations reference workplace shift ids in their pattern */
     var seen={}, out=[];
@@ -1091,7 +1097,7 @@ function rotSlots(key){
       var d=slotDef(p);
       if(d) out.push(d);
     });
-    return out;
+    return filt(out);
   }
   /* built-ins: D = 1st shift, N = 2nd shift, X = 24h shift */
   var out=[];
@@ -1103,7 +1109,12 @@ function rotSlots(key){
   } else {
     var d2=slotDef('D'); if(d2) out.push(d2);
   }
-  return out;
+  return filt(out);
+}
+/* shifts a team runs: its ticked slots, or the rotation's full set */
+function teamShiftIds(v){
+  if(v && Array.isArray(v.shiftIds)) return v.shiftIds.slice();
+  return rotSlots(v?v.rotation:'224').map(function(s){ return s.id; });
 }
 /* legacy: custom rotations now resolve shifts from the workplace (see migrateShifts) */
 function migrateCustomRotation(c){ return c; }
@@ -1333,9 +1344,11 @@ function baseState(presetKey, crewIdx, absDay){
    Calendar-month rosters carry anchorAbs: the absolute engine day of the 1st, so the
    rotation runs continuously across months. Legacy span rosters have no anchorAbs (=0). */
 function cellState(R, dayIdx, crewIdx){
-  var ov = R.overrides[dayIdx+':'+crewIdx];
-  if(ov) return ov;
-  return baseState(R.rotation, crewIdx, dayIdx+(R.anchorAbs||0));
+  var st = R.overrides[dayIdx+':'+crewIdx];
+  if(!st) st = baseState(R.rotation, crewIdx, dayIdx+(R.anchorAbs||0));
+  /* a slot this roster doesn't run counts as off */
+  if(typeof st==='string' && st!=='OFF' && R.shiftIds && R.shiftIds.length && R.shiftIds.indexOf(st)<0) return 'OFF';
+  return st;
 }
 
 
@@ -1357,7 +1370,8 @@ function loadBase(){
   try{ S.base=JSON.parse(localStorage.getItem('sfshift_base')||'null'); }catch(e){ S.base=null; }
   if(!S.base || !S.base.vehicles){ S.base=defaultBase(); migrateUnitsToBase(); persistBase(); }
   /* normalize older saves: coverage + valid rotation + crew colors */
-  S.base.vehicles.forEach(function(v){
+  S.base.vehicles.forEach(function(v,vi){
+    if(!v.color) v.color=CREW_COLORS[vi%CREW_COLORS.length];
     if(v.coverage!==12 && v.coverage!==8) v.coverage=24;
     if(!ROTATIONS[v.rotation] || (ROTATIONS[v.rotation].cov||[24]).indexOf(v.coverage)<0) v.rotation=firstRotForCov(v.coverage);
     if(!v.shiftLen) v.shiftLen=ROTATIONS[v.rotation].hours||12;
@@ -1463,12 +1477,20 @@ function renderBsVehicles(){
   S.base.vehicles.forEach(function(v,vi){
     var card=document.createElement('div'); card.className='vcard';
     var head=document.createElement('div'); head.className='chead';
-    var dot=document.createElement('span'); dot.className='cdot';
+    var dot=crewColorDot(v.color||CREW_COLORS[0], teamColorOpen===v.id, function(){
+      teamColorOpen=(teamColorOpen===v.id?null:v.id); renderBsVehicles();
+    });
+    dot.title='Change team colour'; dot.setAttribute('aria-label','Change team colour');
     var nm=document.createElement('input'); nm.type='text'; nm.maxLength=30; nm.value=v.name; nm.placeholder='Team name — e.g. A01, Kitchen';
     nm.oninput=function(){ v.name=this.value; persistBase(); };
     var rm=document.createElement('button'); rm.className='rm'; rm.textContent='✕'; rm.title='Remove team';
     rm.onclick=function(){ bsDelVehicle(vi); };
     head.appendChild(dot); head.appendChild(nm); head.appendChild(rm); card.appendChild(head);
+    if(teamColorOpen===v.id){
+      card.appendChild(colorSwatches(v.color||CREW_COLORS[0], function(col){
+        v.color=col; persistBase(); teamColorOpen=null; renderBsVehicles();
+      }));
+    }
     /* daily coverage: how much of the day needs someone on shift */
     var covRow=document.createElement('div'); covRow.className='vrow';
     var covDiv=document.createElement('div');
@@ -1477,8 +1499,10 @@ function renderBsVehicles(){
     [[24,'24h — always on'],[12,'12h'],[8,'8h']].forEach(function(o){
       var p=document.createElement('div'); p.className='pill'+(v.coverage===o[0]?' sel':''); p.textContent=o[1];
       p.onclick=(function(val){ return function(){
+        var oldRot=v.rotation;
         v.coverage=val;
         if((ROTATIONS[v.rotation].cov||[24]).indexOf(val)<0) v.rotation=firstRotForCov(val);
+        if(v.rotation!==oldRot) v.shiftIds=rotSlots(v.rotation).map(function(s){ return s.id; });
         ensureCrews(v); persistBase(); renderBsVehicles(); renderBsCrews();
       }; })(o[0]);
       pills.appendChild(p);
@@ -1488,19 +1512,38 @@ function renderBsVehicles(){
     var row=document.createElement('div'); row.className='vrow';
     var d1=document.createElement('div'); var l1=document.createElement('label'); l1.textContent='Rotation';
     var sel=document.createElement('select'); rotOptions(sel, v.rotation, v.coverage);
-    sel.onchange=function(){ v.rotation=this.value; ensureCrews(v); persistBase(); renderBsVehicles(); renderBsCrews(); };
+    sel.onchange=function(){ v.rotation=this.value; v.shiftIds=rotSlots(v.rotation).map(function(s){ return s.id; }); ensureCrews(v); persistBase(); renderBsVehicles(); renderBsCrews(); };
     d1.appendChild(l1); d1.appendChild(sel);
     var d2=document.createElement('div'); var l2=document.createElement('label'); l2.textContent='Shifts';
-    var slInfo=document.createElement('div'); slInfo.style.cssText='font-size:14px;font-weight:700;padding:8px 0;line-height:1.5;';
-    slInfo.textContent=rotSlots(v.rotation).map(function(s){ return s.name+' '+fmtTime(s.start)+'–'+fmtTime(s.end); }).join(' · ')||'—';
-    d2.appendChild(l2); d2.appendChild(slInfo);
+    /* tick which of the rotation's shifts this team runs */
+    var shiftBox=document.createElement('div'); shiftBox.style.cssText='display:flex;flex-wrap:wrap;gap:6px;padding:6px 0;';
+    var rotSlotList=rotSlots(v.rotation);
+    if(!rotSlotList.length){
+      var noSh=document.createElement('span'); noSh.className='fine'; noSh.textContent='Add shifts in the Shifts section above.';
+      shiftBox.appendChild(noSh);
+    }
+    var checkedIds=teamShiftIds(v);
+    rotSlotList.forEach(function(s){
+      var lab=document.createElement('label'); lab.style.cssText='display:flex;gap:5px;align-items:center;font-size:13px;font-weight:700;cursor:pointer;';
+      var cb=document.createElement('input'); cb.type='checkbox'; cb.checked=checkedIds.indexOf(s.id)>=0;
+      cb.setAttribute('data-sid', s.id);
+      cb.onchange=function(){
+        var ids=[];
+        shiftBox.querySelectorAll('input[type=checkbox]').forEach(function(b){ if(b.checked) ids.push(b.getAttribute('data-sid')); });
+        if(!ids.length){ toast('A team needs at least one shift'); this.checked=true; return; }
+        v.shiftIds=ids; persistBase(); renderBsVehicles();
+      };
+      var txt=document.createElement('span'); txt.textContent=s.name+' '+fmtTime(s.start)+'–'+fmtTime(s.end);
+      lab.appendChild(cb); lab.appendChild(txt); shiftBox.appendChild(lab);
+    });
+    d2.appendChild(l2); d2.appendChild(shiftBox);
     row.appendChild(d1); row.appendChild(d2);
     card.appendChild(row);
     wrap.appendChild(card);
   });
 }
 function bsAddVehicle(){
-  var v={id:'v'+Date.now(), name:'Team '+(S.base.vehicles.length+1), rotation:'224', shiftLen:12, startTime:'06:00', coverage:24};
+  var v={id:'v'+Date.now(), name:'Team '+(S.base.vehicles.length+1), rotation:'224', shiftLen:12, startTime:'06:00', coverage:24, color:CREW_COLORS[S.base.vehicles.length%CREW_COLORS.length]};
   S.base.vehicles.push(v); ensureCrews(v); persistBase(); renderBsVehicles(); renderBsCrews();
 }
 function bsDelVehicle(vi){
@@ -1514,7 +1557,7 @@ function renderBsCrews(){ renderBsVehicles(); } /* crews now render inside each 
 
 /* ---------- crew color picker ---------- */
 /* Standard colors are auto-assigned; tapping a crew's dot lets the user pick any of them. */
-var bsColorOpen=null, ceColorOpen=-1;
+var bsColorOpen=null, ceColorOpen=-1, teamColorOpen=null;
 function colorSwatches(current, onPick){
   var row=document.createElement('div'); row.className='cswatches';
   CREW_COLORS.forEach(function(col){
@@ -1684,9 +1727,10 @@ function toAnchorStep(){
     show('v-anchor');
     return;
   }
-  var slots=rotSlots(rotKey);
-  if(!slots.length){ toast('Add shifts first (Settings \u2013 Display \u2013 Shifts)'); return; }
-  if(rotHasNight(rotKey)&&slots.length<2){ toast('Add a second shift first (Settings \u2013 Display \u2013 Shifts)'); return; }
+  var allSlots=rotSlots(rotKey);
+  if(!allSlots.length){ toast('Add shifts first (Settings \u2013 Display \u2013 Shifts)'); return; }
+  if(rotHasNight(rotKey)&&allSlots.length<2){ toast('Add a second shift first (Settings \u2013 Display \u2013 Shifts)'); return; }
+  var slots=rotSlots(rotKey, v.shiftIds);
   var picks={}, anySuggested=sug!=null;
   slots.forEach(function(sl){
     var c=crewOnSlot(rotKey, sl.id, anySuggested?sug:0);
@@ -1845,7 +1889,7 @@ function generateMonthRoster(){
   S.draft={ id:'r'+Date.now(), kind:'month', vehicleId:v.id,
     name:(v.name||'Team')+' \u00b7 '+MN[A.month]+' '+A.year,
     year:A.year, month:A.month, anchorAbs:A.abs, startISO:iso, days:dim, crews:crews,
-    shiftLen:rot.hours||12, startTime:v.startTime||'06:00', rotation:A.rotKey, coverage:v.coverage||24, overrides:{}, memberOverrides:{} };
+    shiftLen:rot.hours||12, startTime:v.startTime||'06:00', rotation:A.rotKey, coverage:v.coverage||24, shiftIds:teamShiftIds(v), overrides:{}, memberOverrides:{} };
   S.fromSaved=false;
   S.cal={vehicleId:v.id, y:A.year, m:A.month, mode:'month', sub:'month', weekISO:null};
   renderCalendar();
@@ -1951,7 +1995,7 @@ function renderCalChrome(ctx){
     return '<span><span class="dot" style="background:'+c.color+'"></span>Crew '+escapeHtml(c.name)+'</span>';
   }).join('')+(function(){
     if(!ctx||!ctx.R) return '';
-    var shifts=rotSlots(ctx.R.rotation).map(function(s){
+    var shifts=rotSlots(ctx.R.rotation, ctx.R.shiftIds).map(function(s){
       var tm=''; try{ tm=slotTime(ctx.R, s.id); }catch(e){}
       return '<span style="white-space:nowrap;">'+escapeHtml(s.name)+(tm?' '+escapeHtml(tm):'')+'</span>';
     }).join('');
@@ -1959,7 +2003,7 @@ function renderCalChrome(ctx){
   })();
 }
 function calSlotCrews(R, dayIdx){
-  var slots=rotSlots(R.rotation);
+  var slots=rotSlots(R.rotation, R.shiftIds);
   var per=slots.map(function(sl){ return {sl:sl, list:[]}; });
   R.crews.forEach(function(c,ci){
     var st=cellState(R,dayIdx,ci);
@@ -1990,7 +2034,7 @@ function renderCalMonth(ctx){
       var date=info.date;
       var hd=hol?hol[holISO(y,m,d)]:null;
       var inner='<div class="dnum">'+d+(hd?'<span class="hdot" title="'+escapeHtml(hd)+'"></span>':'')+'</div>';
-      var slots=rotSlots(R.rotation), nSlots=slots.length;
+      var slots=rotSlots(R.rotation, R.shiftIds), nSlots=slots.length;
       calSlotCrews(R,info.dayIdx).forEach(function(ps, sIdx){
         if(!ps.list.length) return;
         var dateISO=info.date?isoDate(info.date):null;
@@ -2153,7 +2197,7 @@ function continueRoster(){
     year:y, month:m, anchorAbs:(R0.anchorAbs||0)+days, startISO:iso, days:dim,
     crews:JSON.parse(JSON.stringify(R0.crews)),
     shiftLen:R0.shiftLen||rot.hours||12, startTime:R0.startTime||v.startTime||'06:00',
-    rotation:R0.rotation, coverage:R0.coverage||v.coverage||24, overrides:{}, memberOverrides:{} };
+    rotation:R0.rotation, coverage:R0.coverage||v.coverage||24, shiftIds:R0.shiftIds?R0.shiftIds.slice():teamShiftIds(v), overrides:{}, memberOverrides:{} };
   S.fromSaved=false; S.unitId=null; S.unitName=S.draft.name;
   S.cal={vehicleId:cal.vehicleId, y:y, m:m, mode:'month', sub:'month', weekISO:null};
   renderCalendar(); show('v-cal');
@@ -2161,7 +2205,7 @@ function continueRoster(){
 }
 function renderCalAgenda(ctx){
   var cal=ensureCal(), R=ctx.R, y=cal.y, m=cal.m;
-  var slots=rotSlots(R.rotation);
+  var slots=rotSlots(R.rotation, R.shiftIds);
   var wrap=document.getElementById('calAgendaWrap');
   var dim=daysInMonth(y,m), html='';
   var WD=['SUN','MON','TUE','WED','THU','FRI','SAT'];
@@ -2236,7 +2280,7 @@ function renderCalWeek(ctx){
     if(!info){
       html+='<div class="daycard out">'+head+'<div style="color:var(--muted);font-size:14px;">No roster coverage</div></div>';
     }else{
-      var per=calSlotCrews(R,info.dayIdx), body='', nSl=rotSlots(R.rotation).length;
+      var per=calSlotCrews(R,info.dayIdx), body='', nSl=rotSlots(R.rotation, R.shiftIds).length;
       var wDateISO=isoDate(date);
       per.forEach(function(ps, sIdx){
         if(!ps.list.length) return;
@@ -2339,7 +2383,7 @@ function openSheet(dayIdx, crewIdx){
     document.getElementById('sheetTitle').textContent=title+' — Crew '+c.name;
     document.getElementById('sheetSub').textContent='Currently: '+stLabel(st,R)+(isOv?' (edited)':' (generated)');
     var opts2=document.getElementById('sheetOpts'); opts2.innerHTML='';
-    rotSlots(R.rotation).forEach(function(sl){
+    rotSlots(R.rotation, R.shiftIds).forEach(function(sl){
       var b=document.createElement('button'); b.className='opt';
       b.textContent=sl.name+' · '+slotTime(R,sl.id);
       b.onclick=(function(v){ return function(){ setOverride(v); }; })(sl.id);
@@ -3277,7 +3321,7 @@ function renderBase(){
       none.innerHTML='<span style="color:var(--muted)">No roster for this date</span>';
       card.appendChild(none);
     } else {
-      var slots=rotSlots(R.rotation);
+      var slots=rotSlots(R.rotation, R.shiftIds);
       var dateISO=S.baseDateISO;
       var buckets=slots.map(function(){ return []; });
       var shiftCounts=slots.map(function(){ return 0; });
@@ -3356,7 +3400,7 @@ function baseAddStaff(rosterId, shiftId){
     var RR=uu.roster;
     var di=dayDiff(parseISO(RR.startISO), dt);
     if(di<0||di>=RR.days) return;
-    rotSlots(RR.rotation).forEach(function(sl){
+    rotSlots(RR.rotation, RR.shiftIds).forEach(function(sl){
       RR.crews.forEach(function(c){
         if(cellState(RR,di,RR.crews.indexOf(c))===sl.id){
           effShiftMembers(RR, dateISO, sl.id, c).forEach(function(nm){
@@ -3604,7 +3648,7 @@ function baseSick(rosterId, shiftId, personName, leaveType){
     var RR=uu.roster;
     var di=dayDiff(parseISO(RR.startISO), dt);
     if(di<0||di>=RR.days) return;
-    rotSlots(RR.rotation).forEach(function(sl){
+    rotSlots(RR.rotation, RR.shiftIds).forEach(function(sl){
       RR.crews.forEach(function(c){
         if(cellState(RR,di,RR.crews.indexOf(c))===sl.id){
           effShiftMembers(RR, dateISO, sl.id, c).forEach(function(nm){ working[nm]=1; });
@@ -3718,7 +3762,7 @@ function baseFillOpen(rosterId, shiftId){
     var RR=uu.roster;
     var di=dayDiff(parseISO(RR.startISO), dt);
     if(di<0||di>=RR.days) return;
-    rotSlots(RR.rotation).forEach(function(sl){
+    rotSlots(RR.rotation, RR.shiftIds).forEach(function(sl){
       RR.crews.forEach(function(c){
         if(cellState(RR,di,RR.crews.indexOf(c))===sl.id){
           effShiftMembers(RR, dateISO, sl.id, c).forEach(function(nm){
@@ -4162,7 +4206,7 @@ function renderToday(){
     var vk=R.vehicleId||('n:'+u.name);
     if(seenVehicle[vk]) return; /* one row per vehicle — newest first */
     seenVehicle[vk]=1;
-    var slots=rotSlots(R.rotation);
+    var slots=rotSlots(R.rotation, R.shiftIds);
     var buckets=slots.map(function(){ return []; });
     R.crews.forEach(function(c,ci){
       var st=cellState(R,di,ci), names=crewChipNames(c).join(', ');
@@ -5306,7 +5350,7 @@ function expMix(a,b,t){
 }
 /* Build export data from the currently viewed calendar roster. */
 function expShiftList(R){
-  return rotSlots(R.rotation).map(function(sl){
+  return rotSlots(R.rotation, R.shiftIds).map(function(sl){
     return {id:sl.id, name:sl.name, band:sl.name, color:sl.color||'#888888', start:sl.start, end:sl.end};
   });
 }
@@ -5320,10 +5364,10 @@ function expData(){
   var vname=v.name||ctx.unitName||R.name||'Roster';
   var rot=ROTATIONS[R.rotation]||ROTATIONS['224'];
   var dim=daysInMonth(y,m);
-  var hasNight=rotSlots(R.rotation).some(function(s){ return s.id==='N'; });
+  var hasNight=rotSlots(R.rotation, R.shiftIds).some(function(s){ return s.id==='N'; });
   /* ordered shift list for this rotation: D/N/X use the workplace names,
      custom slots (e.g. 8-hour Morning/Afternoon/Night) use their own labels */
-  var rslots=rotSlots(R.rotation);
+  var rslots=rotSlots(R.rotation, R.shiftIds);
   var shifts=expShiftList(R);
   var nsh=shifts.length;
   var crews=R.crews.map(function(c,ci){
