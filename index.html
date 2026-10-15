@@ -873,7 +873,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1130';
+var BUILD='20261015-1145';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -4920,7 +4920,7 @@ function expData(){
   var nsh=shifts.length;
   var crews=R.crews.map(function(c,ci){
     var col=c.color||CREW_COLORS[ci%CREW_COLORS.length]||'#999999';
-    var nm=(c.members||[]).map(staffName).filter(function(n){ return n; });
+    var nm=(c.members||[]).map(function(m){ return staffName(m)||m; }).filter(function(n){ return n; });
     var label=(c.name||'').trim()||String.fromCharCode(65+ci);
     return {name:label, color:col,
       tintXLSX:'FF'+expMix(col,'#ffffff',0.90).replace('#',''),
