@@ -873,7 +873,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1240';
+var BUILD='20261015-1250';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2516,6 +2516,7 @@ function saveDayEdit(){
       }
     }
   });
+  syncLeaveLogFills(R);
   syncUnit();
   dayCtx.edit=false;
   renderDaySheet();
@@ -3012,6 +3013,7 @@ function mkApprove(appId){
     R.memberOverrides[a.dateISO][a.shiftId]=mems;
   }
   a.status='approved';
+  syncLeaveLogFills(R);
   persistBase(); persist();
   toast(a.applicant+' approved for '+a.shift+'.');
   renderBase();
@@ -3675,7 +3677,16 @@ function basePickCover(rosterId, shiftId, sickName, coverName, leaveType){
     }
   }
   if(!R.leaveLog) R.leaveLog=[];
-  R.leaveLog.push({date:dateISO, shift:shiftId, person:sickName, type:leaveType||'Leave', cover:(coverName===OPEN_MARK?'OPEN':coverName), ts:Date.now()});
+  if(sickName===OPEN_MARK){
+    /* Filling an open slot: update the matching OPEN entry instead of adding a duplicate */
+    for(var li2=R.leaveLog.length-1; li2>=0; li2--){
+      var lg2=R.leaveLog[li2];
+      if(lg2.date===dateISO&&lg2.shift===shiftId&&lg2.cover==='OPEN'&&lg2.type!=='Swap'&&lg2.type!=='Cover'){ lg2.cover=coverName; break; }
+    }
+  }else{
+    R.leaveLog.push({date:dateISO, shift:shiftId, person:sickName, type:leaveType||'Leave', cover:(coverName===OPEN_MARK?'OPEN':coverName), ts:Date.now()});
+  }
+  syncLeaveLogFills(R);
   persist();
   document.getElementById('baseCoverPanel').innerHTML='';
   renderBase();
@@ -4426,7 +4437,7 @@ function rosterMemberHtml(nm, original){
 function collectLeaveEntries(R,y,m,personFilter){
   var entries=[];
   (R.leaveLog||[]).forEach(function(lg){
-    if(!lg||lg.type==='Swap') return;
+    if(!lg||lg.type==='Swap'||lg.type==='Cover'||lg.person===OPEN_MARK) return;
     var parts=String(lg.date||'').split('-');
     if(parts.length!==3) return;
     var ly=+parts[0], lm=+parts[1]-1, ld=+parts[2];
@@ -4442,6 +4453,61 @@ function collectLeaveEntries(R,y,m,personFilter){
   });
   entries.sort(function(a,b){ return a.date<b.date?-1:a.date>b.date?1:0; });
   return entries;
+}
+/* Reconcile leaveLog cover assignments with the current roster state.
+   Only fixes inconsistencies — never overwrites a correct assignment.
+   - An OPEN entry gets a filler if an unclaimed replacement is working that shift.
+   - A filled entry whose filler is gone reverts to OPEN (slot open again) or
+     gets reassigned to the new filler (slot filled by someone else). */
+function syncLeaveLogFills(R){
+  if(!R||!R.leaveLog) return;
+  var byKey={};
+  R.leaveLog.forEach(function(lg){
+    if(!lg||lg.type==='Swap'||lg.type==='Cover'||lg.person===OPEN_MARK) return;
+    var k=lg.date+'|'+lg.shift;
+    (byKey[k]=byKey[k]||[]).push(lg);
+  });
+  Object.keys(byKey).forEach(function(k){
+    var parts=k.split('|'), dateISO=parts[0], shiftId=parts[1];
+    var entries=byKey[k];
+    var d=new Date(dateISO+'T00:00:00');
+    var info=null;
+    try{ info=calRosterDay(R, d.getFullYear(), d.getMonth(), d.getDate()); }catch(e){}
+    if(!info) return;
+    var per=calSlotCrews(R, info.dayIdx);
+    var slot=null;
+    per.forEach(function(ps){ if(ps.sl.id===shiftId&&ps.list.length) slot=ps; });
+    if(!slot) return;
+    var crew=slot.list[0].c;
+    var eff=effShiftMembers(R, dateISO, shiftId, crew);
+    var orig=crew.members||[];
+    var fillers=eff.filter(function(nm){ return nm!==OPEN_MARK&&orig.indexOf(nm)<0; });
+    var hasOpen=eff.indexOf(OPEN_MARK)>=0;
+    var claimed={};
+    entries.forEach(function(lg){ if(lg.cover!=='OPEN'&&lg.cover) claimed[lg.cover]=1; });
+    // Stale filled entries: filler gone
+    entries.forEach(function(lg){
+      if(lg.cover!=='OPEN'&&lg.cover&&eff.indexOf(lg.cover)<0){
+        delete claimed[lg.cover];
+        if(hasOpen){
+          lg.cover='OPEN';
+        }else{
+          // Slot filled by someone else — reassign to an unclaimed filler if any
+          for(var i=0;i<fillers.length;i++){
+            if(!claimed[fillers[i]]){ lg.cover=fillers[i]; claimed[fillers[i]]=1; break; }
+          }
+        }
+      }
+    });
+    // OPEN entries: assign an unclaimed filler if one is working
+    entries.forEach(function(lg){
+      if(lg.cover==='OPEN'){
+        for(var j=0;j<fillers.length;j++){
+          if(!claimed[fillers[j]]){ lg.cover=fillers[j]; claimed[fillers[j]]=1; break; }
+        }
+      }
+    });
+  });
 }
 /* Leave list HTML for the bottom of a roster view (same content as the export Leave section). */
 function rosterLeaveHtml(entries){
