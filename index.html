@@ -914,7 +914,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1840';
+var BUILD='20261015-1845';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2502,6 +2502,19 @@ function renderDaySheet(){
   if(!dayCtx.edit){
     document.getElementById('daySheetSub').textContent=shifts.length?shifts.length+' shift'+(shifts.length>1?'s':'')+' on duty':'No shifts rostered';
     var html='';
+    /* Rule violations on this day (same text as the warnings section / red dot)
+       + how to fix each one. Only when this day has violations. */
+    var dayViols=[];
+    try{ dayViols=(rulesViolationDates(R)[dayCtx.dateISO]||[]); }catch(e){ dayViols=[]; }
+    if(dayViols.length){
+      html+='<div style="margin-bottom:12px;"><div style="font-size:15px;font-weight:800;margin-bottom:6px;color:#CC0000;">Rule violations</div>';
+      dayViols.forEach(function(v){
+        html+='<div style="font-size:14px;color:#CC0000;margin-bottom:2px;">'+escapeHtml(v)+'</div>';
+        var fix=rulesFixLine(v);
+        if(fix) html+='<div style="font-size:14px;color:#CC0000;margin-bottom:8px;"><b>To fix:</b> '+escapeHtml(fix)+'</div>';
+      });
+      html+='</div>';
+    }
     shifts.forEach(function(ps, i){
       var tm=''; try{ tm=slotTime(R, ps.sl.id); }catch(e){}
       var band=(ps.list[0]&&ps.list[0].c.color)||'#888888';
@@ -5017,6 +5030,32 @@ function rulesViolationDates(R){
     });
     return out;
   }catch(e){ return {}; }
+}
+
+/* Plain-English "how to fix it" for one violation string.
+   Parses the "<Label>: <person> — <details>" format that rulesCheckPerson
+   / rulesViolationDates produce, and returns the action sentence (without
+   the "To fix:" prefix — the caller adds that). Unknown label -> ''. */
+function rulesFixLine(v){
+  var i=(v||'').indexOf(': ');
+  if(i<0) return '';
+  var label=v.slice(0,i);
+  var rest=v.slice(i+2);
+  var j=rest.indexOf(' — ');
+  var person=(j>=0)?rest.slice(0,j):rest;
+  if(!person) return '';
+  var fix={
+    'Back-to-back shifts':'Take '+person+' off one of these two back-to-back shifts.',
+    'Rest between shifts':'Give '+person+' a longer break before this shift.',
+    'Max continuous hours':'Give '+person+' a break in this stretch.',
+    'Rest after nights':'Give '+person+' more rest after their nights before this shift.',
+    'Max consecutive shifts':'Give '+person+' a full day off in this run.',
+    'Max hours per month':'Take '+person+' off a shift this month.',
+    'Max overtime shifts':'Replace '+person+' on one of their extra shifts this month.',
+    'Work public holidays':'Take '+person+' off this public holiday.',
+    'Weekends off':'Give '+person+' a full weekend (Sat + Sun) off this month.'
+  };
+  return fix[label]||'';
 }
 
 function renderShiftReq(){
