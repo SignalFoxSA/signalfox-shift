@@ -370,6 +370,8 @@
   .cell.changed{box-shadow:inset 0 0 0 2px #FFC13E;}
   .cell.open{box-shadow:inset 0 0 0 2px #CC0000;}
   .cell .band .bmn{display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .agshift{margin-bottom:5px;}
+  .agmem{margin-top:2px;}
   .agqual{color:var(--muted); font-weight:600;}
   .emptycal{text-align:center; padding:34px 18px; color:var(--muted);}
   .emptycal .btn{margin-top:14px;}
@@ -897,7 +899,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1700';
+var BUILD='20261015-1710';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2242,13 +2244,14 @@ function renderCalAgenda(ctx){
         var tm=''; try{ tm=slotTime(R, sl.id); }catch(e){}
         var bit=on.map(function(x){
           var mems=effShiftMembers(R, dateISO, sl.id, x.c);
-          var nm=mems.length?' \u2014 '+mems.map(function(n){
+          var nm=mems.map(function(n){
             var q=(n===OPEN_MARK)?'':qualName(staffQualIdByName(n));
             return rosterMemberHtml(n, x.c.members||[])+(q?' <span class="agqual">('+escapeHtml(q)+')</span>':'');
-          }).join(', '):'';
-          return '<span class="cdot" style="background:'+x.c.color+'"></span> <b>Crew '+escapeHtml(x.c.name)+'</b>'+nm;
-        }).join(' \u00b7 ');
-        return '<div><b>'+escapeHtml(sl.name||sl.id)+(tm?' '+escapeHtml(tm):'')+':</b> '+bit+'</div>';
+          }).join(', ');
+          return '<div class="aghead"><b>'+escapeHtml(sl.name||sl.id)+(tm?' '+escapeHtml(tm):'')+'</b> \u00b7 <span class="cdot" style="background:'+x.c.color+'"></span> <b>Crew '+escapeHtml(x.c.name)+'</b></div>'+
+            (mems.length?'<div class="agmem">'+nm+'</div>':'');
+        }).join('');
+        return '<div class="agshift">'+bit+'</div>';
       }).filter(function(x){ return x; });
       body='<div class="agbody">'+(lines.join('')||'<span class="dim">All off</span>')+(isT?'<span class="todaytag">TODAY</span>':'')+'</div>';
     }
