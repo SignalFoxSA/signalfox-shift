@@ -885,7 +885,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1345';
+var BUILD='20261015-1350';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -4280,15 +4280,16 @@ function renderStaffQuals(){
     +'</div>';
   if(!qs.length){ wrap.innerHTML=h+'<p class="fine">None yet &mdash; add the ones your industry uses.</p>'; return; }
   if(ladderView==='grid'){
-    /* Grid: rows = who covers, columns = shift that needs covering. Read-only. */
-    h+='<p class="fine" style="margin:0 0 6px;">Rows = who covers. Columns = the shift that needs covering.</p>';
+    /* Grid (transposed): columns = who covers, rows = shift that needs covering. Read-only.
+       Find the person across the top, read down their column: tick = they can cover that shift. */
+    h+='<p class="fine" style="margin:0 0 6px;">Find the person across the top. Read down: \u2713 means they can cover that shift.</p>';
     h+='<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;text-align:center;">';
-    h+='<tr><th style="border:1px solid var(--line);padding:7px 4px;background:var(--card2);text-align:left;">Cover \u2193 / Shift \u2192</th>'
+    h+='<tr><th style="border:1px solid var(--line);padding:7px 4px;background:var(--card2);text-align:left;">Shift \u2193 / Cover \u2192</th>'
       +qs.map(function(q){ return '<th style="border:1px solid var(--line);padding:7px 4px;background:#111;color:#fff;">'+escapeHtml(q.name||'?')+'</th>'; }).join('')+'</tr>';
-    qs.forEach(function(row){
-      h+='<tr><td style="border:1px solid var(--line);padding:7px 4px;font-weight:700;text-align:left;background:var(--card2);">'+escapeHtml(row.name||'?')+'</td>'
-        +qs.map(function(col){
-          var ok=qualCanCover(row.id, col.id);
+    qs.forEach(function(shiftRow){
+      h+='<tr><td style="border:1px solid var(--line);padding:7px 4px;font-weight:700;text-align:left;background:var(--card2);">'+escapeHtml(shiftRow.name||'?')+'</td>'
+        +qs.map(function(coverer){
+          var ok=qualCanCover(coverer.id, shiftRow.id);
           return '<td style="border:1px solid var(--line);padding:7px 4px;font-weight:800;font-size:15px;color:'+(ok?'#B8860B':'#CC0000')+';">'+(ok?'\u2713':'\u2715')+'</td>';
         }).join('')+'</tr>';
     });
