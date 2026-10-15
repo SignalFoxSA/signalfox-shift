@@ -580,16 +580,17 @@
       <button class="btn" onclick="openLadder()">Qualifications</button>
     </div>
     <div class="card">
+      <h3>Teams</h3>
+      <p class="sub">Each team runs its own rotation &mdash; 12-hour, 24-hour, whatever the workplace needs.</p>
+      <button class="btn" onclick="openRules()">Shift rules</button>
+      <div id="bsVehicles"></div>
+      <button class="addperson" onclick="bsAddVehicle()">+ Add team</button>
+    </div>
+    <div class="card">
       <h3>Staff <span class="countchip" id="staffCount"></span></h3>
       <p class="sub">Everyone at your workplace, in one list. Put each person into their team and crew below.</p>
       <div id="staffList"></div>
       <button class="addperson" onclick="staffAdd()">+ Add staff member</button>
-    </div>
-    <div class="card">
-      <h3>Teams</h3>
-      <p class="sub">Each team runs its own rotation &mdash; 12-hour, 24-hour, whatever the workplace needs.</p>
-      <div id="bsVehicles"></div>
-      <button class="addperson" onclick="bsAddVehicle()">+ Add team</button>
     </div>
     <div class="card">
       <h3>Rotations</h3>
@@ -618,6 +619,15 @@
       <h3>Shift requirements</h3>
       <p class="sub">What each shift needs to be properly staffed. Set how many of each qualification a shift needs &mdash; a minimum, or an exact number. The On Duty tab shows what&rsquo;s short.</p>
       <div id="shiftReqList"></div>
+    </div>
+  </div>
+
+  <!-- SHIFT RULES (own screen — only reachable from the Shift setup Teams button) -->
+  <div class="view" id="v-rules">
+    <div class="card">
+      <h3>Shift rules</h3>
+      <p class="sub">Your workplace&rsquo;s own rules. Set the ones you want &mdash; leave the rest blank or on None and they won&rsquo;t apply. These are your rules, not legal advice.</p>
+      <div id="rulesList"></div>
     </div>
   </div>
 
@@ -900,7 +910,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1720';
+var BUILD='20261015-1805';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -4084,7 +4094,7 @@ function enterApp(){
 /* ---------- navigation ---------- */
 var TAB_VIEWS={home:'v-home', rosters:'v-rosters', onduty:'v-base', staff:'v-staff', settings:'v-settings',
   myshifts:'v-myshifts', openshifts:'v-marketplace', profile:'v-profile', company:'v-company'};
-var BACK_IDS=['v-newroster','v-anchor','v-cal','v-base','v-rotbuilder','v-ladder','v-shiftreq'];
+var BACK_IDS=['v-newroster','v-anchor','v-cal','v-base','v-rotbuilder','v-ladder','v-shiftreq','v-rules'];
 function show(id){
   document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
   document.getElementById(id).classList.add('active');
@@ -4200,6 +4210,7 @@ function goBack(){
   if(active==='v-rotbuilder'){ openBaseSetup(); return; }
   if(active==='v-ladder'){ switchTab('staff'); return; }
   if(active==='v-shiftreq'){ switchTab('staff'); return; }
+  if(active==='v-rules'){ switchTab('staff'); return; }
   if(active==='v-anchor'){ show('v-newroster'); return; }
   if(active==='v-cal'){
     var cal=ensureCal();
@@ -4400,6 +4411,63 @@ function shiftReqSet(shift,qid,count,mode){
   else shift.reqs.push({qid:qid,count:count,mode:mode||'min'});
 }
 function openShiftReq(){ renderShiftReq(); show('v-shiftreq'); }
+/* ---------- SHIFT RULES (own screen — only reachable from the Shift setup Teams button) ---------- */
+function rulesObj(){
+  if(!S.base.rules || typeof S.base.rules!=='object') S.base.rules={};
+  return S.base.rules;
+}
+function openRules(){ renderRules(); show('v-rules'); }
+function rulesSet(key, raw, kind){
+  var r=rulesObj();
+  if(kind==='num'){
+    var v=(raw===''||raw===null||raw===undefined)?null:parseInt(raw, 10);
+    if(v===null || isNaN(v)) delete r[key]; else r[key]=v;
+  }else if(kind==='yesno'){
+    r[key]=(raw==='yes');
+  }else{ /* pick */
+    if(raw===''||raw===null||raw===undefined) delete r[key];
+    else if(raw==='all') r[key]='all';
+    else r[key]=parseInt(raw, 10);
+  }
+  persistBase();
+}
+function renderRules(){
+  var r=rulesObj();
+  var wrap=document.getElementById('rulesList'); if(!wrap) return;
+  var cons=[]; for(var i=1;i<=30;i++) cons.push(i);
+  var defs=[
+    {key:'restBetween', label:'Rest between shifts', desc:'Minimum break after a shift ends, before the next shift can start.', type:'pick', opts:[null,12,24,36,48], unit:'hours'},
+    {key:'backToBack', label:'Back-to-back shifts', desc:'Allow two shifts with no break between them (e.g. Day straight into Night)?', type:'yesno'},
+    {key:'maxContinuous', label:'Max continuous hours', desc:'Most hours someone can work in one stretch, without a break.', type:'pick', opts:[null,12,24,36,48], unit:'hours'},
+    {key:'restAfterNights', label:'Rest after nights', desc:'Minimum rest after a run of night shifts, before the next shift. Recommended: 24 hours.', type:'num', unit:'hours', placeholder:'e.g. 24'},
+    {key:'maxConsecutiveShifts', label:'Max consecutive shifts in a row', desc:'Most shifts someone can work in a row. Nights and days count the same. The count resets after a break.', type:'pick', opts:[null].concat(cons), unit:'shifts'},
+    {key:'maxHoursMonth', label:'Max hours per month', desc:'Most hours someone can be rostered for in a month.', type:'num', unit:'hours', placeholder:'e.g. 180'},
+    {key:'maxOvertimeShifts', label:'Max overtime shifts per month', desc:'Most extra / cover shifts someone can pick up in a month, beyond their normal roster.', type:'num', unit:'shifts', placeholder:'e.g. 4'},
+    {key:'workHolidays', label:'Work public holidays', desc:'Do staff work on public holidays (from your Settings)?', type:'yesno'},
+    {key:'weekendsOff', label:'Weekends off per month', desc:'How many weekends (Saturday + Sunday) off someone gets each month.', type:'pick', opts:[null,1,2,3,'all'], unit:'weekends'}
+  ];
+  var out='';
+  defs.forEach(function(d){
+    var cur=r[d.key];
+    var ctl='';
+    if(d.type==='pick'){
+      ctl='<select onchange="rulesSet(\''+d.key+'\', this.value, \'pick\')">'+d.opts.map(function(o){
+        var val=(o===null?'':String(o));
+        var lab=(o===null?'None':(o==='all'?'All':String(o)));
+        var sel=((cur==null&&o===null)||(cur!=null&&String(cur)===String(o)))?' selected':'';
+        return '<option value="'+val+'"'+sel+'>'+lab+'</option>';
+      }).join('')+'</select>';
+    }else if(d.type==='yesno'){
+      var yesVal=(cur===undefined||cur===null)?true:!!cur;
+      ctl='<select onchange="rulesSet(\''+d.key+'\', this.value, \'yesno\')"><option value="yes"'+(yesVal?' selected':'')+'>Yes</option><option value="no"'+(!yesVal?' selected':'')+'>No</option></select>';
+    }else{
+      ctl='<input type="number" min="0" placeholder="'+(d.placeholder||'')+'" value="'+(cur==null?'':cur)+'" onchange="rulesSet(\''+d.key+'\', this.value, \'num\')">';
+    }
+    out+='<div class="card" style="margin:0 0 10px;"><b>'+escapeHtml(d.label)+'</b><p class="sub" style="margin:4px 0 8px;">'+escapeHtml(d.desc)+'</p>'+ctl+(d.unit?' <span class="fine">'+escapeHtml(d.unit)+'</span>':'')+'</div>';
+  });
+  wrap.innerHTML=out;
+}
+
 function renderShiftReq(){
   var wrap=document.getElementById('shiftReqList'); if(!wrap) return;
   var qs=baseQuals();
