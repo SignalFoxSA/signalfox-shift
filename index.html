@@ -873,7 +873,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1145';
+var BUILD='20261015-1205';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -4977,7 +4977,26 @@ function expData(){
       : shifts.map(function(s){ return shiftBandShort(s.band)+' '+slotTime(stT,s.id); }).join(' \u00b7 '));
   }catch(e){ sub=rot.name+' rotation'; }
   var slug=(vname+'-'+MN[m]+'-'+y).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
-  return {y:y, m:m, dim:dim, title:title, sub:sub, expPerson:expPerson, expColor:expColor,
+  /* Leave entries for this month (excluding swaps) — for the Leave section at the bottom.
+     Personal exports show only that person's own leave. */
+  var leaveEntries=[];
+  (R.leaveLog||[]).forEach(function(lg){
+    if(!lg||lg.type==='Swap') return;
+    var parts=String(lg.date||'').split('-');
+    if(parts.length!==3) return;
+    var ly=+parts[0], lm=+parts[1]-1, ld=+parts[2];
+    if(ly!==y||lm!==m) return;
+    if(expPerson&&lg.person!==expPerson) return;
+    var isOpen=lg.cover==='OPEN'||!lg.cover;
+    leaveEntries.push({date:lg.date, d:ld,
+      dateLabel:expWeekdayShort(y,m,ld)+' '+ld+' '+MNS[m],
+      person:lg.person, personQual:dispMemberQual(lg.person),
+      type:lg.type||'Leave', isOpen:isOpen,
+      cover:lg.cover,
+      coverQual:(lg.cover&&lg.cover!=='OPEN')?dispMemberQual(lg.cover):null});
+  });
+  leaveEntries.sort(function(a,b){ return a.date<b.date?-1:a.date>b.date?1:0; });
+  return {y:y, m:m, dim:dim, title:title, sub:sub, expPerson:expPerson, expColor:expColor, leave:leaveEntries,
     subXlsx:sub.replace(/ rotation/,''),
     footer:'Generated with SignalFox Shift · build '+BUILD,
     crews:crews, pairs:pairs, pairsMembers:pairsMembers, hasNight:hasNight, shifts:shifts, nsh:nsh,
@@ -5039,6 +5058,12 @@ function expBuildText(E, mode){
   }
   L.push('', 'Crews');
   E.crews.forEach(function(c){ L.push('Crew '+c.name+' — '+c.names.join(', ')); });
+  if(E.leave&&E.leave.length){
+    L.push('', 'Leave');
+    E.leave.forEach(function(lv){
+      L.push(lv.dateLabel+' — '+lv.personQual+', '+lv.type+', '+(lv.isOpen?'OPEN':'replaced by '+lv.coverQual));
+    });
+  }
   L.push('', E.footer);
   return L.join('\n');
 }
@@ -5050,7 +5075,8 @@ function expBuildWorkbook(E, mode){
   var isNames=(mode==='names'), isPersonal=!!E.expPerson;
   var cells=expMonthCells(E.y,E.m), weeks=Math.ceil(cells.length/7);
   var rowsPerWeek=isPersonal?2:3;
-  var totalRows=3+weeks*rowsPerWeek+1+E.crews.length+1;
+  var leaveCount=(E.leave&&E.leave.length)?E.leave.length+1:0; // +1 for Leave header
+  var totalRows=3+weeks*rowsPerWeek+1+E.crews.length+leaveCount+1;
   var rows=[];
   for(var r=0;r<totalRows;r++) rows.push(['','','','','','','']);
   var ws=XLSX.utils.aoa_to_sheet(rows);
@@ -5153,7 +5179,18 @@ function expBuildWorkbook(E, mode){
       {font:{sz:12,color:{rgb:BLACK}}});
     ws['!merges'].push({s:{r:legRow+i-1,c:1},e:{r:legRow+i-1,c:6}});
   });
-  var fRow=legRow+E.crews.length;
+  var lvRow=legRow+E.crews.length;
+  if(leaveCount){
+    set('B'+lvRow,'Leave',{font:{sz:12,bold:true,color:{rgb:BLACK}}});
+    ws['!merges'].push({s:{r:lvRow-1,c:1},e:{r:lvRow-1,c:6}});
+    E.leave.forEach(function(lv,i){
+      var col=lv.isOpen?'FFCC0000':'FFB8860B'; // open = red, replaced = dark yellow
+      set('B'+(lvRow+1+i), lv.dateLabel+' — '+lv.personQual+', '+lv.type+', '+(lv.isOpen?'OPEN':'replaced by '+lv.coverQual),
+        {font:{sz:12,color:{rgb:col}}});
+      ws['!merges'].push({s:{r:lvRow+i,c:1},e:{r:lvRow+i,c:6}});
+    });
+  }
+  var fRow=legRow+E.crews.length+leaveCount;
   set('A'+fRow,E.footer,{font:{sz:11,color:{rgb:'FF999999'}}});
   ws['!merges'].push({s:{r:fRow-1,c:0},e:{r:fRow-1,c:6}});
   ws['!cols']=Array(7).fill({wch:26});
@@ -5252,6 +5289,14 @@ function expGridEl(E, mode, variant){
     h+='<div style="margin-bottom:3px;">Crew '+escapeHtml(c.name)+' — '+escapeHtml(c.names.join(', '))+'</div>';
   });
   h+='</div>';
+  if(E.leave&&E.leave.length){
+    h+='<div style="margin-top:14px;font-size:14px;font-weight:700;">Leave</div>';
+    E.leave.forEach(function(lv){
+      var col=lv.isOpen?'#CC0000':'#B8860B'; // open = red, replaced = dark yellow
+      h+='<div style="font-size:14px;color:'+col+';margin-bottom:2px;">'
+        +escapeHtml(lv.dateLabel+' — '+lv.personQual+', '+lv.type+', '+(lv.isOpen?'OPEN':'replaced by '+lv.coverQual))+'</div>';
+    });
+  }
   h+='<div style="margin-top:12px;font-size:12px;color:#999;">'+escapeHtml(E.footer)+'</div></div>';
   var div=document.createElement('div'); div.innerHTML=h;
   return div.firstChild;
@@ -5270,7 +5315,7 @@ async function expGeneratePDF(E, mode){
   var pw=pdf.internal.pageSize.getWidth(), ph=pdf.internal.pageSize.getHeight();
   var iw=pw-20, ih=canvas.height*iw/canvas.width;
   if(ih>ph-20){ var s=(ph-20)/ih; iw*=s; ih*=s; }
-  pdf.addImage(canvas.toDataURL('image/png'),'PNG',(pw-iw)/2,10,iw,ih);
+  pdf.addImage(canvas.toDataURL('image/jpeg',0.8),'JPEG',(pw-iw)/2,10,iw,ih);
   return new Blob([pdf.output('arraybuffer')],{type:'application/pdf'});
 }
 async function expGenerateImage(E, mode){
