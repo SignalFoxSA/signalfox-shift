@@ -75,6 +75,7 @@
   .srow select.qsel{flex:none; width:96px; padding:12px 6px;}
   /* staff person rows: two lines — name+qual+remove, then team+crew */
   .prow{margin-top:8px;}
+  #staffList .prow + .prow{border-top:1px solid var(--line);padding-top:10px;}
   .prow .sline{display:flex; gap:8px; align-items:center;}
   .prow .sline + .sline{margin-top:8px;}
   .prow .sline input[type=text]{flex:1; min-width:0;}
@@ -888,7 +889,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1455';
+var BUILD='20261015-1500';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -4498,6 +4499,41 @@ function staffSaveName(sid, oldName, newName){
   }
   persistBase(); renderStaffTab();
 }
+/* Crew heading in the Staff list: crew colour + editable name + headcount.
+   Members fall under their crew's heading. */
+function buildCrewHeading(c){
+  var head=document.createElement('div');
+  head.style.cssText='display:flex;gap:8px;align-items:center;padding:10px 0 6px;margin-top:10px;border-top:2px solid '+(c.color||'#888')+';';
+  var dot=crewColorDot(c.color, bsColorOpen===c.id, function(){
+    bsColorOpen=(bsColorOpen===c.id?null:c.id); renderStaffTab();
+  });
+  var nm=document.createElement('input'); nm.type='text'; nm.maxLength=14; nm.value=c.name;
+  nm.title='Crew name \u2014 must be unique across the workplace';
+  nm.style.cssText='flex:1;min-width:0;font-weight:800;font-size:15px;';
+  nm.onchange=function(){
+    var nn=this.value.trim();
+    if(!nn){ this.value=c.name; return; }
+    var dup=(S.base.crews||[]).some(function(x){ return x!==c && (x.name||'').trim().toUpperCase()===nn.toUpperCase(); });
+    if(dup){ toast('Crew names must be unique \u2014 "'+nn+'" is already used'); this.value=c.name; return; }
+    c.name=nn; this.value=nn; persistBase(); renderBsVehicles(); renderStaffTab();
+  };
+  var cnt=document.createElement('span'); cnt.style.cssText='font-size:12px;color:var(--muted);white-space:nowrap;';
+  cnt.textContent=(c.memberIds||[]).length+' people';
+  head.appendChild(dot); head.appendChild(nm); head.appendChild(cnt);
+  var out=document.createElement('div'); out.appendChild(head);
+  if(bsColorOpen===c.id){
+    out.appendChild(colorSwatches(c.color, function(col){
+      c.color=col; persistBase(); bsColorOpen=null; renderBsVehicles(); renderStaffTab();
+    }));
+  }
+  return out;
+}
+function buildUnassignedHeading(){
+  var head=document.createElement('div');
+  head.style.cssText='padding:10px 0 6px;margin-top:10px;border-top:2px solid var(--line);font-weight:800;font-size:15px;color:var(--muted);';
+  head.textContent='No crew yet';
+  return head;
+}
 function renderStaffTab(){
   reconcilePartners();
   renderBsVehicles(); /* headcounts may have shifted if partners were reconciled */
@@ -4505,7 +4541,23 @@ function renderStaffTab(){
   document.getElementById('staffCount').textContent=S.base.staff.length+' people';
   if(!S.base.staff.length) wrap.innerHTML='<p class="fine">Nobody here yet &mdash; add your people below.</p>';
   var teams=S.base.vehicles||[];
-  S.base.staff.forEach(function(s,si){
+  /* group the list by crew: crews in list order, unassigned last */
+  var crewsOrder=S.base.crews||[];
+  function crewIndexOf(sid){
+    var c=staffCrewOf(sid); if(!c) return 1e9;
+    var ix=crewsOrder.indexOf(c); return ix<0?1e9:ix;
+  }
+  var decorated=S.base.staff.map(function(s,si){ return {s:s, si:si, ci:crewIndexOf(s.id)}; });
+  decorated.sort(function(a,b){ return (a.ci-b.ci)||(a.si-b.si); });
+  var lastCrewKey='__start__';
+  decorated.forEach(function(d){
+    var s=d.s, si=d.si;
+    var curCrew=staffCrewOf(s.id);
+    var curKey=curCrew?curCrew.id:'__none__';
+    if(curKey!==lastCrewKey){
+      wrap.appendChild(curCrew?buildCrewHeading(curCrew):buildUnassignedHeading());
+      lastCrewKey=curKey;
+    }
     var row=document.createElement('div'); row.className='prow';
     var top=document.createElement('div'); top.className='sline';
     var inp=document.createElement('input'); inp.type='text'; inp.maxLength=24; inp.value=s.name; inp.placeholder='Staff name';
