@@ -568,9 +568,9 @@
       <h3>Qualifications</h3>
       <p class="sub">The skill levels your industry uses &mdash; BLS, ILS, ALS, or chef, waiter, barista, whatever. Tick who each one can cover.</p>
       <div id="staffQuals"></div>
-      <div style="display:flex;gap:8px;margin-top:4px;">
-        <input type="text" id="newQualName" maxlength="24" placeholder="New qualification name" style="flex:1;" onkeydown="if(event.key==='Enter') qualAdd();">
-        <button class="btn" onclick="qualAdd()">Add</button>
+      <div style="display:flex;gap:8px;margin-top:4px;align-items:center;">
+        <input type="text" id="newQualName" maxlength="24" placeholder="New qualification name" style="flex:1 1 0;min-width:0;margin:0;" onkeydown="if(event.key==='Enter') qualAdd();">
+        <button class="btn" style="width:auto;flex:none;margin:0;padding:12px 22px;" onclick="qualAdd()">Add</button>
       </div>
     </div>
   </div>
@@ -885,7 +885,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1330';
+var BUILD='20261015-1335';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
