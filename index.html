@@ -523,11 +523,11 @@
     <div class="card" id="setupCta" style="display:none;border-color:var(--accent)">
       <h3>&#128075; Set up your workplace first</h3>
       <p class="sub">Name it, add your teams, pair your crews &mdash; two minutes, once. Then every roster takes four taps.</p>
-      <button class="btn" onclick="openBaseSetup()">Set up my workplace</button>
+      <button class="btn" onclick="openBaseSetup()">Shift setup</button>
     </div>
     <button class="btn" id="newRosterBtn" onclick="toNewRoster()">+ New roster</button>
     <button class="btn ghost" onclick="switchTab('onduty')">&#128065; Who's on duty</button>
-    <button class="btn ghost" onclick="openBaseSetup()">&#128736; Set up my workplace</button>
+    <button class="btn ghost" onclick="openBaseSetup()">&#128736; Shift setup</button>
     <div class="card">
       <h3>On duty today</h3>
       <p class="sub" id="todayDate"></p>
@@ -550,9 +550,16 @@
   <!-- STAFF -->
   <div class="view" id="v-staff">
     <div class="card">
-      <h3>Qualifications</h3>
-      <p class="sub">The skill levels your industry uses &mdash; BLS, ILS, ALS, or chef, waiter, barista, whatever. Set them up and tick who each one can cover.</p>
-      <button class="btn" onclick="openLadder()">Qualifications</button>
+      <h3>Workplace</h3>
+      <p class="sub">Define it once &mdash; every roster is built from this standard.</p>
+      <label class="f">Workplace name</label>
+      <input type="text" id="bsName" maxlength="40" oninput="S.base.name=this.value;persistBase();">
+    </div>
+    <div class="card">
+      <h3>Teams</h3>
+      <p class="sub">Each team runs its own rotation &mdash; 12-hour, 24-hour, whatever the workplace needs.</p>
+      <div id="bsVehicles"></div>
+      <button class="addperson" onclick="bsAddVehicle()">+ Add team</button>
     </div>
     <div class="card">
       <h3>Staff <span class="countchip" id="staffCount"></span></h3>
@@ -560,9 +567,32 @@
       <div id="staffList"></div>
       <button class="addperson" onclick="staffAdd()">+ Add staff member</button>
     </div>
+    <div class="card">
+      <h3>Qualifications</h3>
+      <p class="sub">The skill levels your industry uses &mdash; BLS, ILS, ALS, or chef, waiter, barista, whatever. Set them up and tick who each one can cover.</p>
+      <button class="btn" onclick="openLadder()">Qualifications</button>
+    </div>
+    <div class="card">
+      <h3>Crews</h3>
+      <p class="sub">The crews on each team &mdash; name them and set their colors.</p>
+      <div id="bsCrews"></div>
+    </div>
+    <div class="card">
+      <h3>Shifts</h3>
+      <p class="fine" style="margin:-4px 0 8px">Your shifts &mdash; name each one and set its hours. Add as many as the day needs. For a 24-hour shift, set start and end to the same time.</p>
+      <div id="shiftList"></div>
+      <button class="addperson" id="shiftAddBtn" type="button">+ Add shift</button>
+      <button class="btn" style="margin-top:10px;" onclick="openShiftReq()">Shift requirements</button>
+    </div>
+    <div class="card">
+      <h3>Rotations</h3>
+      <p class="sub">Patterns you designed yourself &mdash; reusable on any team.</p>
+      <div id="bsCustom"></div>
+      <button class="addperson" onclick="openRotBuilder()">+ Design your own rotation</button>
+    </div>
   </div>
 
-  <!-- QUALIFICATION LADDER (own screen — only reachable from the Staff tab Qualifications button) -->
+  <!-- QUALIFICATION LADDER (own screen — only reachable from the Shift setup Qualifications button) -->
   <div class="view" id="v-ladder">
     <div class="card">
       <h3>Qualifications</h3>
@@ -575,7 +605,7 @@
     </div>
   </div>
 
-  <!-- SHIFT REQUIREMENTS (own screen — only reachable from the Settings Shifts button) -->
+  <!-- SHIFT REQUIREMENTS (own screen — only reachable from the Shift setup Shifts button) -->
   <div class="view" id="v-shiftreq">
     <div class="card">
       <h3>Shift requirements</h3>
@@ -615,11 +645,6 @@
       <label class="f">Public holidays</label>
       <select id="setHolidays"></select>
       <p class="fine">Marks public holidays on the calendar. Fetched once per year when you're online.</p>
-      <label class="f">Shifts</label>
-      <p class="fine" style="margin:-4px 0 8px">Your shifts — name each one and set its hours. Add as many as the day needs. For a 24-hour shift, set start and end to the same time.</p>
-      <div id="shiftList"></div>
-      <button class="addperson" id="shiftAddBtn" type="button">+ Add shift</button>
-      <button class="btn" style="margin-top:10px;" onclick="openShiftReq()">Shift requirements</button>
     </div>
     <div class="card">
       <h3>Data</h3>
@@ -642,33 +667,6 @@
     </div>
   </div>
   <!-- BASE SETUP -->
-  <div class="view" id="v-basesetup">
-    <div class="card">
-      <h3>Build your workplace</h3>
-      <p class="sub">Define it once &mdash; every roster is built from this standard.</p>
-      <label class="f">Workplace name</label>
-      <input type="text" id="bsName" maxlength="40" oninput="S.base.name=this.value;persistBase();">
-    </div>
-    <div class="card">
-      <h3>Teams</h3>
-      <p class="sub">Each team runs its own rotation &mdash; 12-hour, 24-hour, whatever the workplace needs.</p>
-      <div id="bsVehicles"></div>
-      <button class="addperson" onclick="bsAddVehicle()">+ Add team</button>
-    </div>
-    <div class="card">
-      <h3>Crews</h3>
-      <p class="sub">The crews on each team &mdash; name them and set their colors. Assign people to crews in the Staff tab.</p>
-      <div id="bsCrews"></div>
-    </div>
-    <details class="card adv">
-      <summary><h3>Advanced &mdash; design your own rotation</h3></summary>
-      <p class="sub">Patterns you designed yourself &mdash; reusable on any team.</p>
-      <div id="bsCustom"></div>
-      <button class="addperson" onclick="openRotBuilder()">+ Design your own rotation</button>
-    </details>
-    <button class="btn" onclick="switchTab('home')">Done</button>
-  </div>
-
   <!-- ROTATION BUILDER -->
   <div class="view" id="v-rotbuilder">
     <div class="card">
@@ -819,7 +817,7 @@
   <button data-tab="home" onclick="switchTab('home')"><span class="ti">&#127968;</span>Home</button>
   <button data-tab="onduty" onclick="switchTab('onduty')"><span class="ti">&#128065;</span>On Duty</button>
   <button data-tab="rosters" onclick="switchTab('rosters')"><span class="ti">&#128197;</span>Rosters</button>
-  <button data-tab="staff" onclick="switchTab('staff')"><span class="ti">&#128101;</span>Staff</button>
+  <button data-tab="staff" onclick="switchTab('staff')"><span class="ti">&#128101;</span>Shift setup</button>
   <button data-tab="settings" onclick="switchTab('settings')"><span class="ti">&#9881;&#65039;</span>Settings</button>
 </nav>
 
@@ -895,7 +893,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1410';
+var BUILD='20261015-1425';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -1550,7 +1548,7 @@ function renderBsCrews(){
       var nmem=(c.memberIds||[]).length;
       var sub=document.createElement('p'); sub.className='fine'; sub.style.margin='6px 0 0';
       sub.textContent=nmem===0
-        ? 'No one assigned yet \u2014 put people into this crew in the Staff tab.'
+        ? 'No one assigned yet \u2014 put people into this crew in the Staff section above.'
         : nmem+' person'+(nmem>1?'s':'')+' assigned';
       card.appendChild(sub);
       wrap.appendChild(card);
@@ -3304,7 +3302,7 @@ function renderBase(){
     wrap.innerHTML+=appHtml;
   }
   if(!S.base.vehicles.length){
-    wrap.innerHTML='<p class="fine">No teams yet.<br>Go to <b>Set up my workplace</b> and add your first team.</p>';
+    wrap.innerHTML='<p class="fine">No teams yet.<br>Go to <b>Shift setup</b> and add your first team.</p>';
     return;
   }
   if(!S.rosters.length){
@@ -4060,7 +4058,7 @@ function enterApp(){
 /* ---------- navigation ---------- */
 var TAB_VIEWS={home:'v-home', rosters:'v-rosters', onduty:'v-base', staff:'v-staff', settings:'v-settings',
   myshifts:'v-myshifts', openshifts:'v-marketplace', profile:'v-profile', company:'v-company'};
-var BACK_IDS=['v-basesetup','v-newroster','v-anchor','v-cal','v-base','v-rotbuilder','v-ladder','v-shiftreq'];
+var BACK_IDS=['v-newroster','v-anchor','v-cal','v-base','v-rotbuilder','v-ladder','v-shiftreq'];
 function show(id){
   document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
   document.getElementById(id).classList.add('active');
@@ -4144,7 +4142,7 @@ function renderTabs(){
       {id:'home', icon:'\uD83C\uDFE0', label:'Home'},
       {id:'onduty', icon:'\uD83D\uDC41', label:'On Duty'},
       {id:'rosters', icon:'\uD83D\uDCC7', label:'Rosters'},
-      {id:'staff', icon:'\uD83D\uDC65', label:'Staff'},
+      {id:'staff', icon:'\uD83D\uDC65', label:'Shift setup'},
       {id:'settings', icon:'\u2699\uFE0F', label:'Settings'}
     ];
   }
@@ -4156,7 +4154,7 @@ function switchTab(name){
   if(name==='home') renderHome();
   if(name==='onduty'){ S.baseDateISO=toISO(new Date()); renderBase(); }
   if(name==='rosters') renderAllRosters();
-  if(name==='staff'){ renderStaffQuals(); renderStaffTab(); }
+  if(name==='staff'){ renderBaseSetup(); renderStaffQuals(); renderStaffTab(); renderShifts(); }
   if(name==='settings'){ renderSettings(); syncRoleSeg(); }
   if(name==='myshifts'){
     if(!msPerson){ toast('Pick a staff member in Settings first'); switchTab('settings'); return; }
@@ -4175,7 +4173,7 @@ function goBack(){
   var active=av&&av.id;
   if(active==='v-rotbuilder'){ openBaseSetup(); return; }
   if(active==='v-ladder'){ switchTab('staff'); return; }
-  if(active==='v-shiftreq'){ switchTab('settings'); return; }
+  if(active==='v-shiftreq'){ switchTab('staff'); return; }
   if(active==='v-anchor'){ show('v-newroster'); return; }
   if(active==='v-cal'){
     var cal=ensureCal();
@@ -4224,7 +4222,7 @@ function renderToday(){
   if(rows.length){ wrap.innerHTML=rows.join(''); return; }
   wrap.innerHTML = S.base.vehicles.length
     ? '<p class="fine">No rosters cover today yet.<br>Tap <b>+ New roster</b> to build one.</p>'
-    : '<p class="fine">No workplace set up yet.<br>Go to <b>Set up my workplace</b> to add your teams.</p>';
+    : '<p class="fine">No workplace set up yet.<br>Go to <b>Shift setup</b> to add your teams.</p>';
 }
 
 /* ---------- roster lists ---------- */
@@ -4264,13 +4262,13 @@ function renderRosters(){
 }
 function renderAllRosters(){ renderRosterList(document.getElementById('allRosterList'), 0); }
 
-/* ---------- workplace setup (teams + crews + quals; staff lives in the Staff tab) ---------- */
-function openBaseSetup(){ renderBaseSetup(); show('v-basesetup'); }
+/* ---------- workplace setup (teams + crews + custom rotations; rendered into Shift setup) ---------- */
+function openBaseSetup(){ switchTab('staff'); }
 function renderBaseSetup(){
   document.getElementById('bsName').value=S.base.name||'';
   renderBsVehicles(); renderBsCrews(); renderCustomList();
 }
-/* ---------- qualifications (managed on the Staff tab) ---------- */
+/* ---------- qualifications (managed in Shift setup) ---------- */
 /* Qualification Ladder: Cards view (edit who each qual can cover) + Grid view (quick check).
    Same qual always covers itself. Manager has full control — can tick anything. */
 var ladderView='cards';
@@ -4893,7 +4891,6 @@ function renderSettings(){
   }).join('');
   hs.value=st.holidays||'';
   hs.onchange=function(){ st.holidays=this.value; persistBase(); renderCalendar(); };
-  renderShifts();
 }
 /* workplace shift manager: name + hours per shift, as many as the day needs.
    (Blocks use the crew's color — shifts don't need colors.) */
