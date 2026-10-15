@@ -182,14 +182,16 @@
   .hdot{display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent); margin-left:4px; vertical-align:2px;}
   .holtag{display:inline-block; font-size:10px; font-weight:700; color:var(--accent); border:1px solid var(--accent); border-radius:20px; padding:1px 8px; margin-left:6px; vertical-align:1px; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   /* workplace shift rows: name + start/end times */
-  .shiftrow{display:flex; gap:8px; align-items:center; margin-top:8px;}
+  .shiftrow{display:flex; gap:8px; align-items:center;}
   .shiftrow input[type=text]{flex:1; min-width:0;}
-  .shiftrow input[type=time]{flex:none; width:84px; padding:10px 4px; font-size:14px;}
+  .shiftrow input[type=time]{flex:none; width:96px; padding:10px 4px; font-size:14px;}
   .shiftrow .tdash{color:var(--muted); flex:none;}
   .shiftrow .rm{background:none; border:none; color:var(--red); font-size:16px; cursor:pointer; padding:6px; flex:none;}
-  .shiftrow .mvs{display:flex; flex-direction:column; flex:none;}
-  .shiftrow .mv{background:none; border:none; color:var(--muted); font-size:11px; cursor:pointer; padding:1px 3px; line-height:1.2; flex:none;}
-  .shiftrow .mv:disabled{opacity:.25; cursor:default;}
+  .shiftcard{margin-top:10px;}
+  .shiftmove{display:flex; gap:8px; margin-top:6px;}
+  .shiftmove .mvbtn{flex:1; padding:11px 8px; font-size:14px; font-weight:700; border:1px solid var(--line);
+    background:var(--card2); color:var(--text); border-radius:10px; cursor:pointer;}
+  .shiftmove .mvbtn:disabled{opacity:.3; cursor:default;}
   .grid{display:grid; grid-template-columns:repeat(7,1fr); gap:4px;}
   .cell{
     border-radius:10px; min-height:70px; padding:5px 2px; cursor:pointer; position:relative;
@@ -894,7 +896,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1650';
+var BUILD='20261015-1655';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -5042,16 +5044,18 @@ function renderShifts(){
   function escQ(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   var ss0=wpShifts();
   wrap.innerHTML=ss0.map(function(s, idx){
-    return '<div class="shiftrow">'+
+    return '<div class="shiftcard">'+
+      '<div class="shiftrow">'+
       '<input type="text" maxlength="24" value="'+escQ(s.name)+'" placeholder="Shift name" aria-label="Shift name" data-shift="'+s.id+'" data-f="name">'+
       '<input type="time" value="'+escQ(s.start||'06:00')+'" aria-label="Shift start" data-shift="'+s.id+'" data-f="start">'+
       '<span class="tdash">\u2013</span>'+
       '<input type="time" value="'+escQ(s.end||'18:00')+'" aria-label="Shift end" data-shift="'+s.id+'" data-f="end">'+
-      '<span class="mvs">'+
-      '<button class="mv" type="button" title="Move up" data-move="-1" data-shift="'+s.id+'"'+(idx===0?' disabled':'')+'>\u25B2</button>'+
-      '<button class="mv" type="button" title="Move down" data-move="1" data-shift="'+s.id+'"'+(idx===ss0.length-1?' disabled':'')+'>\u25BC</button>'+
-      '</span>'+
       '<button class="rm" type="button" title="Remove shift" data-del="'+s.id+'">\u2715</button>'+
+      '</div>'+
+      '<div class="shiftmove">'+
+      '<button class="mvbtn" type="button" data-move="-1" data-shift="'+s.id+'"'+(idx===0?' disabled':'')+'>\u25B2 Move up</button>'+
+      '<button class="mvbtn" type="button" data-move="1" data-shift="'+s.id+'"'+(idx===ss0.length-1?' disabled':'')+'>\u25BC Move down</button>'+
+      '</div>'+
       '</div>';
   }).join('');
   var inps=wrap.querySelectorAll('input');
