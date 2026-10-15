@@ -910,7 +910,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1805';
+var BUILD='20261015-1815';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -4439,10 +4439,10 @@ function renderRules(){
     {key:'restBetween', label:'Rest between shifts', desc:'Minimum break after a shift ends, before the next shift can start.', type:'pick', opts:[null,12,24,36,48], unit:'hours'},
     {key:'backToBack', label:'Back-to-back shifts', desc:'Allow two shifts with no break between them (e.g. Day straight into Night)?', type:'yesno'},
     {key:'maxContinuous', label:'Max continuous hours', desc:'Most hours someone can work in one stretch, without a break.', type:'pick', opts:[null,12,24,36,48], unit:'hours'},
-    {key:'restAfterNights', label:'Rest after nights', desc:'Minimum rest after a run of night shifts, before the next shift. Recommended: 24 hours.', type:'num', unit:'hours', placeholder:'e.g. 24'},
+    {key:'restAfterNights', label:'Rest after nights', desc:'Minimum rest after a run of night shifts, before the next shift. Recommended: 24 hours.', type:'num', unit:'hours', placeholder:'e.g. 24', opts:[12,24,36,48,72]},
     {key:'maxConsecutiveShifts', label:'Max consecutive shifts in a row', desc:'Most shifts someone can work in a row. Nights and days count the same. The count resets after a break.', type:'pick', opts:[null].concat(cons), unit:'shifts'},
-    {key:'maxHoursMonth', label:'Max hours per month', desc:'Most hours someone can be rostered for in a month.', type:'num', unit:'hours', placeholder:'e.g. 180'},
-    {key:'maxOvertimeShifts', label:'Max overtime shifts per month', desc:'Most extra / cover shifts someone can pick up in a month, beyond their normal roster.', type:'num', unit:'shifts', placeholder:'e.g. 4'},
+    {key:'maxHoursMonth', label:'Max hours per month', desc:'Most hours someone can be rostered for in a month.', type:'num', unit:'hours', placeholder:'e.g. 180', opts:[120,144,168,180,192,216,240,288,336]},
+    {key:'maxOvertimeShifts', label:'Max overtime shifts per month', desc:'Most extra / cover shifts someone can pick up in a month, beyond their normal roster.', type:'num', unit:'shifts', placeholder:'e.g. 4', opts:[1,2,3,4,5,6,8,10]},
     {key:'workHolidays', label:'Work public holidays', desc:'Do staff work on public holidays (from your Settings)?', type:'yesno'},
     {key:'weekendsOff', label:'Weekends off per month', desc:'How many weekends (Saturday + Sunday) off someone gets each month.', type:'pick', opts:[null,1,2,3,'all'], unit:'weekends'}
   ];
@@ -4461,7 +4461,9 @@ function renderRules(){
       var yesVal=(cur===undefined||cur===null)?true:!!cur;
       ctl='<select onchange="rulesSet(\''+d.key+'\', this.value, \'yesno\')"><option value="yes"'+(yesVal?' selected':'')+'>Yes</option><option value="no"'+(!yesVal?' selected':'')+'>No</option></select>';
     }else{
-      ctl='<input type="number" min="0" placeholder="'+(d.placeholder||'')+'" value="'+(cur==null?'':cur)+'" onchange="rulesSet(\''+d.key+'\', this.value, \'num\')">';
+      var dlId='dl-'+d.key;
+      ctl='<input type="text" inputmode="numeric" list="'+dlId+'" placeholder="'+(d.placeholder||'')+'" value="'+(cur==null?'':cur)+'" onchange="rulesSet(\''+d.key+'\', this.value, \'num\')">'+
+        '<datalist id="'+dlId+'">'+(d.opts||[]).map(function(o){ return '<option value="'+o+'">'; }).join('')+'</datalist>';
     }
     out+='<div class="card" style="margin:0 0 10px;"><b>'+escapeHtml(d.label)+'</b><p class="sub" style="margin:4px 0 8px;">'+escapeHtml(d.desc)+'</p>'+ctl+(d.unit?' <span class="fine">'+escapeHtml(d.unit)+'</span>':'')+'</div>';
   });
