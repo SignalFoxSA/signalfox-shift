@@ -889,7 +889,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1545';
+var BUILD='20261015-1615';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2039,23 +2039,24 @@ function renderCalMonth(ctx){
         if(!ps.list.length) return;
         var dateISO=info.date?isoDate(info.date):null;
         var crews=ps.list.map(function(x){ return escapeHtml(x.c.name); }).join(' / ');
-        var memHtml=[];
+        var memHtml=[], hasOpen=false;
         ps.list.forEach(function(x){
           var orig=x.c.members||[];
           effShiftMembers(R, dateISO, ps.sl.id, x.c).forEach(function(nm){
+            if(nm===OPEN_MARK) hasOpen=true;
             var mh=rosterMemberHtml(nm, orig);
             if(memHtml.indexOf(mh)<0) memHtml.push(mh);
           });
         });
         var memLine=memHtml.length?'<span class="bm">'+memHtml.join(', ')+'</span>':'';
         var band=(ps.list[0]&&ps.list[0].c.color)||'#888888';
-        inner+='<span class="band" style="background:'+band+';color:'+textOnBand(band)+'">'+
+        inner+='<span class="band" style="background:'+band+';color:'+textOnBand(band)+(hasOpen?';box-shadow:inset 0 0 0 2px #CC0000':'')+'">'+
           '<span class="bs">'+escapeHtml(shiftBandShort(ps.sl.name))+'</span>'+
           '<span class="bc">'+crews+'</span>'+memLine+'</span>';
       });
       var ed=R.crews.some(function(c,ci){ return R.overrides[info.dayIdx+':'+ci]; });
       var med=R.memberOverrides&&info.date&&R.memberOverrides[isoDate(info.date)];
-      if(ed||med) inner+='<span class="edot"></span>';
+      if(ed||med) inner+='<span class="edot" title="Day changed — leave, replacement, swap or edit"></span>';
       html+='<div class="cell'+(isToday(date)?' today':'')+'" data-d="'+d+'" title="Tap to view day">'+inner+'</div>';
     }
   }
@@ -5242,17 +5243,17 @@ function genTestData(){
     for(var d=fromDay; d<=toDay && done<maxDays; d++){
       if(d<1||d>dim) continue;
       var dateISO=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-      if(!R.memberOverrides[dateISO]) R.memberOverrides[dateISO]={};
       var dt=parseISO(dateISO), di=dayDiff(parseISO(R.startISO),dt);
       try{
         calSlotCrews(R,di).forEach(function(ps){
           if(done>=maxDays) return;
-          if(!ps.list.length||R.memberOverrides[dateISO][ps.sl.id]) return;
+          if(!ps.list.length||(R.memberOverrides[dateISO]&&R.memberOverrides[dateISO][ps.sl.id])) return;
           var mems=effShiftMembers(R,dateISO,ps.sl.id,ps.list[0].c);
           if(mems.indexOf(person)<0) return;
           var cover='OPEN';
           if(coverName&&coverName!=='OPEN') cover=findCover(dateISO, person, coverName)||'OPEN';
           mems[mems.indexOf(person)]=(cover==='OPEN'?OPEN_MARK:cover);
+          if(!R.memberOverrides[dateISO]) R.memberOverrides[dateISO]={};
           R.memberOverrides[dateISO][ps.sl.id]=mems;
           R.leaveLog.push({date:dateISO, shift:ps.sl.id, person:person, type:type, cover:cover, ts:Date.now()});
           done++;
@@ -5264,12 +5265,11 @@ function genTestData(){
     for(var d=fromDay; d<=toDay; d++){
       if(d<1||d>dim) continue;
       var dateISO=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-      if(!R.memberOverrides[dateISO]) R.memberOverrides[dateISO]={};
       var dt=parseISO(dateISO), di=dayDiff(parseISO(R.startISO),dt);
       var slot1=null, slot2=null, mems1=null, mems2=null;
       try{
         calSlotCrews(R,di).forEach(function(ps){
-          if(!ps.list.length||R.memberOverrides[dateISO][ps.sl.id]) return;
+          if(!ps.list.length||(R.memberOverrides[dateISO]&&R.memberOverrides[dateISO][ps.sl.id])) return;
           var mems=effShiftMembers(R,dateISO,ps.sl.id,ps.list[0].c);
           if(mems.indexOf(p1)>=0){ slot1=ps.sl.id; mems1=mems; }
           if(mems.indexOf(p2)>=0){ slot2=ps.sl.id; mems2=mems; }
@@ -5278,6 +5278,7 @@ function genTestData(){
       if(slot1&&slot2&&slot1!==slot2){
         mems1[mems1.indexOf(p1)]=p2;
         mems2[mems2.indexOf(p2)]=p1;
+        if(!R.memberOverrides[dateISO]) R.memberOverrides[dateISO]={};
         R.memberOverrides[dateISO][slot1]=mems1;
         R.memberOverrides[dateISO][slot2]=mems2;
         R.leaveLog.push({date:dateISO, shift:slot1, person:p1, type:'Swap', cover:p2, ts:Date.now()});
