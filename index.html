@@ -885,7 +885,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1335';
+var BUILD='20261015-1345';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -939,10 +939,11 @@ function migrateQuals(){
   }
   if(!Array.isArray(S.base.staff)) S.base.staff=[];
   S.base.staff.forEach(function(s){ if(s.qual==null) s.qual=''; });
-  /* Ladder migration: quals without canCover keep old behaviour (cover all below in the list) */
+  /* Ladder: no guessing. Quals without canCover get an empty list — they cover
+     only their own kind until the manager ticks what they can cover. */
   var qs2=S.base.quals||[];
-  qs2.forEach(function(q, qi){
-    if(!Array.isArray(q.canCover)) q.canCover=qs2.slice(qi+1).map(function(x){ return x.id; });
+  qs2.forEach(function(q){
+    if(!Array.isArray(q.canCover)) q.canCover=[];
   });
 }
 var OLD_CREW_COLORS = ['#22c55e','#3b82f6','#f97316','#a855f7']; /* pre-Oct-2026 palette, migrated on load */
