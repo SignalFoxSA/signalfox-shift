@@ -910,7 +910,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1825';
+var BUILD='20261015-1835';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -1914,6 +1914,17 @@ function generateMonthRoster(){
     shiftLen:rot.hours||12, startTime:v.startTime||'06:00', rotation:A.rotKey, coverage:v.coverage||24, shiftIds:teamShiftIds(v), overrides:{}, memberOverrides:{} };
   S.fromSaved=false;
   S.cal={vehicleId:v.id, y:A.year, m:A.month, mode:'month', sub:'month', weekISO:null};
+  /* RULES: flag if the generated roster breaks a rule — override keeps it, cancel discards it */
+  var genResults=rulesCheckRoster(S.draft);
+  if(genResults.length){
+    var genViols=[];
+    genResults.forEach(function(gr){ gr.violations.forEach(function(v){ if(genViols.indexOf(v)<0) genViols.push(v); }); });
+    if(!rulesConfirmViolations(genViols, 'New roster')){
+      S.draft=null;
+      show('v-anchor');
+      return;
+    }
+  }
   renderCalendar();
   show('v-cal');
 }
@@ -2095,6 +2106,13 @@ function renderCalMonth(ctx){
     grid.parentNode.appendChild(lvWrap);
   }
   lvWrap.innerHTML=rosterLeaveHtml(collectLeaveEntries(R,y,m,null));
+  /* Rule warnings at the bottom of the roster (never block) */
+  var rwWrap=document.getElementById('calRuleWrap');
+  if(!rwWrap){
+    rwWrap=document.createElement('div'); rwWrap.id='calRuleWrap';
+    grid.parentNode.appendChild(rwWrap);
+  }
+  rwWrap.innerHTML=rosterRulesHtml(rulesCheckRoster(R));
   var cells=grid.querySelectorAll('.cell[data-d]');
   for(var i=0;i<cells.length;i++){
     (function(el){
@@ -2573,6 +2591,41 @@ function dayEditAdd(si){
 function saveDayEdit(){
   var R=dayCtx.R;
   if(!R.memberOverrides) R.memberOverrides={};
+  /* RULES: only people newly added by this edit are checked */
+  var added=[];
+  dayCtx.editData.forEach(function(ed){
+    var oldMems;
+    if(dayCtx.scope==='once'){
+      oldMems=effShiftMembers(R, dayCtx.dateISO, ed.sl.id, (R.crews[ed.idx]||{}));
+    }else{
+      oldMems=((R.crews[ed.idx]||{}).members||[]);
+    }
+    ed.members.forEach(function(nm){
+      if(nm!==OPEN_MARK && oldMems.indexOf(nm)<0 && added.indexOf(nm)<0) added.push(nm);
+    });
+  });
+  if(added.length){
+    var hypo=rulesCopyRoster(R);
+    if(hypo){
+      if(!hypo.memberOverrides) hypo.memberOverrides={};
+      dayCtx.editData.forEach(function(ed){
+        if(dayCtx.scope==='once'){
+          if(!hypo.memberOverrides[dayCtx.dateISO]) hypo.memberOverrides[dayCtx.dateISO]={};
+          hypo.memberOverrides[dayCtx.dateISO][ed.sl.id]=ed.members.slice();
+        }else{
+          if(ed.idx>=0 && hypo.crews[ed.idx]){
+            hypo.crews[ed.idx].members=ed.members.slice();
+            if(hypo.memberOverrides[dayCtx.dateISO]) delete hypo.memberOverrides[dayCtx.dateISO][ed.sl.id];
+          }
+        }
+      });
+      var viols=[];
+      added.forEach(function(nm){
+        rulesCheckPerson(hypo, nm).forEach(function(v){ if(viols.indexOf(v)<0) viols.push(v); });
+      });
+      if(viols.length && !rulesConfirmViolations(viols, 'Day edit')) return;
+    }
+  }
   dayCtx.editData.forEach(function(ed){
     if(dayCtx.scope==='once'){
       /* once-off: store explicit member list for this date+shift */
@@ -2982,6 +3035,28 @@ function mkFindOpen(){
   return out.filter(function(s){ return s.dt>=today; })
     .sort(function(a,b){ return a.dt-b.dt; });
 }
+/* would adding this person to this open shift break a rule for them?
+   Used by the marketplace filter (hide) and mkApply (re-check). */
+function rulesWouldBreakForShift(rosterId, dateISO, shiftId, personName){
+  var u=(S.rosters||[]).find(function(x){ return x.id===rosterId; });
+  if(!u||!u.roster) return false;
+  var R=u.roster;
+  var y=parseInt(dateISO.slice(0,4),10), m=parseInt(dateISO.slice(5,7),10)-1, d=parseInt(dateISO.slice(8,10),10);
+  var info=calRosterDay(R, y, m, d);
+  if(!info||info.dayIdx<0) return false;
+  var per=calSlotCrews(R, info.dayIdx);
+  var crew=null;
+  for(var i=0;i<per.length;i++){ if(per[i].sl.id===shiftId&&per[i].list.length){ crew=per[i].list[0].c; break; } }
+  if(!crew) return false;
+  var mems=effShiftMembers(R, dateISO, shiftId, crew).slice();
+  var ix=mems.indexOf(OPEN_MARK);
+  if(ix>=0) mems[ix]=personName;
+  else if(mems.indexOf(personName)<0) mems.push(personName);
+  var hypo=rulesCopyRoster(R);
+  if(!hypo) return false;
+  rulesSetOverride(hypo, dateISO, shiftId, mems);
+  return rulesCheckPerson(hypo, personName).length>0;
+}
 function renderMarketplace(){
   var open=mkFindOpen();
   var wrap=document.getElementById('mkList');
@@ -2995,6 +3070,8 @@ function renderMarketplace(){
       if(msPerson&&mkHasConflict(msPerson, s.dateISO)) return;
       /* only offer shifts this person can cover (Qualification Ladder) */
       if(msPerson&&s.needQid&&!qualCanCover(staffQualIdByName(msPerson), s.needQid)) return;
+      /* RULES: shifts that would break a rule for you are not offered at all */
+      if(msPerson&&rulesWouldBreakForShift(s.rosterId, s.dateISO, s.shiftId, msPerson)) return;
       shown++;
       var already=(S.shiftApps||[]).some(function(a){
         return a.rosterId===s.rosterId&&a.dateISO===s.dateISO&&a.shiftId===s.shiftId
@@ -3058,6 +3135,11 @@ function mkHasConflict(personName, dateISO){
 function mkApply(i){
   var s=(S._mkOpen||[])[i];
   if(!s||!msPerson) return;
+  /* RULES: re-check (rules may have changed since the list rendered) — staff cannot override */
+  if(rulesWouldBreakForShift(s.rosterId, s.dateISO, s.shiftId, msPerson)){
+    toast('This shift would break a rule for you, so you can\'t apply for it.');
+    return;
+  }
   /* block double-rostering and 24-hour stretches */
   if(mkHasConflict(msPerson, s.dateISO)){
     toast('You are already rostered on that date.');
@@ -3089,6 +3171,17 @@ function mkApprove(appId){
     var R=u.roster;
     if(!R.memberOverrides) R.memberOverrides={};
     if(!R.memberOverrides[a.dateISO]) R.memberOverrides[a.dateISO]={};
+    /* RULES: warn if approving this applicant would break a rule for them */
+    var prospectMems=(R.memberOverrides[a.dateISO][a.shiftId]||[]).slice();
+    var pIdx=prospectMems.indexOf(OPEN_MARK);
+    if(pIdx>=0) prospectMems[pIdx]=a.applicant;
+    else if(prospectMems.indexOf(a.applicant)<0) prospectMems.push(a.applicant);
+    var hypoA2=rulesCopyRoster(R);
+    if(hypoA2){
+      rulesSetOverride(hypoA2, a.dateISO, a.shiftId, prospectMems);
+      var av2=rulesCheckPerson(hypoA2, a.applicant);
+      if(av2.length && !rulesConfirmViolations(av2, 'Approve: '+a.applicant)) return;
+    }
     var mems=R.memberOverrides[a.dateISO][a.shiftId]||[];
     var idx=mems.indexOf(OPEN_MARK);
     if(idx>=0) mems[idx]=a.applicant;
@@ -3495,6 +3588,15 @@ function baseDoAddStaff(rosterId, shiftId, personName){
     if(per[i].sl.id===shiftId&&per[i].list.length){
       var mems=effShiftMembers(R, dateISO, shiftId, per[i].list[0].c);
       if(mems.indexOf(personName)<0) mems.push(personName);
+      /* RULES: warn if adding this person would break a rule for them */
+      if(personName!==OPEN_MARK){
+        var hypoA=rulesCopyRoster(R);
+        if(hypoA){
+          rulesSetOverride(hypoA, dateISO, shiftId, mems);
+          var av=rulesCheckPerson(hypoA, personName);
+          if(av.length && !rulesConfirmViolations(av, 'Add staff: '+personName)) return;
+        }
+      }
       R.memberOverrides[dateISO][shiftId]=mems;
       break;
     }
@@ -3584,6 +3686,30 @@ function baseDoSwap2(rosterId, shiftIdA, personA, dateA, shiftIdB, personB, date
   if(!u) return;
   var R=u.roster;
   if(!R.memberOverrides) R.memberOverrides={};
+  /* RULES: warn if the swap would break a rule for either person */
+  var hypoS=rulesCopyRoster(R);
+  if(hypoS){
+    [ [dateA, shiftIdA, personA, personB], [dateB, shiftIdB, personB, personA] ].forEach(function(sw){
+      var diso=sw[0], sid=sw[1], from=sw[2], to=sw[3];
+      var di=dayDiff(parseISO(hypoS.startISO), parseISO(diso));
+      if(di<0||di>=hypoS.days) return;
+      var per=calSlotCrews(hypoS,di);
+      for(var i=0;i<per.length;i++){
+        if(per[i].sl.id===sid&&per[i].list.length){
+          var mems=effShiftMembers(hypoS, diso, sid, per[i].list[0].c);
+          var idx=mems.indexOf(from);
+          if(idx>=0) mems[idx]=to;
+          rulesSetOverride(hypoS, diso, sid, mems);
+          break;
+        }
+      }
+    });
+    var sv=[];
+    [personA, personB].forEach(function(pn){
+      if(pn!==OPEN_MARK) rulesCheckPerson(hypoS, pn).forEach(function(v){ if(sv.indexOf(v)<0) sv.push(v); });
+    });
+    if(sv.length && !rulesConfirmViolations(sv, 'Swap: '+personA+' / '+personB)) return;
+  }
   /* swap A->B on dateA/shiftA, and B->A on dateB/shiftB */
   [ [dateA, shiftIdA, personA, personB], [dateB, shiftIdB, personB, personA] ].forEach(function(sw){
     var diso=sw[0], sid=sw[1], from=sw[2], to=sw[3];
@@ -3755,6 +3881,15 @@ function basePickCover(rosterId, shiftId, sickName, coverName, leaveType){
         /* replacing a person (or filling one open slot): swap exactly one entry */
         if(idx>=0) mems[idx]=coverName;
         else if(mems.indexOf(coverName)<0) mems.push(coverName);
+      }
+      /* RULES: warn if this cover would break a rule for the cover person */
+      if(coverName!==OPEN_MARK){
+        var hypoC=rulesCopyRoster(R);
+        if(hypoC){
+          rulesSetOverride(hypoC, dateISO, shiftId, mems);
+          var cv=rulesCheckPerson(hypoC, coverName);
+          if(cv.length && !rulesConfirmViolations(cv, 'Cover: '+coverName)) return;
+        }
       }
       R.memberOverrides[dateISO][shiftId]=mems;
       break;
@@ -4461,6 +4596,229 @@ function renderRules(){
     out+='<div class="card" style="margin:0 0 10px;"><b>'+escapeHtml(d.label)+'</b><p class="sub" style="margin:4px 0 8px;">'+escapeHtml(d.desc)+'</p>'+ctl+(d.unit?' <span class="fine">'+escapeHtml(d.unit)+'</span>':'')+'</div>';
   });
   wrap.innerHTML=out;
+}
+
+/* ---------- RULES ENFORCEMENT (Violation Firewall) ----------
+   Warn, don't block. Every check funnels through rulesCheckPerson.
+   The manager can override a warning (confirm). The marketplace is the
+   exception: shifts that would break a rule are hidden, not warned. */
+function rulesMins(hhmm){
+  var p=String(hhmm||'00:00').split(':');
+  return (parseInt(p[0],10)||0)*60+(parseInt(p[1],10)||0);
+}
+function rulesFmtHours(mins){
+  return (Math.round((mins/60)*10)/10)+'h';
+}
+function rulesCopyRoster(R){ try{ return JSON.parse(JSON.stringify(R)); }catch(e){ return null; } }
+function rulesSetOverride(R, dateISO, shiftId, mems){
+  if(!R.memberOverrides) R.memberOverrides={};
+  if(!R.memberOverrides[dateISO]) R.memberOverrides[dateISO]={};
+  R.memberOverrides[dateISO][shiftId]=mems.slice();
+}
+/* all days in a roster: [{dayIdx, dateISO}] (month rosters + legacy span rosters) */
+function rulesRosterDays(R){
+  var out=[];
+  if(R.kind==='month'){
+    var dim=daysInMonth(R.year, R.month);
+    for(var d=1; d<=dim; d++) out.push({dayIdx:d-1, dateISO:R.year+'-'+String(R.month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0')});
+  }else if(R.startISO && R.days){
+    var s=parseISO(R.startISO);
+    for(var i=0;i<R.days;i++) out.push({dayIdx:i, dateISO:toISO(addDays(s,i))});
+  }
+  return out;
+}
+/* is this shift a night shift? slot N, or it covers part of 00:00-06:00 */
+function rulesIsNight(s){
+  if(s.slotId==='N') return true;
+  var rs=s.rawStart, re=s.rawEnd;
+  if(re>rs) return rs<360 && re>0;
+  return rs<360 || re>0;
+}
+/* a person's shifts on a roster, sorted by start */
+function rulesPersonShifts(R, personName){
+  var shifts=[];
+  rulesRosterDays(R).forEach(function(dd){
+    calSlotCrews(R, dd.dayIdx).forEach(function(ps){
+      ps.list.forEach(function(x){
+        var eff=effShiftMembers(R, dd.dateISO, ps.sl.id, x.c);
+        if(eff.indexOf(personName)<0) return;
+        for(var k=0;k<shifts.length;k++) if(shifts[k].dateISO===dd.dateISO && shifts[k].slotId===ps.sl.id) return;
+        var def=slotDef(ps.sl.id);
+        var rs=def?rulesMins(def.start):0, re=def?rulesMins(def.end):0;
+        var eAdj=re;
+        if(def && def.start===def.end) eAdj=rs+1440;
+        else if(eAdj<=rs) eAdj+=1440;
+        var orig=x.c.members||[];
+        shifts.push({dateISO:dd.dateISO, dayIdx:dd.dayIdx, slotId:ps.sl.id, slotName:(def&&def.name)||ps.sl.id,
+          rawStart:rs, rawEnd:re, startAbs:dd.dayIdx*1440+rs, endAbs:dd.dayIdx*1440+eAdj,
+          isOvertime:orig.indexOf(personName)<0, crewId:x.c.id});
+      });
+    });
+  });
+  shifts.sort(function(a,b){ return a.startAbs-b.startAbs; });
+  return shifts;
+}
+/* check ONE person against all 9 rules on a roster -> array of violation strings */
+function rulesCheckPerson(R, personName){
+  var r=rulesObj();
+  var v=[];
+  var shifts=rulesPersonShifts(R, personName);
+  if(!shifts.length) return v;
+  /* 1+2. back-to-back + rest between shifts (consecutive pairs) */
+  var restB=(r.restBetween!=null)?+r.restBetween:null;
+  var noBB=(r.backToBack===false);
+  for(var i=1;i<shifts.length;i++){
+    var prev=shifts[i-1], cur=shifts[i];
+    var gapMin=cur.startAbs-prev.endAbs;
+    if(gapMin<0) gapMin=0;
+    if(gapMin===0){
+      if(noBB) v.push('Back-to-back shifts: '+personName+' — '+prev.slotName+' on '+prev.dateISO+' runs straight into '+cur.slotName+' on '+cur.dateISO+' (no break)');
+      else if(restB!=null) v.push('Rest between shifts: '+personName+' — no break between '+prev.slotName+' on '+prev.dateISO+' and '+cur.slotName+' on '+cur.dateISO+' (needs '+restB+'h)');
+    }else if(restB!=null && gapMin<restB*60){
+      v.push('Rest between shifts: '+personName+' — only '+rulesFmtHours(gapMin)+' break between '+prev.slotName+' on '+prev.dateISO+' and '+cur.slotName+' on '+cur.dateISO+' (needs '+restB+'h)');
+    }
+  }
+  /* 3. max continuous hours (stretches with zero break) */
+  var maxC=(r.maxContinuous!=null)?+r.maxContinuous:null;
+  if(maxC!=null && shifts.length){
+    var sStart=0;
+    for(var j=1;j<=shifts.length;j++){
+      var isEnd=(j===shifts.length);
+      var continues=!isEnd && (shifts[j].startAbs-shifts[j-1].endAbs)===0;
+      if(!continues){
+        var first=shifts[sStart], last=shifts[j-1];
+        var totalMin=last.endAbs-first.startAbs;
+        if(totalMin>maxC*60) v.push('Max continuous hours: '+personName+' — '+rulesFmtHours(totalMin)+' continuous from '+first.slotName+' on '+first.dateISO+' to '+last.slotName+' on '+last.dateISO+' (max '+maxC+'h)');
+        sStart=j;
+      }
+    }
+  }
+  /* 4. rest after nights (gap from end of a run of nights to the next shift) */
+  var restN=(r.restAfterNights!=null)?+r.restAfterNights:null;
+  if(restN!=null){
+    var nightShifts=shifts.filter(rulesIsNight);
+    var runs=[], curRun=[];
+    nightShifts.forEach(function(ns){
+      if(!curRun.length) curRun=[ns];
+      else{
+        var prevN=curRun[curRun.length-1];
+        if(ns.startAbs-prevN.endAbs>=1440){ runs.push(curRun); curRun=[ns]; }
+        else curRun.push(ns);
+      }
+    });
+    if(curRun.length) runs.push(curRun);
+    runs.forEach(function(run){
+      var lastN=run[run.length-1];
+      var nextShift=null;
+      for(var m=0;m<shifts.length;m++){ if(shifts[m].startAbs>=lastN.endAbs){ nextShift=shifts[m]; break; } }
+      if(nextShift){
+        var gapMin2=nextShift.startAbs-lastN.endAbs;
+        if(gapMin2<restN*60) v.push('Rest after nights: '+personName+' — only '+rulesFmtHours(gapMin2)+' rest after nights ending '+lastN.dateISO+' before '+nextShift.slotName+' on '+nextShift.dateISO+' (needs '+restN+'h)');
+      }
+    });
+  }
+  /* 5. max consecutive shifts (runs of shifts on consecutive days; a full day off resets) */
+  var maxCons=(r.maxConsecutiveShifts!=null)?+r.maxConsecutiveShifts:null;
+  if(maxCons!=null && shifts.length){
+    var run=[shifts[0]], lastD=shifts[0].dateISO;
+    function flushRun(){
+      if(run.length>maxCons) v.push('Max consecutive shifts: '+personName+' — '+run.length+' shifts in a row from '+run[0].dateISO+' to '+run[run.length-1].dateISO+' (max '+maxCons+')');
+    }
+    for(var n=1;n<shifts.length;n++){
+      var dayGap=Math.round((parseISO(shifts[n].dateISO)-parseISO(lastD))/86400000);
+      if(dayGap<=1){ run.push(shifts[n]); lastD=shifts[n].dateISO; }
+      else{ flushRun(); run=[shifts[n]]; lastD=shifts[n].dateISO; }
+    }
+    flushRun();
+  }
+  /* 6+7. max hours per month + max overtime shifts per month */
+  var maxH=(r.maxHoursMonth!=null)?+r.maxHoursMonth:null;
+  var maxOT=(r.maxOvertimeShifts!=null)?+r.maxOvertimeShifts:null;
+  if(maxH!=null||maxOT!=null){
+    var byMonth={};
+    shifts.forEach(function(s){
+      var ym=s.dateISO.slice(0,7);
+      if(!byMonth[ym]) byMonth[ym]={mins:0, ot:0};
+      byMonth[ym].mins+=(s.endAbs-s.startAbs);
+      if(s.isOvertime) byMonth[ym].ot++;
+    });
+    Object.keys(byMonth).sort().forEach(function(ym){
+      var b=byMonth[ym];
+      var parts=ym.split('-'); var lbl=MN[parseInt(parts[1],10)-1]+' '+parts[0];
+      if(maxH!=null && b.mins>maxH*60) v.push('Max hours per month: '+personName+' — '+rulesFmtHours(b.mins)+' in '+lbl+' (max '+maxH+'h)');
+      if(maxOT!=null && b.ot>maxOT) v.push('Max overtime shifts: '+personName+' — '+b.ot+' extra shifts in '+lbl+' (max '+maxOT+')');
+    });
+  }
+  /* 8. work public holidays */
+  if(r.workHolidays===false){
+    var holCache={};
+    shifts.forEach(function(s){
+      var y=parseInt(s.dateISO.slice(0,4),10);
+      if(holCache[y]===undefined) holCache[y]=holMapFor(y);
+      var hol=holCache[y];
+      if(hol && hol[s.dateISO]) v.push('Work public holidays: '+personName+' — rostered on '+hol[s.dateISO]+' ('+s.dateISO+'), but staff don\'t work public holidays');
+    });
+  }
+  /* 9. weekends off per month (weekend = Sat + Sun both off) */
+  if(r.weekendsOff!=null && r.weekendsOff!==''){
+    var req=r.weekendsOff;
+    var months={};
+    shifts.forEach(function(s){ var ym2=s.dateISO.slice(0,7); (months[ym2]=months[ym2]||[]).push(s); });
+    Object.keys(months).sort().forEach(function(ym){
+      var parts2=ym.split('-'); var yy=+parts2[0], mm=+parts2[1]-1;
+      var dim=daysInMonth(yy,mm);
+      var totalW=0, offW=0;
+      for(var d=1; d<=dim; d++){
+        if(new Date(yy,mm,d).getDay()!==6) continue;
+        if(d+1>dim) continue;
+        totalW++;
+        var satISO=yy+'-'+String(mm+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+        var sunISO=yy+'-'+String(mm+1).padStart(2,'0')+'-'+String(d+1).padStart(2,'0');
+        var hasSat=months[ym].some(function(s){ return s.dateISO===satISO; });
+        var hasSun=months[ym].some(function(s){ return s.dateISO===sunISO; });
+        if(!hasSat&&!hasSun) offW++;
+      }
+      var need=(req==='all')?totalW:(+req);
+      if(offW<need) v.push('Weekends off: '+personName+' — only '+offW+' full weekend'+(offW===1?'':'s')+' off in '+MN[mm]+' '+yy+' (needs '+(req==='all'?'all ('+totalW+')':need)+')');
+    });
+  }
+  return v;
+}
+/* check EVERYONE on a roster -> [{person, violations[]}] (only people with violations) */
+function rulesCheckRoster(R){
+  var people={};
+  (R.crews||[]).forEach(function(c){ (c.members||[]).forEach(function(nm){ if(nm&&nm!==OPEN_MARK) people[nm]=1; }); });
+  Object.keys(R.memberOverrides||{}).forEach(function(dateISO){
+    var per=R.memberOverrides[dateISO]||{};
+    Object.keys(per).forEach(function(sid){
+      (per[sid]||[]).forEach(function(nm){ if(nm&&nm!==OPEN_MARK) people[nm]=1; });
+    });
+  });
+  var out=[];
+  Object.keys(people).sort().forEach(function(nm){
+    var vs=rulesCheckPerson(R, nm);
+    if(vs.length) out.push({person:nm, violations:vs});
+  });
+  return out;
+}
+/* warn + override: true = no violations, or the manager confirmed the override */
+function rulesConfirmViolations(violations, label){
+  if(!violations||!violations.length) return true;
+  var msg='Rule warning'+(label?' — '+label:'')+':\n\n'+violations.slice(0,8).join('\n');
+  if(violations.length>8) msg+='\n…and '+(violations.length-8)+' more';
+  msg+='\n\nProceed anyway (override)?';
+  return confirm(msg);
+}
+/* HTML for the Rule warnings section under the calendar (like the Leave list) */
+function rosterRulesHtml(results){
+  if(!results||!results.length) return '';
+  var h='<div style="margin-top:16px;"><div style="font-size:15px;font-weight:800;margin-bottom:6px;">Rule warnings</div>';
+  results.forEach(function(r){
+    r.violations.forEach(function(v){
+      h+='<div style="font-size:14px;color:#CC0000;margin-bottom:2px;">'+escapeHtml(v)+'</div>';
+    });
+  });
+  return h+'</div>';
 }
 
 function renderShiftReq(){
