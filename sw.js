@@ -1,7 +1,7 @@
 /* SignalFox Shift V2 — app-shell service worker.
    Pages are network-first (updates appear on next load when online);
    assets are cache-first. Everything falls back to cache offline. */
-var CACHE = 'sfshift-v2-67';
+var CACHE = 'sfshift-v2-68';
 var ASSETS = [
   './',
   'index.html',
