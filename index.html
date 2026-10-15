@@ -889,7 +889,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1500';
+var BUILD='20261015-1515';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -1496,36 +1496,6 @@ function renderBsVehicles(){
     d2.appendChild(l2); d2.appendChild(slInfo);
     row.appendChild(d1); row.appendChild(d2);
     card.appendChild(row);
-    /* crews on this team — compact rows: colour dot + name + headcount */
-    var crewLab=document.createElement('label'); crewLab.textContent='Crews';
-    card.appendChild(crewLab);
-    vehicleCrews(v.id).forEach(function(c){
-      var crow=document.createElement('div'); crow.style.cssText='display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line);';
-      var dot=crewColorDot(c.color, bsColorOpen===c.id, (function(cc){
-        return function(){ bsColorOpen=(bsColorOpen===cc.id?null:cc.id); renderBsVehicles(); };
-      })(c));
-      var nm=document.createElement('input'); nm.type='text'; nm.maxLength=14; nm.value=c.name;
-      nm.title='Crew names must be unique across the workplace';
-      nm.style.cssText='flex:1;min-width:0;';
-      nm.onchange=(function(cc){
-        return function(){
-          var nn=this.value.trim();
-          if(!nn){ this.value=cc.name; return; }
-          var dup=(S.base.crews||[]).some(function(x){ return x!==cc && (x.name||'').trim().toUpperCase()===nn.toUpperCase(); });
-          if(dup){ toast('Crew names must be unique \u2014 "'+nn+'" is already used'); this.value=cc.name; return; }
-          cc.name=nn; this.value=nn; persistBase();
-        };
-      })(c);
-      var cnt=document.createElement('span'); cnt.style.cssText='font-size:12px;color:var(--muted);white-space:nowrap;';
-      cnt.textContent=(c.memberIds||[]).length+' people';
-      crow.appendChild(dot); crow.appendChild(nm); crow.appendChild(cnt);
-      card.appendChild(crow);
-      if(bsColorOpen===c.id){
-        card.appendChild(colorSwatches(c.color, (function(cc){
-          return function(col){ cc.color=col; persistBase(); bsColorOpen=null; renderBsVehicles(); };
-        })(c)));
-      }
-    });
     wrap.appendChild(card);
   });
 }
@@ -4541,23 +4511,8 @@ function renderStaffTab(){
   document.getElementById('staffCount').textContent=S.base.staff.length+' people';
   if(!S.base.staff.length) wrap.innerHTML='<p class="fine">Nobody here yet &mdash; add your people below.</p>';
   var teams=S.base.vehicles||[];
-  /* group the list by crew: crews in list order, unassigned last */
-  var crewsOrder=S.base.crews||[];
-  function crewIndexOf(sid){
-    var c=staffCrewOf(sid); if(!c) return 1e9;
-    var ix=crewsOrder.indexOf(c); return ix<0?1e9:ix;
-  }
-  var decorated=S.base.staff.map(function(s,si){ return {s:s, si:si, ci:crewIndexOf(s.id)}; });
-  decorated.sort(function(a,b){ return (a.ci-b.ci)||(a.si-b.si); });
-  var lastCrewKey='__start__';
-  decorated.forEach(function(d){
-    var s=d.s, si=d.si;
-    var curCrew=staffCrewOf(s.id);
-    var curKey=curCrew?curCrew.id:'__none__';
-    if(curKey!==lastCrewKey){
-      wrap.appendChild(curCrew?buildCrewHeading(curCrew):buildUnassignedHeading());
-      lastCrewKey=curKey;
-    }
+  /* build one staff row — crew headings group the list (see below) */
+  function buildStaffRow(s,si){
     var row=document.createElement('div'); row.className='prow';
     var top=document.createElement('div'); top.className='sline';
     var inp=document.createElement('input'); inp.type='text'; inp.maxLength=24; inp.value=s.name; inp.placeholder='Staff name';
@@ -4644,8 +4599,22 @@ function renderStaffTab(){
         row.appendChild(_note);
       }
     }
-    wrap.appendChild(row);
+    return row;
+  }
+  /* group the list by crew: every crew gets a heading (even empty ones),
+     unassigned people last. Crew name/colour are edited on the heading. */
+  (S.base.crews||[]).forEach(function(c){
+    wrap.appendChild(buildCrewHeading(c));
+    S.base.staff.forEach(function(s,si){
+      if(staffCrewOf(s.id)===c) wrap.appendChild(buildStaffRow(s,si));
+    });
   });
+  if(S.base.staff.some(function(s){ return !staffCrewOf(s.id); })){
+    wrap.appendChild(buildUnassignedHeading());
+    S.base.staff.forEach(function(s,si){
+      if(!staffCrewOf(s.id)) wrap.appendChild(buildStaffRow(s,si));
+    });
+  }
 }
 /* Partners: two people linked so they always work together. Pairing is mutual —
    setting A's partner to B also sets B's partner to A, and re-pairing clears the
