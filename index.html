@@ -184,9 +184,12 @@
   /* workplace shift rows: name + start/end times */
   .shiftrow{display:flex; gap:8px; align-items:center; margin-top:8px;}
   .shiftrow input[type=text]{flex:1; min-width:0;}
-  .shiftrow input[type=time]{flex:none; width:96px; padding:10px 4px; font-size:14px;}
+  .shiftrow input[type=time]{flex:none; width:84px; padding:10px 4px; font-size:14px;}
   .shiftrow .tdash{color:var(--muted); flex:none;}
   .shiftrow .rm{background:none; border:none; color:var(--red); font-size:16px; cursor:pointer; padding:6px; flex:none;}
+  .shiftrow .mvs{display:flex; flex-direction:column; flex:none;}
+  .shiftrow .mv{background:none; border:none; color:var(--muted); font-size:11px; cursor:pointer; padding:1px 3px; line-height:1.2; flex:none;}
+  .shiftrow .mv:disabled{opacity:.25; cursor:default;}
   .grid{display:grid; grid-template-columns:repeat(7,1fr); gap:4px;}
   .cell{
     border-radius:10px; min-height:70px; padding:5px 2px; cursor:pointer; position:relative;
@@ -891,7 +894,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1640';
+var BUILD='20261015-1650';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -5037,13 +5040,17 @@ function renderSettings(){
 function renderShifts(){
   var wrap=document.getElementById('shiftList'); if(!wrap) return;
   function escQ(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  wrap.innerHTML=wpShifts().map(function(s){
+  var ss0=wpShifts();
+  wrap.innerHTML=ss0.map(function(s, idx){
     return '<div class="shiftrow">'+
       '<input type="text" maxlength="24" value="'+escQ(s.name)+'" placeholder="Shift name" aria-label="Shift name" data-shift="'+s.id+'" data-f="name">'+
       '<input type="time" value="'+escQ(s.start||'06:00')+'" aria-label="Shift start" data-shift="'+s.id+'" data-f="start">'+
       '<span class="tdash">\u2013</span>'+
       '<input type="time" value="'+escQ(s.end||'18:00')+'" aria-label="Shift end" data-shift="'+s.id+'" data-f="end">'+
-
+      '<span class="mvs">'+
+      '<button class="mv" type="button" title="Move up" data-move="-1" data-shift="'+s.id+'"'+(idx===0?' disabled':'')+'>\u25B2</button>'+
+      '<button class="mv" type="button" title="Move down" data-move="1" data-shift="'+s.id+'"'+(idx===ss0.length-1?' disabled':'')+'>\u25BC</button>'+
+      '</span>'+
       '<button class="rm" type="button" title="Remove shift" data-del="'+s.id+'">\u2715</button>'+
       '</div>';
   }).join('');
@@ -5065,7 +5072,32 @@ function renderShifts(){
       btn.onclick=function(){ shiftDel(btn.getAttribute('data-del')); };
     })(dels[j]);
   }
+  var mvs=wrap.querySelectorAll('button[data-move]');
+  for(var k=0;k<mvs.length;k++){
+    (function(btn){
+      btn.onclick=function(){ shiftMove(btn.getAttribute('data-shift'), parseInt(btn.getAttribute('data-move'),10)); };
+    })(mvs[k]);
+  }
   document.getElementById('shiftAddBtn').onclick=function(){ shiftAdd(); };
+}
+/* Move a shift up (-1) or down (+1) in the Shifts list. The list order is the
+   order everywhere: calendar blocks, team shift picker, requirements. The top
+   two shifts are what the rotation calls D and N, so changing them also
+   reorders the shifts on existing rosters — confirm that case. */
+function shiftMove(id, dir){
+  var ss=wpShifts();
+  var i=-1;
+  for(var k=0;k<ss.length;k++) if(ss[k].id===id) i=k;
+  var j=i+dir;
+  if(i<0||j<0||j>=ss.length) return;
+  var firstBefore=ss[0]?ss[0].id:null, secondBefore=ss[1]?ss[1].id:null;
+  var sim=ss.slice(); var tmp=sim[i]; sim[i]=sim[j]; sim[j]=tmp;
+  var firstAfter=sim[0]?sim[0].id:null, secondAfter=sim[1]?sim[1].id:null;
+  if((S.rosters||[]).length && (firstAfter!==firstBefore||secondAfter!==secondBefore)){
+    if(!confirm('This will also reorder the shifts on your existing rosters (your rotation uses the top two shifts). Continue?')) return;
+  }
+  var tmp2=ss[i]; ss[i]=ss[j]; ss[j]=tmp2;
+  persistBase(); renderShifts(); renderCalendar();
 }
 function shiftAdd(){
   var ss=wpShifts();
