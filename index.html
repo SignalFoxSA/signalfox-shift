@@ -580,11 +580,6 @@
       <button class="addperson" onclick="bsAddVehicle()">+ Add team</button>
     </div>
     <div class="card">
-      <h3>Crews</h3>
-      <p class="sub">The crews on each team &mdash; name them and set their colors.</p>
-      <div id="bsCrews"></div>
-    </div>
-    <div class="card">
       <h3>Rotations</h3>
       <p class="sub">Patterns you designed yourself &mdash; reusable on any team.</p>
       <div id="bsCustom"></div>
@@ -893,7 +888,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1435';
+var BUILD='20261015-1445';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -1500,6 +1495,36 @@ function renderBsVehicles(){
     d2.appendChild(l2); d2.appendChild(slInfo);
     row.appendChild(d1); row.appendChild(d2);
     card.appendChild(row);
+    /* crews on this team — compact rows: colour dot + name + headcount */
+    var crewLab=document.createElement('label'); crewLab.textContent='Crews';
+    card.appendChild(crewLab);
+    vehicleCrews(v.id).forEach(function(c){
+      var crow=document.createElement('div'); crow.style.cssText='display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line);';
+      var dot=crewColorDot(c.color, bsColorOpen===c.id, (function(cc){
+        return function(){ bsColorOpen=(bsColorOpen===cc.id?null:cc.id); renderBsVehicles(); };
+      })(c));
+      var nm=document.createElement('input'); nm.type='text'; nm.maxLength=14; nm.value=c.name;
+      nm.title='Crew names must be unique across the workplace';
+      nm.style.cssText='flex:1;min-width:0;';
+      nm.onchange=(function(cc){
+        return function(){
+          var nn=this.value.trim();
+          if(!nn){ this.value=cc.name; return; }
+          var dup=(S.base.crews||[]).some(function(x){ return x!==cc && (x.name||'').trim().toUpperCase()===nn.toUpperCase(); });
+          if(dup){ toast('Crew names must be unique \u2014 "'+nn+'" is already used'); this.value=cc.name; return; }
+          cc.name=nn; this.value=nn; persistBase();
+        };
+      })(c);
+      var cnt=document.createElement('span'); cnt.style.cssText='font-size:12px;color:var(--muted);white-space:nowrap;';
+      cnt.textContent=(c.memberIds||[]).length+' people';
+      crow.appendChild(dot); crow.appendChild(nm); crow.appendChild(cnt);
+      card.appendChild(crow);
+      if(bsColorOpen===c.id){
+        card.appendChild(colorSwatches(c.color, (function(cc){
+          return function(col){ cc.color=col; persistBase(); bsColorOpen=null; renderBsVehicles(); };
+        })(c)));
+      }
+    });
     wrap.appendChild(card);
   });
 }
@@ -1514,48 +1539,7 @@ function bsDelVehicle(vi){
   persistBase(); renderBsVehicles(); renderBsCrews();
 }
 
-function renderBsCrews(){
-  var wrap=document.getElementById('bsCrews'); wrap.innerHTML='';
-  if(!S.base.vehicles.length){ wrap.innerHTML='<p class="fine">Add a team above to start building crews.</p>'; return; }
-  S.base.vehicles.forEach(function(v){
-    var rot=ROTATIONS[v.rotation];
-    var h=document.createElement('div'); h.className='vsect';
-    h.textContent=(v.name||'Team')+' · '+(rot?rot.name:v.rotation);
-    wrap.appendChild(h);
-    vehicleCrews(v.id).forEach(function(c){
-      var card=document.createElement('div'); card.className='crewcard';
-      var head=document.createElement('div'); head.className='chead';
-      var dot=crewColorDot(c.color, bsColorOpen===c.id, (function(cc){
-        return function(){ bsColorOpen=(bsColorOpen===cc.id?null:cc.id); renderBsCrews(); };
-      })(c));
-      var nm=document.createElement('input'); nm.type='text'; nm.maxLength=14; nm.value=c.name;
-      nm.title='Crew names must be unique across the workplace';
-      nm.onchange=(function(cc){
-        return function(){
-          var nn=this.value.trim();
-          if(!nn){ this.value=cc.name; return; }
-          var dup=(S.base.crews||[]).some(function(x){ return x!==cc && (x.name||'').trim().toUpperCase()===nn.toUpperCase(); });
-          if(dup){ toast('Crew names must be unique \u2014 "'+nn+'" is already used'); this.value=cc.name; return; }
-          cc.name=nn; this.value=nn; persistBase();
-        };
-      })(c);
-      head.appendChild(dot); head.appendChild(nm); card.appendChild(head);
-      if(bsColorOpen===c.id){
-        card.appendChild(colorSwatches(c.color, (function(cc){
-          return function(col){ cc.color=col; persistBase(); bsColorOpen=null; renderBsCrews(); };
-        })(c)));
-      }
-      var nmem=(c.memberIds||[]).length;
-      var sub=document.createElement('p'); sub.className='fine'; sub.style.margin='6px 0 0';
-      sub.textContent=nmem===0
-        ? 'No one assigned yet \u2014 put people into this crew in the Staff section above.'
-        : nmem+' person'+(nmem>1?'s':'')+' assigned';
-      card.appendChild(sub);
-      wrap.appendChild(card);
-    });
-  });
-}
-
+function renderBsCrews(){ renderBsVehicles(); } /* crews now render inside each team card */
 
 /* ---------- crew color picker ---------- */
 /* Standard colors are auto-assigned; tapping a crew's dot lets the user pick any of them. */
@@ -4569,7 +4553,10 @@ function renderStaffTab(){
     csel.onchange=(function(ss){
       return function(){
         assignStaffToCrew(ss.id, this.value||null);
-        persistBase(); renderBsCrews();
+        /* partner moves with them — the pair always works together */
+        var pr=staffPartnerOf(ss.id);
+        if(pr) assignStaffToCrew(pr.id, this.value||null);
+        persistBase(); renderBsVehicles(); renderStaffTab();
       };
     })(s);
     bot.appendChild(tsel); bot.appendChild(csel);
@@ -4596,10 +4583,10 @@ function renderStaffTab(){
     var _partner=staffPartnerOf(s.id);
     if(_partner){
       var _myCrew=staffCrewOf(s.id), _pCrew=staffCrewOf(_partner.id);
-      if(_myCrew&&_pCrew&&_myCrew.id!==_pCrew.id){
+      if((_myCrew?_myCrew.id:null)!==(_pCrew?_pCrew.id:null)){
         var _note=document.createElement('div'); _note.className='fine';
         _note.style.cssText='margin:2px 0 0;color:var(--orange);font-weight:700;';
-        _note.textContent='\u26a0 Partner '+_partner.name+' is in a different crew';
+        _note.textContent='\u26a0 Partner '+_partner.name+' is not in the same crew';
         row.appendChild(_note);
       }
     }
@@ -4628,6 +4615,13 @@ function setPartner(staffId, partnerId){
       if(po&&po.partnerId===partnerId) po.partnerId='';
       p.partnerId=staffId; s.partnerId=partnerId;
     }
+  }
+  /* partners always work together: put them in the same crew.
+     The picker's crew wins; if the picker has no crew, the partner's crew wins. */
+  if(partnerId){
+    var aCrew=staffCrewOf(staffId), bCrew=staffCrewOf(partnerId);
+    if(aCrew&&(!bCrew||bCrew.id!==aCrew.id)) assignStaffToCrew(partnerId, aCrew.id);
+    else if(!aCrew&&bCrew) assignStaffToCrew(staffId, bCrew.id);
   }
   persistBase(); renderStaffTab();
 }
@@ -4951,7 +4945,7 @@ function renderShifts(){
       '<input type="time" value="'+escQ(s.start||'06:00')+'" aria-label="Shift start" data-shift="'+s.id+'" data-f="start">'+
       '<span class="tdash">\u2013</span>'+
       '<input type="time" value="'+escQ(s.end||'18:00')+'" aria-label="Shift end" data-shift="'+s.id+'" data-f="end">'+
-      '<input type="number" min="1" max="50" value="'+(s.size||'')+'" placeholder="Size" aria-label="People per shift" title="How many people should work this shift" data-shift="'+s.id+'" data-f="size" style="width:56px;">'+
+
       '<button class="rm" type="button" title="Remove shift" data-del="'+s.id+'">\u2715</button>'+
       '</div>';
   }).join('');
@@ -4962,7 +4956,6 @@ function renderShifts(){
         var s=wpShift(inp.getAttribute('data-shift')); if(!s) return;
         var f=inp.getAttribute('data-f'), v=inp.value;
         if(f==='name'){ if(v.trim()) s.name=v.trim(); }
-        else if(f==='size'){ s.size=v?Math.max(1,parseInt(v,10)||1):null; }
         else if(v){ s[f]=v; }
         persistBase(); renderShifts(); renderCalendar();
       };
