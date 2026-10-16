@@ -410,6 +410,11 @@
   #newDraftBox select, #newDraftBox input[type=month]{width:100%; padding:10px; border:1px solid var(--line);
     border-radius:8px; background:var(--card2); color:var(--text); margin-bottom:8px;}
   #newDraftBox input{color-scheme:dark;}
+  #newDraftBox input[type=file]{width:100%; padding:10px; border:1px solid var(--line);
+    border-radius:8px; background:var(--card2); color:var(--text); margin-bottom:8px;}
+  .imp-table{width:100%; border-collapse:collapse; font-size:13px;}
+  .imp-table td,.imp-table th{border-bottom:1px solid var(--line); padding:5px 6px; text-align:left; vertical-align:top;}
+  .imp-err{color:#CC0000; font-weight:700;}
   body.light #newDraftBox input{color-scheme:light;}
   /* long-term leave section (draft view only, below the calendar) */
   #draftLeaveSection{margin:14px 0;}
@@ -682,6 +687,7 @@
       <p class="sub">Rosters not yet live &mdash; build them here, publish when ready.</p>
     </div>
     <button class="btn" id="newDraftBtn" onclick="openNewDraft()">+ New draft</button>
+    <button class="btn ghost" id="importRosterBtn" onclick="openImportRoster()">Import roster</button>
     <div id="draftList"></div>
   </div>
 
@@ -1132,7 +1138,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1984';
+var BUILD='20261015-1985';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -3817,6 +3823,8 @@ function openNewDraft(){
     '<div class="nd-opt" id="newDraftFromScratch" onclick="newDraftScratchForm()">From scratch <span>&#8594;</span></div>'+
     '<p class="fine" style="margin:0 0 8px;text-align:left;">Pick a team + month \u2014 pre-filled from the team\u2019s current rotation.</p>'+
     '<div class="nd-opt" id="newDraftCopyFrom" onclick="newDraftCopyForm()">Copy from\u2026 <span>&#8594;</span></div>'+
+    '<div class="nd-opt" id="newDraftImport" onclick="openImportRoster()">Import roster\u2026 <span>&#8594;</span></div>'+
+    '<p class="fine" style="margin:0 0 8px;text-align:left;">Upload a spreadsheet or a photo of a roster \u2014 review it, then save it as a draft.</p>'+
     '<p class="fine" style="margin:0 0 8px;text-align:left;">Copy a previous roster into a new month \u2014 rotation, crews and pattern carry over; dated changes do not.</p>'+
     '<div class="btnrow"><button class="btn ghost" onclick="closeNewDraft()">Cancel</button></div>';
   document.getElementById('newDraftWrap').classList.add('open');
@@ -3982,6 +3990,522 @@ function newDraftCreateCopy(){
   openDraft(entry.id);
   toast('Draft copied');
 }
+/* ---------- Import from Anywhere (Rosters -> Import roster) ----------
+   Upload a spreadsheet (.xlsx/.csv) or a photo of a roster -> review ->
+   create a DRAFT. Nothing ever goes straight to live, and nothing is
+   guessed: empty grid cells become Open, unmapped shifts must be mapped
+   or skipped, unknown names appear exactly as written, dates outside the
+   target month are skipped with a warning. */
+var IMP=null;
+function impNorm(s){ return String(s==null?'':s).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(); }
+function impCellStr(c){
+  if(c==null) return '';
+  if(c instanceof Date) return isNaN(c.getTime())?'':isoDate(c);
+  if(typeof c==='number') return String(c);
+  return String(c).trim();
+}
+var IMP_MONTHS={jan:0,january:0,feb:1,february:1,mar:2,march:2,apr:3,april:3,may:4,jun:5,june:5,jul:6,july:6,aug:7,august:7,sep:8,september:8,oct:9,october:9,nov:10,november:10,dec:11,december:11};
+function impParseDateCell(c){
+  if(c instanceof Date){ if(isNaN(c.getTime())) return null; return {y:c.getFullYear(),m:c.getMonth(),d:c.getDate(),hasYear:true,hasMonth:true}; }
+  if(typeof c==='number'){
+    if(c>=1&&c<=31&&Math.floor(c)===c) return {y:null,m:null,d:c,hasYear:false,hasMonth:false};
+    if(c>=20000&&c<=80000){ var dt=new Date(Math.round((c-25569)*86400000)); return {y:dt.getUTCFullYear(),m:dt.getUTCMonth(),d:dt.getUTCDate(),hasYear:true,hasMonth:true}; }
+    var s8=String(Math.floor(c));
+    if(/^\d{8}$/.test(s8)){ var yy=+s8.slice(0,4), mm=+s8.slice(4,6)-1, dd=+s8.slice(6,8); if(mm>=0&&mm<12&&dd>=1&&dd<=31) return {y:yy,m:mm,d:dd,hasYear:true,hasMonth:true}; }
+    return null;
+  }
+  var s=String(c).trim(); if(!s) return null;
+  var m1=s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if(m1) return {y:+m1[1],m:+m1[2]-1,d:+m1[3],hasYear:true,hasMonth:true};
+  var m2=s.match(/^(\d{1,2})[\/\.\-](\d{1,2})(?:[\/\.\-](\d{2,4}))?$/);
+  if(m2){ var dd2=+m2[1], mm2=+m2[2]-1, yy2=m2[3]?+m2[3]:null; if(yy2!=null&&yy2<100) yy2+=2000; if(mm2>=0&&mm2<12&&dd2>=1&&dd2<=31) return {y:yy2,m:mm2,d:dd2,hasYear:yy2!=null,hasMonth:true}; return null; }
+  var m3=s.toLowerCase().match(/(\d{1,2})(?:st|nd|rd|th)?[\s\-]+([a-z]+)(?:[\s\-,]+(\d{2,4}))?/);
+  if(m3&&IMP_MONTHS[m3[2]]!==undefined){ var yy3=m3[3]?+m3[3]:null; if(yy3!=null&&yy3<100) yy3+=2000; return {y:yy3,m:IMP_MONTHS[m3[2]],d:+m3[1],hasYear:yy3!=null,hasMonth:true}; }
+  var m4=s.toLowerCase().match(/([a-z]+)[\s\-]+(\d{1,2})(?:st|nd|rd|th)?(?:[\s\-,]+(\d{2,4}))?/);
+  if(m4&&IMP_MONTHS[m4[1]]!==undefined){ var yy4=m4[3]?+m4[3]:null; if(yy4!=null&&yy4<100) yy4+=2000; return {y:yy4,m:IMP_MONTHS[m4[1]],d:+m4[2],hasYear:yy4!=null,hasMonth:true}; }
+  return null;
+}
+function impFindDateInText(s){
+  var m=s.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if(m) return {d:{y:+m[1],m:+m[2]-1,d:+m[3],hasYear:true,hasMonth:true}, text:m[0]};
+  m=s.match(/(\d{1,2})[\/](\d{1,2})(?:[\/](\d{2,4}))?/);
+  if(m){ var yy=m[3]?+m[3]:null; if(yy!=null&&yy<100) yy+=2000; return {d:{y:yy,m:+m[2]-1,d:+m[1],hasYear:yy!=null,hasMonth:true}, text:m[0]}; }
+  m=s.match(/(\d{1,2})(?:st|nd|rd|th)?[\s\-]+([a-z]+)(?:[\s\-,]+(\d{2,4}))?/i);
+  if(m&&IMP_MONTHS[m[2].toLowerCase()]!==undefined){ var yy2=m[3]?+m[3]:null; if(yy2!=null&&yy2<100) yy2+=2000; return {d:{y:yy2,m:IMP_MONTHS[m[2].toLowerCase()],d:+m[1],hasYear:yy2!=null,hasMonth:true}, text:m[0]}; }
+  m=s.match(/([a-z]+)[\s\-]+(\d{1,2})(?:st|nd|rd|th)?(?:[\s\-,]+(\d{2,4}))?/i);
+  if(m&&IMP_MONTHS[m[1].toLowerCase()]!==undefined){ var yy3=m[3]?+m[3]:null; if(yy3!=null&&yy3<100) yy3+=2000; return {d:{y:yy3,m:IMP_MONTHS[m[1].toLowerCase()],d:+m[2],hasYear:yy3!=null,hasMonth:true}, text:m[0]}; }
+  return null;
+}
+function impSlotList(teamId){
+  var v=vehicleById(teamId); if(!v) return [];
+  return rotSlots(v?v.rotation:'224', v.shiftIds);
+}
+function impMatchShift(raw, teamId){
+  var n=impNorm(raw); if(!n) return null;
+  var slots=impSlotList(teamId);
+  var i;
+  for(i=0;i<slots.length;i++){ if(impNorm(slots[i].name)===n) return slots[i].id; }
+  var want=null;
+  if(n==='day'||n==='d'||n==='days'||n==='day shift'||n==='dayshift') want='D';
+  else if(n==='night'||n==='n'||n==='nights'||n==='night shift'||n==='nightshift') want='N';
+  else if(n==='24h'||n==='24 h'||n==='24'||n==='24 hour'||n==='24 hours'||n==='24h shift'||n==='24 hour shift'||n==='x'||n==='24 hr'||n==='24 hrs') want='X';
+  if(want){ for(i=0;i<slots.length;i++) if(slots[i].id===want) return want; }
+  if(n.length>=3&&n!=='shift'){
+    for(i=0;i<slots.length;i++){ var sn=impNorm(slots[i].name); if(sn&&(sn.indexOf(n)>=0||n.indexOf(sn)>=0)) return slots[i].id; }
+  }
+  return null;
+}
+function impLooksLikeShift(raw){
+  if(impMatchShift(raw, IMP?IMP.teamId:null)) return true;
+  var n=impNorm(raw);
+  return n==='day'||n==='night'||n==='24h'||n==='early'||n==='late'||n==='morning'||n==='afternoon'||n==='evening'||n==='graveyard'||/shift/.test(n);
+}
+function impSplitNames(cell){
+  var s=impCellStr(cell); if(!s) return {names:[], kind:'empty'};
+  var low=impNorm(s);
+  if(low==='off'||low==='-'||low==='none'||low==='n a'||low==='leave'||low==='on leave'||low==='rest'||low==='day off') return {names:[], kind:'off'};
+  if(low==='open'||low==='?'||low==='tbc'||low==='to be confirmed'||low==='vacant'||low==='unfilled'||low==='tba') return {names:[], kind:'open'};
+  var parts=s.split(/[,;\/\n\+&]+|\s+and\s+/i).map(function(p){ return String(p).trim().replace(/^[-–—:]+|[-–—:]+$/g,'').trim(); }).filter(function(p){ return p&&p!=='-'&&impNorm(p)!=='off'; });
+  return {names:parts, kind:parts.length?'names':'empty'};
+}
+function impExpandNames(names, warnings){
+  var out=[];
+  (names||[]).forEach(function(nm){
+    var staffHit=(S.base.staff||[]).some(function(s){ return impNorm(s.name)===impNorm(nm); });
+    if(staffHit){ if(out.indexOf(nm)<0) out.push(nm); return; }
+    var crew=null;
+    (S.base.crews||[]).forEach(function(c){ if(!crew&&(impNorm(c.name)===impNorm(nm)||impNorm('crew '+c.name)===impNorm(nm))) crew=c; });
+    if(crew){
+      var mems=(crew.memberIds||[]).map(staffName).filter(function(x){ return x; });
+      if(mems.length){ mems.forEach(function(m){ if(out.indexOf(m)<0) out.push(m); }); }
+      else { if(out.indexOf(nm)<0) out.push(nm); warnings.push('Crew '+crew.name+' has no members in Shift setup — left as “'+nm+'”.'); }
+      return;
+    }
+    if(out.indexOf(nm)<0) out.push(nm);
+  });
+  return out;
+}
+function impNewParsed(teamId){
+  return {teamId:teamId, assigns:[], warnings:[], unmapped:[], people:[], dayOnly:false, year:null, month:null, total:0, openCount:0, skipped:0, yearAssumed:false};
+}
+function impPushAssign(P, dateObj, slotId, rawShift, namesInfo){
+  if(!dateObj||dateObj.d<1||dateObj.d>31) return;
+  if(namesInfo.kind==='off') return;
+  P.assigns.push({d:dateObj.d, m:dateObj.hasMonth?dateObj.m:null, y:dateObj.hasYear?dateObj.y:null,
+    hasMonth:!!dateObj.hasMonth, hasYear:!!dateObj.hasYear,
+    slotId:slotId||null, rawShift:rawShift||'', names:namesInfo.names.slice(), open:namesInfo.kind==='open'});
+}
+/* Merge duplicate (date, shift) rows: names win over Open. */
+function impFinalize(P){
+  var byKey={}, merged=[];
+  P.assigns.forEach(function(a){
+    var key=(a.hasMonth?(a.y!=null?a.y:'?')+'-'+a.m:'day')+'-'+a.d+'|'+(a.slotId||('raw:'+impNorm(a.rawShift)));
+    if(!byKey[key]){ byKey[key]=a; merged.push(a); return; }
+    var ex=byKey[key];
+    a.names.forEach(function(n){ if(ex.names.indexOf(n)<0) ex.names.push(n); });
+    if(ex.open&&ex.names.length) ex.open=false;
+    else if(a.open&&!ex.names.length) ex.open=true;
+  });
+  P.assigns=merged;
+  /* month/year: majority month among dated assigns; year assumed when missing */
+  var counts={}, dayOnly=true;
+  P.assigns.forEach(function(a){
+    if(!a.hasMonth) return;
+    dayOnly=false;
+    var yy=a.y!=null?a.y:new Date().getFullYear();
+    var k=yy+'-'+a.m; counts[k]=(counts[k]||0)+1;
+  });
+  P.dayOnly=dayOnly;
+  if(!dayOnly){
+    var best=null, bestN=-1;
+    Object.keys(counts).forEach(function(k){ if(counts[k]>bestN){ bestN=counts[k]; best=k; } });
+    var bp=best.split('-'); P.year=+bp[0]; P.month=+bp[1];
+    P.assigns.forEach(function(a){
+      if(!a.hasMonth) return;
+      var yy=a.y!=null?a.y:new Date().getFullYear();
+      if(yy!==P.year||a.m!==P.month) P.skipped++;
+    });
+    P.assigns=P.assigns.filter(function(a){ if(!a.hasMonth) return true; var yy=a.y!=null?a.y:new Date().getFullYear(); return yy===P.year&&a.m===P.month; });
+    if(P.assigns.some(function(a){ return a.hasMonth&&!a.hasYear; })) P.yearAssumed=true;
+  }
+  var unm={}, people={};
+  P.assigns.forEach(function(a){
+    if(!a.slotId){ unm[a.rawShift]=(unm[a.rawShift]||0)+1; }
+    a.names.forEach(function(n){ people[n]=1; });
+  });
+  P.unmapped=Object.keys(unm).sort();
+  P.people=Object.keys(people).sort();
+  P.total=P.assigns.length;
+  P.openCount=P.assigns.filter(function(a){ return a.open; }).length;
+  if(P.skipped) P.warnings.push(P.skipped+' date'+(P.skipped===1?'':'s')+' outside '+MN[P.month]+' '+P.year+' '+(P.skipped===1?'was':'were')+' skipped.');
+  if(P.yearAssumed) P.warnings.push('Some dates had no year — assumed '+P.year+'. Check the month below.');
+  if(P.unmapped.length) P.warnings.push('Shift name'+(P.unmapped.length===1?'':'s')+' not recognised: '+P.unmapped.join(', ')+'. Map '+(P.unmapped.length===1?'it':'them')+' below or those rows will be skipped.');
+  var unknown=P.people.filter(function(n){
+    if((S.base.staff||[]).some(function(s){ return impNorm(s.name)===impNorm(n); })) return false;
+    return !(S.base.crews||[]).some(function(c){ return impNorm(c.name)===impNorm(n)||impNorm('crew '+c.name)===impNorm(n); });
+  });
+  if(unknown.length){
+    var shown=unknown.slice(0,5).join(', ');
+    P.warnings.push('Name'+(unknown.length===1?'':'s')+' not in your staff list ('+shown+(unknown.length>5?' and '+(unknown.length-5)+' more':'')+') — '+(unknown.length===1?'it':'they')+' will appear exactly as written.');
+  }
+  var seen={}; P.warnings=P.warnings.filter(function(w){ if(seen[w]) return false; seen[w]=1; return true; });
+  return P;
+}
+function impHeaderKind(cell){
+  var n=impNorm(cell);
+  if(n==='date'||n==='day'||n==='dates'||n==='days'||n==='date day') return 'date';
+  if(n==='shift'||n==='shifts'||n==='shift name'||n==='duty'||n==='shift type') return 'shift';
+  if(n==='person'||n==='people'||n==='name'||n==='names'||n==='member'||n==='members'||n==='staff'||n==='staff member'||n==='staff members'||n==='employee'||n==='crew member'||n==='crew members') return 'person';
+  if(n==='crew'||n==='crew name'||n==='team') return 'crew';
+  return '';
+}
+/* Tidy: rows with Date + Shift + Person columns (header or positional). */
+function impParseTidy(aoa, teamId){
+  var P=impNewParsed(teamId), found=false;
+  var r, c;
+  for(r=0;r<Math.min(aoa.length,12);r++){
+    var cols={date:-1,shift:-1,person:-1,crew:-1};
+    for(c=0;c<aoa[r].length;c++){ var k=impHeaderKind(aoa[r][c]); if(k&&cols[k]<0) cols[k]=c; }
+    if(cols.date>=0&&(cols.person>=0||cols.crew>=0)){
+      found=true;
+      for(var d=r+1;d<aoa.length;d++){
+        var row=aoa[d];
+        var dateObj=impParseDateCell(row[cols.date]);
+        if(!dateObj) continue;
+        var rawShift=cols.shift>=0?impCellStr(row[cols.shift]):'';
+        var slotId=rawShift?impMatchShift(rawShift, teamId):null;
+        if(!rawShift){
+          var only=impSlotList(teamId);
+          if(only.length===1) slotId=only[0].id;
+          else continue;
+        }
+        var namesInfo=cols.person>=0?impSplitNames(row[cols.person]):impSplitNames(row[cols.crew]);
+        /* tidy row with a date + shift but a blank person cell = an Open slot
+           (grid empty cells are handled in impParseGrid instead) */
+        if(namesInfo.kind==='empty') namesInfo={names:[], kind:'open'};
+        impPushAssign(P, dateObj, slotId, rawShift, namesInfo);
+      }
+      break;
+    }
+  }
+  if(!found){
+    /* positional: [date, shift, people] with no header row */
+    for(var d2=0;d2<aoa.length;d2++){
+      var row2=aoa[d2]; if(row2.length<3) continue;
+      var dateObj2=impParseDateCell(row2[0]); if(!dateObj2) continue;
+      var raw2=impCellStr(row2[1]); if(!raw2||!impLooksLikeShift(raw2)) continue;
+      var namesInfo2=impSplitNames(row2[2]);
+      if(namesInfo2.kind==='empty') namesInfo2={names:[], kind:'open'};
+      impPushAssign(P, dateObj2, impMatchShift(raw2, teamId), raw2, namesInfo2);
+    }
+  }
+  return impFinalize(P);
+}
+/* Grid: dates down the first column, shifts across the header row. */
+function impParseGrid(aoa, teamId){
+  var P=impNewParsed(teamId);
+  var h=-1, shiftCols=[];
+  for(var r=0;r<Math.min(aoa.length,12);r++){
+    var first=impNorm(aoa[r][0]);
+    if(first!=='date'&&first!=='day'&&first!=='dates'&&first!=='days'&&first!=='') continue;
+    var cols=[];
+    for(var c=1;c<aoa[r].length;c++){ var cell=impCellStr(aoa[r][c]); if(cell&&impLooksLikeShift(cell)) cols.push(c); }
+    if(cols.length){ h=r; shiftCols=cols; break; }
+  }
+  if(h<0) return impFinalize(P);
+  var colHasContent={};
+  var rawCells=[];
+  for(var d=h+1;d<aoa.length;d++){
+    var dateObj=impParseDateCell(aoa[d][0]); if(!dateObj) continue;
+    shiftCols.forEach(function(c){
+      var rawShift=impCellStr(aoa[h][c]);
+      var info=impSplitNames(aoa[d][c]);
+      if(info.kind==='names'||info.kind==='open') colHasContent[c]=1;
+      rawCells.push({dateObj:dateObj, rawShift:rawShift, info:info, col:c});
+    });
+  }
+  rawCells.forEach(function(rc){
+    if(rc.info.kind==='empty'&&colHasContent[rc.col]) impPushAssign(P, rc.dateObj, impMatchShift(rc.rawShift, teamId), rc.rawShift, {names:[], kind:'open'});
+    else impPushAssign(P, rc.dateObj, impMatchShift(rc.rawShift, teamId), rc.rawShift, rc.info);
+  });
+  return impFinalize(P);
+}
+/* Transposed grid: shifts down the first column, dates across the header row. */
+function impParseGridTransposed(aoa, teamId){
+  var P=impNewParsed(teamId);
+  var h=-1, dateCols=[];
+  for(var r=0;r<Math.min(aoa.length,12);r++){
+    var cols=[];
+    for(var c=1;c<aoa[r].length;c++){ if(impParseDateCell(aoa[r][c])) cols.push(c); }
+    if(cols.length>=2){ h=r; dateCols=cols; break; }
+  }
+  if(h<0) return impFinalize(P);
+  var colHasContent={};
+  var rawCells=[];
+  for(var d=h+1;d<aoa.length;d++){
+    var rawShift=impCellStr(aoa[d][0]); if(!rawShift||!impLooksLikeShift(rawShift)) continue;
+    dateCols.forEach(function(c){
+      var dateObj=impParseDateCell(aoa[h][c]);
+      var info=impSplitNames(aoa[d][c]);
+      if(info.kind==='names'||info.kind==='open') colHasContent[c]=1;
+      rawCells.push({dateObj:dateObj, rawShift:rawShift, info:info, col:c});
+    });
+  }
+  rawCells.forEach(function(rc){
+    if(rc.info.kind==='empty'&&colHasContent[rc.col]) impPushAssign(P, rc.dateObj, impMatchShift(rc.rawShift, teamId), rc.rawShift, {names:[], kind:'open'});
+    else impPushAssign(P, rc.dateObj, impMatchShift(rc.rawShift, teamId), rc.rawShift, rc.info);
+  });
+  return impFinalize(P);
+}
+function impParseAoA(aoa, teamId){
+  var tidy=impParseTidy(aoa, teamId);
+  var grid=impParseGrid(aoa, teamId);
+  var trans=impParseGridTransposed(aoa, teamId);
+  var best=tidy;
+  if(grid.total>best.total) best=grid;
+  if(trans.total>best.total) best=trans;
+  return best;
+}
+/* OCR text: one line per shift, e.g. "1 Oct Day Thabo, Naledi". */
+function impParseText(text, teamId){
+  var P=impNewParsed(teamId);
+  String(text||'').split(/\r?\n/).forEach(function(line){
+    if(!line||!line.trim()) return;
+    var found=impFindDateInText(line); if(!found) return;
+    var sm=line.match(/\b(day|night|24\s*h(?:our)?s?|early|late|morning|afternoon|evening|graveyard)\b/i);
+    if(!sm) return;
+    var rest=line.replace(found.text,'').replace(sm[0],'');
+    rest=rest.replace(/^[\s:;\-–—\.]+|[\s:;\-–—\.]+$/g,'');
+    var info=impSplitNames(rest);
+    if(info.kind!=='names'&&info.kind!=='open') return;
+    impPushAssign(P, found.d, impMatchShift(sm[0], teamId), sm[0], info);
+  });
+  return impFinalize(P);
+}
+/* ---------- Import UI (inside the new-draft sheet) ---------- */
+function openImportRoster(){
+  IMP=null;
+  if(!(S.base.vehicles||[]).length){ toast('Set up your workplace first'); openBaseSetup(); return; }
+  var box=document.getElementById('newDraftBox'); if(!box) return;
+  var teamOpts=(S.base.vehicles||[]).map(function(v){
+    return '<option value="'+escapeHtml(v.id)+'">'+escapeHtml((v.name||'Team')+' \u00b7 '+((ROTATIONS[v.rotation]||{}).name||v.rotation))+'</option>';
+  }).join('');
+  box.innerHTML=
+    '<h3>Import roster</h3>'+
+    '<p class="sub" style="margin:0 0 8px;">Upload a spreadsheet or a photo of a roster. You review what was read, then it becomes a draft &mdash; nothing goes live until you publish it.</p>'+
+    '<label class="f">Team</label><select id="impTeam">'+teamOpts+'</select>'+
+    '<label class="f">Spreadsheet (.xlsx or .csv)</label>'+
+    '<input type="file" id="impFileXlsx" accept=".xlsx,.xls,.csv" onchange="impHandleSpreadsheet(this.files[0]);this.value=\'\'">'+
+    '<p class="fine" style="text-align:left;">Rows with Date + Shift + People, or a grid with dates down the side and shifts across the top. Empty cells stay Open &mdash; nothing is guessed.</p>'+
+    '<label class="f">Photo of a roster</label>'+
+    '<input type="file" id="impFilePhoto" accept="image/*" onchange="impHandlePhoto(this.files[0]);this.value=\'\'">'+
+    '<p class="fine" style="text-align:left;">One line per shift, e.g. “1 Oct Day Thabo, Naledi”. Needs internet for text recognition. If the photo can&rsquo;t be read clearly, use a spreadsheet instead.</p>'+
+    '<div id="impStatus"></div>'+
+    '<div class="btnrow"><button class="btn ghost" onclick="closeNewDraft()">Cancel</button></div>';
+  document.getElementById('newDraftWrap').classList.add('open');
+}
+function impSetStatus(html, isErr){
+  var el=document.getElementById('impStatus'); if(!el) return;
+  el.innerHTML='<p class="'+(isErr?'imp-err':'fine')+'" style="text-align:left;">'+html+'</p>';
+}
+function impHandleSpreadsheet(file){
+  if(!file) return;
+  if(typeof XLSX==='undefined'){ impSetStatus('Spreadsheet reading is unavailable right now (it needs internet for the spreadsheet library). Try again when online.', true); return; }
+  var teamId=(document.getElementById('impTeam')||{}).value||'';
+  impSetStatus('Reading spreadsheet&hellip;');
+  var rd=new FileReader();
+  rd.onload=function(){
+    try{
+      var wb=XLSX.read(new Uint8Array(rd.result), {type:'array', cellDates:true});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      if(!ws){ impSetStatus('Could not read this file — expected dates/shifts/people.', true); return; }
+      var aoa=XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:''});
+      var parsed=impParseAoA(aoa, teamId);
+      impAfterParse(parsed, teamId);
+    }catch(e){ impSetStatus('Could not read this file — expected dates/shifts/people.', true); }
+  };
+  rd.onerror=function(){ impSetStatus('Could not read this file — expected dates/shifts/people.', true); };
+  rd.readAsArrayBuffer(file);
+}
+function impLoadTesseract(cb, errCb){
+  if(window.Tesseract){ cb(); return; }
+  var s=document.createElement('script');
+  s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+  s.onload=function(){ cb(); };
+  s.onerror=function(){ errCb(); };
+  document.head.appendChild(s);
+}
+function impHandlePhoto(file){
+  if(!file) return;
+  var teamId=(document.getElementById('impTeam')||{}).value||'';
+  impSetStatus('Reading photo&hellip; this can take a few seconds.');
+  impLoadTesseract(function(){
+    try{
+      Tesseract.recognize(file, 'eng', {}).then(function(res){
+        var conf=(res&&res.data&&res.data.confidence)||0;
+        var parsed=impParseText((res&&res.data&&res.data.text)||'', teamId);
+        if(parsed.total<2||conf<40){
+          impSetStatus('Couldn&rsquo;t read this photo clearly — try a sharper, straight-on photo with one line per shift, or use a spreadsheet instead.', true);
+          return;
+        }
+        impAfterParse(parsed, teamId);
+      }).catch(function(){ impSetStatus('Couldn&rsquo;t read this photo — try a sharper, straight-on photo, or use a spreadsheet instead.', true); });
+    }catch(e){ impSetStatus('Couldn&rsquo;t read this photo — try a sharper, straight-on photo, or use a spreadsheet instead.', true); }
+  }, function(){
+    impSetStatus('Photo reading needs internet for the text-recognition library. Try again when online, or use a spreadsheet instead.', true);
+  });
+}
+function impAfterParse(parsed, teamId){
+  if(!parsed||!parsed.total){
+    impSetStatus('Could not read this file — expected dates/shifts/people.', true);
+    return;
+  }
+  IMP={teamId:teamId, parsed:parsed};
+  impRenderReview();
+}
+function impRenderReview(){
+  var box=document.getElementById('newDraftBox'); if(!box||!IMP) return;
+  var P=IMP.parsed;
+  var teamName=vehicleName(IMP.teamId);
+  var monthHtml;
+  if(P.dayOnly){
+    var dm=defaultRosterMonth(IMP.teamId);
+    monthHtml='<label class="f">Month (the file only has day numbers)</label><input type="month" id="impMonth" value="'+dm.y+'-'+String(dm.m+1).padStart(2,'0')+'">';
+  }else{
+    monthHtml='<p class="fine" style="text-align:left;"><b>Month:</b> '+escapeHtml(MN[P.month]+' '+P.year)+'</p>';
+  }
+  var warnHtml=P.warnings.length?('<div style="text-align:left;margin:6px 0;">'+P.warnings.map(function(w){ return '<p class="fine" style="text-align:left;margin:2px 0;">&bull; '+escapeHtml(w)+'</p>'; }).join('')+'</div>'):'';
+  var mapHtml='';
+  if(P.unmapped.length){
+    var slotOpts=impSlotList(IMP.teamId).map(function(s){
+      return '<option value="'+escapeHtml(s.id)+'">'+escapeHtml(s.name)+'</option>';
+    }).join('');
+    mapHtml='<label class="f">Map unrecognised shifts</label>'+
+      P.unmapped.map(function(raw, i){
+        return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;text-align:left;"><span style="flex:1;">'+escapeHtml(raw)+'</span>'+
+          '<select id="impMap_'+i+'" style="flex:1;margin:0;"><option value="">Skip these rows</option>'+slotOpts+'</select></div>';
+      }).join('');
+  }
+  var sorted=P.assigns.slice().sort(function(a,b){
+    var da=a.hasMonth?(a.y!=null?a.y:9999)*10000+(a.m!=null?a.m:0)*100+a.d:a.d;
+    var db=b.hasMonth?(b.y!=null?b.y:9999)*10000+(b.m!=null?b.m:0)*100+b.d:b.d;
+    if(da!==db) return da-db;
+    return impNorm(a.rawShift)<impNorm(b.rawShift)?-1:1;
+  });
+  var preview=sorted.slice(0,30).map(function(a){
+    var dlbl=a.hasMonth?(a.d+' '+MNS[a.m]):('Day '+a.d);
+    var shiftLbl=a.slotId?(impSlotList(IMP.teamId).filter(function(s){ return s.id===a.slotId; })[0]||{}).name||a.rawShift:a.rawShift;
+    return '<tr><td>'+escapeHtml(dlbl)+'</td><td>'+escapeHtml(shiftLbl)+'</td><td>'+(a.open?'<span style="color:#CC0000;font-weight:700;">Open</span>':escapeHtml(a.names.join(', ')))+'</td></tr>';
+  }).join('');
+  box.innerHTML=
+    '<h3>Review import</h3>'+
+    '<p class="fine" style="text-align:left;"><b>Team:</b> '+escapeHtml(teamName)+'</p>'+
+    monthHtml+
+    '<p class="fine" style="text-align:left;"><b>'+P.total+' shift'+(P.total===1?'':'s')+' read</b> &middot; '+P.people.length+' people &middot; '+P.openCount+' open slot'+(P.openCount===1?'':'s')+'</p>'+
+    warnHtml+mapHtml+
+    '<div style="max-height:30vh;overflow-y:auto;margin:8px 0;"><table class="imp-table"><tr><th>Date</th><th>Shift</th><th>People</th></tr>'+preview+'</table>'+
+    (sorted.length>30?'<p class="fine" style="text-align:left;">Showing 30 of '+sorted.length+' rows.</p>':'')+'</div>'+
+    '<p class="fine" style="text-align:left;">Check the rows above. Creating the draft does not change your live roster.</p>'+
+    '<div class="btnrow"><button class="btn ghost" onclick="openImportRoster()">Back</button>'+
+    '<button class="btn" id="impConfirmBtn" onclick="impConfirm()">Create draft</button></div>';
+}
+function impConfirm(){
+  if(!IMP) return;
+  var P=IMP.parsed, teamId=IMP.teamId;
+  var y, m;
+  if(P.dayOnly){
+    var mv=(document.getElementById('impMonth')||{}).value||'';
+    if(!mv||mv.length<7){ toast('Pick a month'); return; }
+    y=parseInt(mv.slice(0,4),10); m=parseInt(mv.slice(5,7),10)-1;
+  }else{ y=P.year; m=P.month; }
+  /* apply shift mappings from the review step */
+  var map={};
+  P.unmapped.forEach(function(raw, i){
+    var sel=document.getElementById('impMap_'+i);
+    if(sel&&sel.value) map[impNorm(raw)]=sel.value;
+  });
+  var usable=P.assigns.filter(function(a){ if(a.slotId) return true; return !!map[impNorm(a.rawShift)]; });
+  if(!usable.length){ toast('Nothing to import — map at least one shift or pick another file.'); return; }
+  var ex=findDraftFor(teamId, y, m);
+  if(ex && !confirm('A draft already exists for '+vehicleName(teamId)+' '+MN[m]+' '+y+'. Replace it?')) return;
+  /* persist any in-progress draft first, so importing never silently drops it */
+  autoSaveDraft();
+  if(ex && S.draftId===ex.id){ S.draftId=null; S.draft=null; }
+  var R=impBuildRoster(teamId, y, m, usable, map);
+  if(!R){ toast('Could not build a draft from this file.'); return; }
+  closeNewDraft();
+  S.draft=R; S.fromSaved=false; S.draftId=null; S.unitName=R.name;
+  var fresh=autoSaveDraft();
+  if(!fresh) return;
+  renderDrafts();
+  openDraft(fresh.id);
+  toast('Draft imported — review it before publishing');
+}
+function impBuildRoster(teamId, y, m, assigns, map){
+  var v=vehicleById(teamId); if(!v) return null;
+  var rotKey=v.rotation, rot=ROTATIONS[rotKey]||ROTATIONS['224'];
+  var slots=impSlotList(teamId);
+  var usedIds=[];
+  assigns.forEach(function(a){
+    var sid=a.slotId||map[impNorm(a.rawShift)];
+    if(sid&&usedIds.indexOf(sid)<0) usedIds.push(sid);
+  });
+  /* crews: the team's own crews (names + colours); extra crews if the file
+     uses more shifts than the team has crews */
+  var baseCrews=vehicleCrews(teamId);
+  if(!baseCrews.length) baseCrews=(S.base.crews||[]).slice();
+  var need=Math.max(baseCrews.length, usedIds.length, rot.crews||0);
+  var crews=[];
+  for(var i=0;i<need;i++){
+    var bc=baseCrews[i];
+    crews.push({name:bc?((bc.name||'').trim()||('Crew '+String.fromCharCode(65+i))):('Crew '+String.fromCharCode(65+i)),
+      color:bc?bc.color:CREW_COLORS[i%CREW_COLORS.length], members:[]});
+  }
+  /* crew index per shift = the shift's position in the used list */
+  var crewForShift={};
+  usedIds.forEach(function(sid, idx){ crewForShift[sid]=idx; });
+  /* members per crew = everyone assigned to that crew's shift across the month */
+  var warnings=[];
+  assigns.forEach(function(a){
+    var sid=a.slotId||map[impNorm(a.rawShift)]; if(!sid) return;
+    var ci=crewForShift[sid];
+    var expanded=impExpandNames(a.names, warnings);
+    expanded.forEach(function(nm){ if(crews[ci].members.indexOf(nm)<0) crews[ci].members.push(nm); });
+  });
+  var dim=daysInMonth(y,m);
+  var overrides={}, memberOverrides={};
+  for(var d=1;d<=dim;d++){
+    for(var ci2=0;ci2<crews.length;ci2++) overrides[(d-1)+':'+ci2]='OFF';
+  }
+  assigns.forEach(function(a){
+    var sid=a.slotId||map[impNorm(a.rawShift)]; if(!sid) return;
+    var ci=crewForShift[sid];
+    var dayIdx=a.d-1;
+    overrides[dayIdx+':'+ci]=sid;
+    var iso=y+'-'+String(m+1).padStart(2,'0')+'-'+String(a.d).padStart(2,'0');
+    if(!memberOverrides[iso]) memberOverrides[iso]={};
+    var names=a.open?[OPEN_MARK]:impExpandNames(a.names, warnings);
+    if(memberOverrides[iso][sid]){
+      var cur=memberOverrides[iso][sid];
+      if(cur.length===1&&cur[0]===OPEN_MARK) cur=[];
+      names.forEach(function(n){ if(cur.indexOf(n)<0) cur.push(n); });
+      if(!cur.length) cur=[OPEN_MARK];
+      memberOverrides[iso][sid]=cur;
+    }else{
+      memberOverrides[iso][sid]=names.length?names:[OPEN_MARK];
+    }
+  });
+  var shiftIds=teamShiftIds(v);
+  usedIds.forEach(function(sid){ if(shiftIds.indexOf(sid)<0) shiftIds.push(sid); });
+  var R={id:'r'+Date.now(), kind:'month', vehicleId:teamId,
+    name:(v.name||'Team')+' \u00b7 '+MN[m]+' '+y,
+    year:y, month:m, anchorAbs:0, startISO:y+'-'+String(m+1).padStart(2,'0')+'-01', days:dim,
+    crews:crews, shiftLen:rot.hours||12, startTime:v.startTime||'06:00',
+    rotation:rotKey, coverage:v.coverage||24, shiftIds:shiftIds,
+    overrides:overrides, memberOverrides:memberOverrides, leaveLog:[]};
+  return R;
+}
+
 /* ---------- Draft long-term leave (DRAFT view only) ----------
    Collapsible section below the calendar in the draft view. Apply removes
    the person from their shifts in the range (OPEN_MARK, red Open, slot
