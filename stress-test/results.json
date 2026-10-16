@@ -2883,6 +2883,83 @@
       "staff": 0,
       "rosters": 0,
       "changes": 0
+    },
+    {
+      "time": "21:46",
+      "companies": 0,
+      "staff": 20,
+      "rosters": 12,
+      "changes": 170
+    },
+    {
+      "time": "21:46",
+      "companies": 0,
+      "staff": 40,
+      "rosters": 24,
+      "changes": 340
+    },
+    {
+      "time": "21:46",
+      "companies": 0,
+      "staff": 60,
+      "rosters": 36,
+      "changes": 510
+    },
+    {
+      "time": "21:46",
+      "companies": 0,
+      "staff": 80,
+      "rosters": 48,
+      "changes": 680
+    },
+    {
+      "time": "21:46",
+      "companies": 0,
+      "staff": 100,
+      "rosters": 60,
+      "changes": 850
+    },
+    {
+      "time": "21:46",
+      "companies": 0,
+      "staff": 120,
+      "rosters": 72,
+      "changes": 1020
+    },
+    {
+      "time": "21:46",
+      "companies": 0,
+      "staff": 140,
+      "rosters": 84,
+      "changes": 1190
+    },
+    {
+      "time": "21:46",
+      "companies": 0,
+      "staff": 160,
+      "rosters": 96,
+      "changes": 1360
+    },
+    {
+      "time": "21:46",
+      "companies": 0,
+      "staff": 180,
+      "rosters": 108,
+      "changes": 1530
+    },
+    {
+      "time": "21:46",
+      "companies": 0,
+      "staff": 200,
+      "rosters": 120,
+      "changes": 1700
+    },
+    {
+      "time": "21:46",
+      "companies": 5,
+      "staff": 200,
+      "rosters": 120,
+      "changes": 1700
     }
   ],
   "log": [
@@ -4885,12 +4962,88 @@
     {
       "time": "21:46",
       "message": "Building up — seeding…"
+    },
+    {
+      "time": "21:46",
+      "message": "Added teams — staff 20, rosters 12, changes 170"
+    },
+    {
+      "time": "21:46",
+      "message": "Added teams — staff 40, rosters 24, changes 340"
+    },
+    {
+      "time": "21:46",
+      "message": "Added teams — staff 60, rosters 36, changes 510"
+    },
+    {
+      "time": "21:46",
+      "message": "Added teams — staff 80, rosters 48, changes 680"
+    },
+    {
+      "time": "21:46",
+      "message": "Added teams — staff 100, rosters 60, changes 850"
+    },
+    {
+      "time": "21:46",
+      "message": "Added teams — staff 120, rosters 72, changes 1020"
+    },
+    {
+      "time": "21:46",
+      "message": "Added teams — staff 140, rosters 84, changes 1190"
+    },
+    {
+      "time": "21:46",
+      "message": "Added teams — staff 160, rosters 96, changes 1360"
+    },
+    {
+      "time": "21:46",
+      "message": "Added teams — staff 180, rosters 108, changes 1530"
+    },
+    {
+      "time": "21:46",
+      "message": "Added teams — staff 200, rosters 120, changes 1700"
+    },
+    {
+      "time": "21:46",
+      "message": "Added notifications — 1000 of 1000"
+    },
+    {
+      "time": "21:46",
+      "message": "Added applications — 200 of 200"
+    },
+    {
+      "time": "21:46",
+      "message": "Added drafts — 50 of 50"
+    },
+    {
+      "time": "21:46",
+      "message": "Build complete — staff 200, rosters 120, changes 1700"
+    },
+    {
+      "time": "21:46",
+      "message": "Rapid: +50 drafts (drafts 100)"
+    },
+    {
+      "time": "21:46",
+      "message": "Rapid: -50 drafts (tear-down) + 50 decisions + 30 tab switches"
+    },
+    {
+      "time": "21:46",
+      "message": "Problem: Export Excel FAILED on mega team (200 staff, full month)"
+    },
+    {
+      "time": "21:46",
+      "message": "Problem: Export PNG FAILED on mega team (200 staff, full month)"
+    },
+    {
+      "time": "21:46",
+      "message": "Problem: Export PDF FAILED on mega team (200 staff, full month)"
     }
   ],
   "metrics": [
     {
       "label": "Companies",
-      "value": "0"
+      "value": "5"
     },
     {
       "label": "Staff rostered",
@@ -4903,6 +5056,30 @@
     {
       "label": "Changes",
       "value": "0"
+    },
+    {
+      "label": "Export Excel (mega 200 staff)",
+      "value": "err:XLSX is not defined ReferenceError: XLSX is not defined\n    at expBuildWorkbook (http://127.0.0.1:38905/:11679:10)\n    at eval (eval at evaluate (:370:30), <anonymous>:21:20)\n    at UtilityScript.evaluate (<anonymous>:37"
+    },
+    {
+      "label": "Export PNG (mega 200 staff)",
+      "value": "png-err:html2canvas is not defined"
+    },
+    {
+      "label": "Export PDF (mega 200 staff)",
+      "value": "pdf-err:html2canvas is not defined"
+    },
+    {
+      "label": "Storage persist+reload",
+      "value": "persist ok 6ms, reload 1994ms, staffAfter=40 rostersAfter=25 draftsAfter=50"
+    },
+    {
+      "label": "Rapid actions",
+      "value": "added ms=1 draftsNow=100 | removed+decided ms=257 draftsNow=50 pendAfter=16"
+    },
+    {
+      "label": "Multi-tab",
+      "value": "draftsBefore=50 pageBseesMarker=true"
     }
   ],
   "progress": {
@@ -4918,11 +5095,11 @@
   },
   "totals": {
     "changes": 0,
-    "companies": 0,
+    "companies": 5,
     "rosters": 0,
     "staff": 0
   },
-  "updatedAt": "2026-10-16T21:46:02.469+02:00",
+  "updatedAt": "2026-10-16T21:46:12.158+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
@@ -5025,6 +5202,12 @@
       "loadMs": null,
       "renderMs": null,
       "exportMs": 6
+    },
+    {
+      "staff": 200,
+      "loadMs": null,
+      "renderMs": null,
+      "exportMs": 1115
     }
   ],
   "speedPerLevel": [
@@ -5033,7 +5216,7 @@
       "staff": 200,
       "loadMs": null,
       "renderMs": null,
-      "exportMs": 6
+      "exportMs": 1115
     },
     {
       "level": "Low",
@@ -5112,6 +5295,24 @@
       "message": "Company Stats compute took 64,669ms at 4,000 staff — near-freeze (break threshold >10s) (measured AFTER the wipe, over 1,920 rosters, not the full 9,600)",
       "detail": "Stage 5 Stats measured after the company wipe, over the wiped 1-workplace company = 1,920 rosters (not the full 9,600). 1,920 rosters → 64.7s. True Stats time at 9,600 rosters would be far higher. Detail: ok ms=64664 total=12400.",
       "fix": "Stats recomputes over every roster on every view — cache per-workplace aggregates, compute incrementally, or paginate the Stats view."
+    },
+    {
+      "time": "21:46",
+      "message": "Export Excel FAILED on mega team (200 staff, full month)",
+      "detail": "err:XLSX is not defined ReferenceError: XLSX is not defined\n    at expBuildWorkbook (http://127.0.0.1:38905/:11679:10)\n    at eval (eval at evaluate (:370:30), <anonymous>:21:20)\n    at UtilityScript.evaluate (<anonymous>:37",
+      "fix": "Check SheetJS write for large workbooks; consider streaming / chunked export or capping export size with a warning."
+    },
+    {
+      "time": "21:46",
+      "message": "Export PNG FAILED on mega team (200 staff, full month)",
+      "detail": "png-err:html2canvas is not defined",
+      "fix": "Check html2canvas memory on huge DOM; consider rendering the export sheet off-screen in chunks."
+    },
+    {
+      "time": "21:46",
+      "message": "Export PDF FAILED on mega team (200 staff, full month)",
+      "detail": "pdf-err:html2canvas is not defined",
+      "fix": "Check PDF generation memory on huge DOM; consider chunked rendering."
     }
   ]
 }
