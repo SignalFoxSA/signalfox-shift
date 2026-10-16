@@ -1102,7 +1102,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1977';
+var BUILD='20261015-1978';
 /* LEAVE_TYPES — the ONE shared list of leave types (single source of truth).
    Used by EVERY leave-reason picker: the day-sheet removal prompt, the draft
    Long-term leave section, and both On Duty leave flows (baseLeave +
@@ -10249,12 +10249,19 @@ function expData(){
       dark:expMix(col,'#000000',0.45),
       names:nm.length?nm.map(dispMemberQual):[label]};
   });
-  var pairs=[], pairsMembers=[];
+  var pairs=[], pairsMembers=[], changedDays=[];
   for(var d=1;d<=dim;d++){
     var info=calRosterDay(R,y,m,d);
-    if(!info){ pairs.push(null); pairsMembers.push(null); continue; }
+    if(!info){ pairs.push(null); pairsMembers.push(null); changedDays.push(false); continue; }
     var per=calSlotCrews(R,info.dayIdx), row=[], mrow=[];
     var dateISO=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    /* AUDIT TRAIL: a day counts as changed exactly when the in-app calendar
+       marks it changed (yellow border): a manual crew override for that day
+       (R.overrides) OR a member-level edit for that date (memberOverrides —
+       written by leave / replacement / swap / cover / manual edit flows). */
+    var ed=R.crews.some(function(c,ci){ return (R.overrides||{})[info.dayIdx+':'+ci]; });
+    var med=R.memberOverrides&&R.memberOverrides[dateISO];
+    changedDays.push(!!(ed||med));
     rslots.forEach(function(sl){
       var ci=-1, crew=null;
       for(var i=0;i<per.length;i++){
@@ -10301,6 +10308,7 @@ function expData(){
   /* Leave entries for this month — for the Leave section at the bottom. */
   var leaveEntries=collectLeaveEntries(R,y,m,expPerson||null);
   return {y:y, m:m, dim:dim, title:title, sub:sub, expPerson:expPerson, expColor:expColor, leave:leaveEntries,
+    changedDays:changedDays, hasChanges:changedDays.some(function(x){ return x; }),
     subXlsx:sub.replace(/ rotation/,''),
     footer:'Generated with SignalFox Shift · build '+BUILD,
     crews:crews, pairs:pairs, pairsMembers:pairsMembers, hasNight:hasNight, shifts:shifts, nsh:nsh,
@@ -10329,6 +10337,8 @@ function expBuildText(E, mode){
     var pr=E.pairs[d-1]; if(!pr) continue;
     var pm=((E.pairsMembers||[])[d-1])||[];
     var wd=expWeekdayShort(E.y,E.m,d)+' '+d+' '+MN[E.m].slice(0,3);
+    /* AUDIT TRAIL: text has no colour — mark changed days with text. */
+    var chg=(E.changedDays&&E.changedDays[d-1])?' · Changed':'';
     if(isPersonal){
       // Personal: one shift per day (Day OR Night), with times
       var found=null;
@@ -10339,12 +10349,12 @@ function expBuildText(E, mode){
         var time=s.id==='D'?'06:00–18:00':s.id==='N'?'18:00–06:00':slotTime({startTime:'06:00'},s.id);
         found=wd+' — '+shiftBandShort(s.band)+', '+time+', '+(isNames?names.join(', '):'Shift '+crew.name);
       });
-      if(found) L.push(found);
+      if(found) L.push(found+chg);
     }else{
       // Manager: all days, Day + Night, no times
       // Names: date on own line, then Day line, then Night line (not one long string)
       if(isNames){
-        L.push(wd);
+        L.push(wd+chg);
         E.shifts.forEach(function(s,i){
           var crew=pr[i]>=0?E.crews[pr[i]]:null;
           var names=(pm[i]&&pm[i].length)?pm[i].map(dispMemberQual):(crew?crew.names:[]);
@@ -10356,7 +10366,7 @@ function expBuildText(E, mode){
           var crew=pr[i]>=0?E.crews[pr[i]]:null;
           bits.push(shiftBandShort(s.band)+': '+(crew?crew.name:'—'));
         });
-        L.push(wd+' — '+bits.join(', '));
+        L.push(wd+' — '+bits.join(', ')+chg);
       }
     }
   }
@@ -10367,6 +10377,9 @@ function expBuildText(E, mode){
     E.leave.forEach(function(lv){
       L.push(lv.dateLabel+' — '+lv.personQual+', '+lv.type+', '+(lv.isOpen?'OPEN':'replaced by '+lv.coverQual));
     });
+  }
+  if(E.hasChanges){
+    L.push('', 'Changed days are marked \u00b7 Changed (gold border in Excel / PDF / image).');
   }
   L.push('', E.footer);
   return L.join('\n');
@@ -10380,7 +10393,10 @@ function expBuildWorkbook(E, mode){
   var cells=expMonthCells(E.y,E.m), weeks=Math.ceil(cells.length/7);
   var rowsPerWeek=isPersonal?2:3;
   var leaveCount=(E.leave&&E.leave.length)?E.leave.length+1:0; // +1 for Leave header
-  var totalRows=3+weeks*rowsPerWeek+1+E.crews.length+leaveCount+1;
+  /* AUDIT TRAIL: one legend line explaining the gold border — only when
+     the roster has changes, so unchanged exports are byte-identical in layout. */
+  var changedNote=E.hasChanges?1:0;
+  var totalRows=3+weeks*rowsPerWeek+1+E.crews.length+leaveCount+changedNote+1;
   var rows=[];
   for(var r=0;r<totalRows;r++) rows.push(['','','','','','','']);
   var ws=XLSX.utils.aoa_to_sheet(rows);
@@ -10388,7 +10404,11 @@ function expBuildWorkbook(E, mode){
   var BLACK='FF000000';
   var bdrThin={style:'thin',color:{rgb:'FFBFBFBF'}};
   var bdrMed={style:'medium',color:{rgb:'FF333333'}};
-  function dayBorder(col, isFirst, isLast, isTop, isBottom){
+  /* AUDIT TRAIL: changed days get a GOLD border (same gold as the app's
+     changed-day yellow border) instead of the standard border. */
+  var bdrGold={style:'medium',color:{rgb:'FFFFC13E'}};
+  function dayBorder(col, isFirst, isLast, isTop, isBottom, changed){
+    if(changed) return {top:bdrGold, bottom:bdrGold, left:bdrGold, right:bdrGold};
     return {top:isTop?bdrMed:bdrThin, bottom:isBottom?bdrMed:bdrThin,
       left:col===0?bdrMed:bdrThin, right:col===6?bdrMed:bdrThin};
   }
@@ -10421,10 +10441,12 @@ function expBuildWorkbook(E, mode){
       }
       var pr=E.pairs[c.date-1];
       var pm=((E.pairsMembers||[])[c.date-1])||[];
+      /* AUDIT TRAIL: gold border on changed days (see expData). */
+      var chg=E.changedDays&&E.changedDays[c.date-1];
       // Date cell: always white
       set(dateAddr,String(c.date),{font:{sz:12,bold:true,color:{rgb:BLACK}},
         fill:{patternType:'solid',fgColor:{rgb:'FFFFFFFF'}},
-        border:dayBorder(col,true,false,true,false)});
+        border:dayBorder(col,true,false,true,false,chg)});
       if(isPersonal){
         // Personal: ONE block — Day OR Night (person is only on one shift/day)
         var foundIdx=-1, foundShift=null;
@@ -10438,11 +10460,11 @@ function expBuildWorkbook(E, mode){
           set(blockAddr,v,{font:{sz:12,bold:true,color:{rgb:BLACK}},
             alignment:{horizontal:'left',vertical:'top',wrapText:true},
             fill:{patternType:'solid',fgColor:{rgb:bg}},
-            border:dayBorder(col,false,true,false,true)});
+            border:dayBorder(col,false,true,false,true,chg)});
         }else{
           // Off day: empty white, NO black
           set(blockAddr,'',{fill:{patternType:'solid',fgColor:{rgb:'FFFFFFFF'}},
-            border:dayBorder(col,false,true,false,true)});
+            border:dayBorder(col,false,true,false,true,chg)});
         }
       }else{
         // Manager: Day block + Night block, full crew colours, NO times
@@ -10457,10 +10479,10 @@ function expBuildWorkbook(E, mode){
           set(blockAddr,dv,{font:{sz:12,bold:true,color:{rgb:BLACK}},
             alignment:{horizontal:'left',vertical:'top',wrapText:true},
             fill:{patternType:'solid',fgColor:{rgb:'FF'+dcrew.color.replace('#','')}},
-            border:dayBorder(col,false,false,false,false)});
+            border:dayBorder(col,false,false,false,false,chg)});
         }else{
           set(blockAddr,'',{fill:{patternType:'solid',fgColor:{rgb:'FFFFFFFF'}},
-            border:dayBorder(col,false,false,false,false)});
+            border:dayBorder(col,false,false,false,false,chg)});
         }
         if(nightIdx>=0){
           var ncrew=E.crews[pr[nightIdx]];
@@ -10469,10 +10491,10 @@ function expBuildWorkbook(E, mode){
           set(nightAddr,nv,{font:{sz:12,bold:true,color:{rgb:BLACK}},
             alignment:{horizontal:'left',vertical:'top',wrapText:true},
             fill:{patternType:'solid',fgColor:{rgb:'FF'+ncrew.color.replace('#','')}},
-            border:dayBorder(col,false,true,false,true)});
+            border:dayBorder(col,false,true,false,true,chg)});
         }else{
           set(nightAddr,'',{fill:{patternType:'solid',fgColor:{rgb:'FFFFFFFF'}},
-            border:dayBorder(col,false,true,false,true)});
+            border:dayBorder(col,false,true,false,true,chg)});
         }
       }
     }
@@ -10494,7 +10516,13 @@ function expBuildWorkbook(E, mode){
       ws['!merges'].push({s:{r:lvRow+i,c:1},e:{r:lvRow+i,c:6}});
     });
   }
-  var fRow=legRow+E.crews.length+leaveCount;
+  var noteRow=legRow+E.crews.length+leaveCount;
+  if(E.hasChanges){
+    set('B'+noteRow,'Gold border = changed day (leave / replacement / swap / manual edit)',
+      {font:{sz:12,color:{rgb:BLACK}}});
+    ws['!merges'].push({s:{r:noteRow-1,c:1},e:{r:noteRow-1,c:6}});
+  }
+  var fRow=noteRow+changedNote;
   set('A'+fRow,E.footer,{font:{sz:11,color:{rgb:'FF999999'}}});
   ws['!merges'].push({s:{r:fRow-1,c:0},e:{r:fRow-1,c:6}});
   ws['!cols']=Array(7).fill({wch:26});
@@ -10537,7 +10565,15 @@ function expGridEl(E, mode, variant){
       var idx=wi+ci, c=cells[idx];
       var pr=c.inMonth?E.pairs[c.date-1]:null;
       var pm=c.inMonth?(((E.pairsMembers||[])[c.date-1])||[]):[];
-      var dayStyle='flex:1;box-sizing:border-box;border-right:2px solid #333;border-bottom:2px solid #333;';
+      /* AUDIT TRAIL: gold inset border on changed days (same gold as the
+         app's changed-day border). The shadow is applied to the date row
+         AND each block row: opaque block backgrounds would paint over a
+         shadow on the outer day div alone, hiding it. Unchanged days
+         render exactly as before. */
+      var chg=c.inMonth&&E.changedDays&&E.changedDays[c.date-1];
+      var chgSh=chg?'box-shadow:inset 0 0 0 3px #FFC13E;':'';
+      var dayStyle='flex:1;box-sizing:border-box;border-right:2px solid #333;border-bottom:2px solid #333;'
+        +(chg?'box-shadow:inset 0 0 0 3px #FFC13E;':'');
       if(!pr){
         h+='<div style="'+dayStyle+'">'
           +'<div style="font-size:14px;font-weight:700;padding:6px 8px;background:#F2F2F2;color:#999;">'+c.date+'</div>'
@@ -10546,7 +10582,7 @@ function expGridEl(E, mode, variant){
         continue;
       }
       var dayHtml='<div style="'+dayStyle+'">'
-        +'<div style="font-size:14px;font-weight:700;padding:6px 8px;background:#FFFFFF;">'+c.date+'</div>';
+        +'<div style="font-size:14px;font-weight:700;padding:6px 8px;background:#FFFFFF;'+chgSh+'">'+c.date+'</div>';
       if(isPersonal){
         var foundIdx=-1, foundShift=null;
         E.shifts.forEach(function(s,i){ if(pr[i]>=0&&foundIdx<0){ foundIdx=i; foundShift=s; } });
@@ -10557,9 +10593,9 @@ function expGridEl(E, mode, variant){
           var bg=E.expColor?E.expColor:crew.color;
           var content=escapeHtml(shiftBandShort(foundShift.band))+'<br>'+escapeHtml(time)+'<br>'
             +(isNames?names.map(escapeHtml).join('<br>'):escapeHtml('Shift '+crew.name));
-          dayHtml+='<div style="font-size:14px;font-weight:700;padding:6px 8px;background:'+bg+';color:'+BLACK+';min-height:50px;line-height:1.4;">'+content+'</div>';
+          dayHtml+='<div style="font-size:14px;font-weight:700;padding:6px 8px;background:'+bg+';color:'+BLACK+';min-height:50px;line-height:1.4;'+chgSh+'">'+content+'</div>';
         }else{
-          dayHtml+='<div style="min-height:50px;background:#FFFFFF;"></div>';
+          dayHtml+='<div style="min-height:50px;background:#FFFFFF;'+chgSh+'"></div>';
         }
       }else{
         var dayIdx=-1, nightIdx=-1;
@@ -10569,17 +10605,17 @@ function expGridEl(E, mode, variant){
           var dcrew=E.crews[pr[dayIdx]];
           var dnames=(pm[dayIdx]&&pm[dayIdx].length)?pm[dayIdx].map(dispMemberQual):dcrew.names;
           var dcontent=isNames?('Day<br>'+dnames.map(escapeHtml).join('<br>')):escapeHtml('Day: '+dcrew.name);
-          dayHtml+='<div style="font-size:14px;font-weight:700;padding:6px 8px;background:'+dcrew.color+';color:'+BLACK+';min-height:30px;line-height:1.4;border-top:1px solid #BFBFBF;">'+dcontent+'</div>';
+          dayHtml+='<div style="font-size:14px;font-weight:700;padding:6px 8px;background:'+dcrew.color+';color:'+BLACK+';min-height:30px;line-height:1.4;border-top:1px solid #BFBFBF;'+chgSh+'">'+dcontent+'</div>';
         }else{
-          dayHtml+='<div style="min-height:30px;background:#FFFFFF;border-top:1px solid #BFBFBF;"></div>';
+          dayHtml+='<div style="min-height:30px;background:#FFFFFF;border-top:1px solid #BFBFBF;'+chgSh+'"></div>';
         }
         if(nightIdx>=0){
           var ncrew=E.crews[pr[nightIdx]];
           var nnames=(pm[nightIdx]&&pm[nightIdx].length)?pm[nightIdx].map(dispMemberQual):ncrew.names;
           var ncontent=isNames?('Night<br>'+nnames.map(escapeHtml).join('<br>')):escapeHtml('Night: '+ncrew.name);
-          dayHtml+='<div style="font-size:14px;font-weight:700;padding:6px 8px;background:'+ncrew.color+';color:'+BLACK+';min-height:30px;line-height:1.4;border-top:1px solid #BFBFBF;">'+ncontent+'</div>';
+          dayHtml+='<div style="font-size:14px;font-weight:700;padding:6px 8px;background:'+ncrew.color+';color:'+BLACK+';min-height:30px;line-height:1.4;border-top:1px solid #BFBFBF;'+chgSh+'">'+ncontent+'</div>';
         }else{
-          dayHtml+='<div style="min-height:30px;background:#FFFFFF;border-top:1px solid #BFBFBF;"></div>';
+          dayHtml+='<div style="min-height:30px;background:#FFFFFF;border-top:1px solid #BFBFBF;'+chgSh+'"></div>';
         }
       }
       dayHtml+='</div>';
@@ -10592,6 +10628,9 @@ function expGridEl(E, mode, variant){
   E.crews.forEach(function(c){
     h+='<div style="margin-bottom:3px;">Crew '+escapeHtml(c.name)+' — '+escapeHtml(c.names.join(', '))+'</div>';
   });
+  if(E.hasChanges){
+    h+='<div style="margin-bottom:3px;">Gold border = changed day (leave / replacement / swap / manual edit)</div>';
+  }
   h+='</div>';
   if(E.leave&&E.leave.length){
     h+='<div style="margin-top:14px;font-size:14px;font-weight:700;">Leave</div>';
