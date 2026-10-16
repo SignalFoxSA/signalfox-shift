@@ -1,21 +1,50 @@
 {
-  "history": [],
+  "history": [
+    {
+      "time": "21:17",
+      "companies": 0,
+      "staff": 0,
+      "rosters": 0,
+      "changes": 0
+    }
+  ],
   "log": [
     {
-      "message": "Dashboard ready \u2014 waiting for the stress test to start.",
+      "message": "Dashboard ready — waiting for the stress test to start.",
       "time": "20:55"
     },
     {
       "time": "21:11",
-      "message": "Stress test started \u2014 Stage 1: 5 workplaces, 10 teams, 200 staff, 12 months."
+      "message": "Stress test started — Stage 1: 5 workplaces, 10 teams, 200 staff, 12 months."
+    },
+    {
+      "time": "21:17",
+      "message": "Building up — seeding…"
     }
   ],
-  "metrics": [],
+  "metrics": [
+    {
+      "label": "Companies",
+      "value": "0"
+    },
+    {
+      "label": "Staff rostered",
+      "value": "0"
+    },
+    {
+      "label": "Active rosters",
+      "value": "0"
+    },
+    {
+      "label": "Changes",
+      "value": "0"
+    }
+  ],
   "progress": {
     "current": 1,
     "total": 7
   },
-  "stage": "Stage 1 of 7 \u2014 200 staff, 12 months",
+  "stage": "Stage 1 of 7 — 200 staff, 12 months",
   "status": "running",
   "thresholds": {
     "break": null,
@@ -23,10 +52,10 @@
     "perfect": null
   },
   "totals": {
-    "changes": null,
-    "companies": null,
-    "rosters": null,
-    "staff": null
+    "changes": 0,
+    "companies": 0,
+    "rosters": 0,
+    "staff": 0
   },
-  "updatedAt": "2026-10-16T21:11:31.166862+02:00"
+  "updatedAt": "2026-10-16T21:17:48.020+02:00"
 }
