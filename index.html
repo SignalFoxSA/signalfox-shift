@@ -1102,7 +1102,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1976';
+var BUILD='20261015-1977';
 /* LEAVE_TYPES — the ONE shared list of leave types (single source of truth).
    Used by EVERY leave-reason picker: the day-sheet removal prompt, the draft
    Long-term leave section, and both On Duty leave flows (baseLeave +
@@ -8344,8 +8344,9 @@ function rulesIsNight(s){
    using that workplace's own shift times + holiday country (default:
    the active base's slotDef / holMapFor). holName is attached per shift
    so the work-holidays check works across bases. absStart/absEnd are
-   epoch minutes (correct across rosters); startAbs/endAbs are kept
-   (dayIdx-based) so rulesViolationDates is untouched. */
+   epoch minutes (correct across rosters, and what rulesViolationDates
+   now uses so cross-month runs compare correctly); startAbs/endAbs
+   are kept (dayIdx-based) for backward compatibility. */
 function rulesPersonShiftsFor(R, personName, base){
   var shifts=[];
   var b=base||S.base;
@@ -8500,13 +8501,98 @@ function rulesCheckShifts(shifts, personName, r){
   }
   return v;
 }
+/* ---------- CROSS-MONTH RUNS (16 Oct 2026) ----------
+   Runs don't stop at a month boundary: a 4-day run split 2 Sep + 2 Oct
+   is ONE run. The per-roster checks therefore pull in the same team's
+   LIVE rosters for the previous and next month (when they exist) and
+   check the merged timeline. Violations are then kept only if they
+   touch the roster being checked (date-interval overlap, or same
+   month label), so a run entirely in October never shows up as a
+   September warning. Drafts are NOT pulled in: drafts are not live,
+   so they never feed warnings. Thresholds, message text, warn-not-
+   block and dot semantics are unchanged. */
+/* same team's live rosters for the month before / after R (if they exist) */
+function rulesAdjacentLiveRosters(R){
+  var out=[], seen={};
+  if(!R||R.kind!=='month') return out;
+  var prevY=(R.month===0)?R.year-1:R.year, prevM=(R.month===0)?11:R.month-1;
+  var nextY=(R.month===11)?R.year+1:R.year, nextM=(R.month===11)?0:R.month+1;
+  function scan(units){
+    (units||[]).forEach(function(u){
+      var AR=(u&&u.roster)?u.roster:u;
+      if(!AR||AR===R||AR.kind!=='month') return;
+      if(AR.vehicleId!==R.vehicleId) return;
+      var isPrev=(AR.year===prevY&&AR.month===prevM);
+      var isNext=(AR.year===nextY&&AR.month===nextM);
+      if(!isPrev&&!isNext) return;
+      var key=AR.id||(String(AR.vehicleId)+'|'+AR.year+'|'+AR.month);
+      if(seen[key]) return; seen[key]=1;
+      out.push(AR);
+    });
+  }
+  scan(S.rosters);
+  try{
+    var ws=(S.company&&S.company.workplaces)||[];
+    ws.forEach(function(wp){ scan(wp.rosters); });
+  }catch(e){}
+  return out;
+}
+/* a person's shifts on R plus the adjacent-month rosters (same team),
+   sorted by start. Focus-roster shifts win on any same date+slot clash. */
+function rulesPersonShiftsCrossMonth(R, personName, base){
+  var shifts=rulesPersonShiftsFor(R, personName, base);
+  var adj=rulesAdjacentLiveRosters(R);
+  if(!adj.length) return shifts;
+  var have={};
+  shifts.forEach(function(s){ have[s.dateISO+'|'+s.slotId]=1; });
+  adj.forEach(function(AR){
+    rulesPersonShiftsFor(AR, personName, base).forEach(function(s){
+      var k=s.dateISO+'|'+s.slotId;
+      if(!have[k]){ have[k]=1; shifts.push(s); }
+    });
+  });
+  shifts.sort(function(a,b){ return a.absStart-b.absStart; });
+  return shifts;
+}
+/* does violation string v touch roster R? Date-based violations: the
+   date interval in the message must overlap R's date range. Month-based
+   violations ("in October 2026"): the month must be R's month. Anything
+   unrecognised is kept (fail-open). Span (non-month) rosters keep all. */
+function rulesViolationTouchesRoster(v, R){
+  try{
+    if(!R||R.kind!=='month') return true;
+    var days=rulesRosterDays(R);
+    if(!days.length) return true;
+    var start=days[0].dateISO, end=days[days.length-1].dateISO;
+    var dates=String(v||'').match(/\d{4}-\d{2}-\d{2}/g);
+    if(dates&&dates.length){
+      var mn=dates[0], mx=dates[0];
+      dates.forEach(function(d){ if(d<mn) mn=d; if(d>mx) mx=d; });
+      return mx>=start && mn<=end;
+    }
+    var mm=String(v||'').match(/ in ([A-Za-z]+) (\d{4})/);
+    if(mm){
+      var mi=MN.indexOf(mm[1]);
+      if(mi<0) return true;
+      return (+mm[2]===R.year && mi===R.month);
+    }
+    return true;
+  }catch(e){ return true; }
+}
+/* per-roster check on the cross-month merged timeline, filtered to
+   violations that touch R (see rulesViolationTouchesRoster). */
+function rulesCheckPersonMerged(R, personName, base, rules){
+  var shifts=rulesPersonShiftsCrossMonth(R, personName, base);
+  var vs=rulesCheckShifts(shifts, personName, rules);
+  return vs.filter(function(v){ return rulesViolationTouchesRoster(v, R); });
+}
 function rulesCheckPerson(R, personName){
-  return rulesCheckShifts(rulesPersonShifts(R, personName), personName, rulesEffectiveObj());
+  return rulesCheckPersonMerged(R, personName, null, rulesEffectiveObj());
 }
 /* check a person on a specific workplace's roster, with that base's own
    shift times / holidays / effective rules (used for cross-base checks). */
 function rulesCheckPersonFor(R, personName, base, rules){
-  return rulesCheckShifts(rulesPersonShiftsFor(R, personName, base), personName, rules||rulesEffectiveObj(base.rules));
+  return rulesCheckPersonMerged(R, personName, base, rules||rulesEffectiveObj(base.rules));
 }
 /* company-wide check: merge one person's shifts from ALL workplaces'
    rosters into one timeline and run the same 9 checks. Rules used = the
@@ -8586,12 +8672,20 @@ function rosterRulesHtml(results){
    - work holidays: the holiday date itself
    - weekends off: every worked weekend day (Sat/Sun) in a violated month
      (every worked weekend contributes to the shortfall, so all are marked)
+   Cross-month: shifts include the adjacent-month rosters (same team), so
+   a run split across the boundary is checked as one run; only days on
+   THIS roster get a dot.
    Fail-safe: returns {} on any error, so the dot can never break the calendar. */
 function rulesViolationDates(R){
   try{
     var out={};
+    /* cross-month: only mark days on THIS roster (adjacent-month days
+       belong to their own month's calendar, not this one) */
+    var rDays=rulesRosterDays(R);
+    var rStart=rDays.length?rDays[0].dateISO:'', rEnd=rDays.length?rDays[rDays.length-1].dateISO:'';
     function mark(dateISO, msg){
       if(!dateISO) return;
+      if(rStart && (dateISO<rStart||dateISO>rEnd)) return;
       if(!out[dateISO]) out[dateISO]=[];
       if(out[dateISO].indexOf(msg)<0) out[dateISO].push(msg);
     }
@@ -8606,14 +8700,14 @@ function rulesViolationDates(R){
       });
     });
     Object.keys(people).sort().forEach(function(nm){
-      var shifts=rulesPersonShifts(R, nm);
+      var shifts=rulesPersonShiftsCrossMonth(R, nm, null);
       if(!shifts.length) return;
       /* 1+2. back-to-back + rest between shifts (consecutive pairs) */
       var restB=(r.restBetween!=null)?+r.restBetween:null;
       var noBB=(r.backToBack===false);
       for(var i=1;i<shifts.length;i++){
         var prev=shifts[i-1], cur=shifts[i];
-        var gapMin=cur.startAbs-prev.endAbs;
+        var gapMin=cur.absStart-prev.absEnd;
         if(gapMin<0) gapMin=0;
         if(gapMin===0){
           if(noBB) mark(cur.dateISO, 'Back-to-back shifts: '+nm+' — '+prev.slotName+' on '+prev.dateISO+' runs straight into '+cur.slotName+' on '+cur.dateISO+' (no break)');
@@ -8628,14 +8722,14 @@ function rulesViolationDates(R){
         var sStart=0;
         for(var j=1;j<=shifts.length;j++){
           var isEnd=(j===shifts.length);
-          var continues=!isEnd && (shifts[j].startAbs-shifts[j-1].endAbs)===0;
+          var continues=!isEnd && (shifts[j].absStart-shifts[j-1].absEnd)===0;
           if(!continues){
             var first=shifts[sStart], last=shifts[j-1];
-            var totalMin=last.endAbs-first.startAbs;
+            var totalMin=last.absEnd-first.absStart;
             if(totalMin>maxC*60){
               var msg='Max continuous hours: '+nm+' — '+rulesFmtHours(totalMin)+' continuous from '+first.slotName+' on '+first.dateISO+' to '+last.slotName+' on '+last.dateISO+' (max '+maxC+'h)';
-              var exceedAbs=first.startAbs+maxC*60;
-              for(var k=sStart;k<j;k++){ if(shifts[k].endAbs>exceedAbs) mark(shifts[k].dateISO, msg); }
+              var exceedAbs=first.absStart+maxC*60;
+              for(var k=sStart;k<j;k++){ if(shifts[k].absEnd>exceedAbs) mark(shifts[k].dateISO, msg); }
             }
             sStart=j;
           }
@@ -8650,7 +8744,7 @@ function rulesViolationDates(R){
           if(!curRun.length) curRun=[ns];
           else{
             var prevN=curRun[curRun.length-1];
-            if(ns.startAbs-prevN.endAbs>=1440){ runs.push(curRun); curRun=[ns]; }
+            if(ns.absStart-prevN.absEnd>=1440){ runs.push(curRun); curRun=[ns]; }
             else curRun.push(ns);
           }
         });
@@ -8658,9 +8752,9 @@ function rulesViolationDates(R){
         runs.forEach(function(run){
           var lastN=run[run.length-1];
           var nextShift=null;
-          for(var m=0;m<shifts.length;m++){ if(shifts[m].startAbs>=lastN.endAbs){ nextShift=shifts[m]; break; } }
+          for(var m=0;m<shifts.length;m++){ if(shifts[m].absStart>=lastN.absEnd){ nextShift=shifts[m]; break; } }
           if(nextShift){
-            var gapMin2=nextShift.startAbs-lastN.endAbs;
+            var gapMin2=nextShift.absStart-lastN.absEnd;
             if(gapMin2<restN*60) mark(nextShift.dateISO, 'Rest after nights: '+nm+' — only '+rulesFmtHours(gapMin2)+' rest after nights ending '+lastN.dateISO+' before '+nextShift.slotName+' on '+nextShift.dateISO+' (needs '+restN+'h)');
           }
         });
@@ -8694,7 +8788,7 @@ function rulesViolationDates(R){
         shifts.forEach(function(s){
           var ym=s.dateISO.slice(0,7);
           if(!totals[ym]) totals[ym]={mins:0, ot:0};
-          totals[ym].mins+=(s.endAbs-s.startAbs);
+          totals[ym].mins+=(s.absEnd-s.absStart);
           if(s.isOvertime) totals[ym].ot++;
         });
         var acc={};
@@ -8702,7 +8796,7 @@ function rulesViolationDates(R){
           var ym=s.dateISO.slice(0,7);
           if(!acc[ym]) acc[ym]={mins:0, ot:0, hOn:false, otOn:false};
           var b=acc[ym], fin=totals[ym];
-          b.mins+=(s.endAbs-s.startAbs);
+          b.mins+=(s.absEnd-s.absStart);
           if(s.isOvertime) b.ot++;
           var parts=ym.split('-');
           if(maxH!=null && !b.hOn && b.mins>maxH*60){
