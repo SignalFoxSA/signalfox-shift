@@ -74,6 +74,8 @@
   /* Inbox bell (header, all roles): theme variables only, no hard-coded colours */
   .bellbtn{margin-left:auto; position:relative; background:none; border:none; padding:6px; cursor:pointer; font-size:22px; line-height:1; flex:none;}
   .bellbadge{position:absolute; top:0; right:0; min-width:18px; height:18px; padding:0 4px; border-radius:9px; background:var(--red); color:var(--card); font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; box-sizing:border-box;}
+  /* Inbox per-notification delete: small, quiet ✕, top-right of the row */
+  .inbox-del{flex:none; background:none; border:none; padding:2px 6px; margin:0; color:var(--muted); font-size:16px; line-height:1; cursor:pointer; font-family:inherit;}
   .view{display:none;}
   .view.active{display:block; animation:fade .18s ease;}
   @keyframes fade{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
@@ -759,6 +761,7 @@
       <h3>Inbox</h3>
       <p class="sub">Notifications for you. Tap one to open it.</p>
       <button class="btn ghost" onclick="inboxMarkAllRead()">Mark all read</button>
+      <button class="btn ghost" onclick="inboxDeleteAllRead()">Delete all read</button>
     </div>
     <div id="inboxList"></div>
   </div>
@@ -1096,7 +1099,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1974';
+var BUILD='20261015-1975';
 /* LEAVE_TYPES — the ONE shared list of leave types (single source of truth).
    Used by EVERY leave-reason picker: the day-sheet removal prompt, the draft
    Long-term leave section, and both On Duty leave flows (baseLeave +
@@ -5697,7 +5700,10 @@ function renderInbox(){
     var when='';
     try{ when=new Date(n.createdAt).toLocaleString('en-ZA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}); }catch(e){}
     h+='<div class="card" style="cursor:pointer;'+(n.read?'':'border-left:3px solid var(--accent);')+'" onclick="inboxTap(\''+escapeHtml(n.id)+'\')">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'
       +'<div style="font-size:14px;'+(n.read?'':'font-weight:800;')+'">'+(n.read?'':'\u25cf ')+escapeHtml(n.title)+'</div>'
+      +'<button class="inbox-del" aria-label="Delete notification" onclick="event.stopPropagation();inboxDelete(\''+escapeHtml(n.id)+'\')">\u2715</button>'
+      +'</div>'
       +'<div style="font-size:13px;color:var(--muted);margin-top:2px;">'+escapeHtml(n.body)+'</div>'
       +'<div style="font-size:12px;color:var(--muted);margin-top:4px;">'+escapeHtml(when)+'</div>'
       +'</div>';
@@ -5745,6 +5751,32 @@ function inboxMarkAllRead(){
   persistNotifications();
   renderInbox();
   toast('All notifications marked read.');
+}
+/* Delete ONE notification (read or unread) after confirm. The row's ✕
+   stops propagation so tapping it never also fires inboxTap. Deletion
+   removes it from S.notifications + persists (localStorage + cloud sync
+   via persistNotifications), so it stays gone across reload/sync. */
+function inboxDelete(id){
+  if(!confirm('Delete this notification?')) return;
+  loadNotifications();
+  var idx=(S.notifications||[]).findIndex(function(x){ return x.id===id; });
+  if(idx<0) return;
+  S.notifications.splice(idx,1);
+  persistNotifications();
+  renderInbox();
+  toast('Notification deleted.');
+}
+/* Delete ALL READ notifications in the current Inbox at once (unread
+   ones STAY — never bulk-delete unread). Cancel keeps everything. */
+function inboxDeleteAllRead(){
+  if(!confirm('Delete all read notifications?')) return;
+  loadNotifications();
+  var readIds={};
+  inboxForCurrent().forEach(function(n){ if(n.read) readIds[n.id]=true; });
+  S.notifications=(S.notifications||[]).filter(function(x){ return !readIds[x.id]; });
+  persistNotifications();
+  renderInbox();
+  toast('Read notifications deleted.');
 }
 /* ---------- Staff profile tab ---------- */
 function renderStaffProfile(){
