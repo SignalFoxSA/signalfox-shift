@@ -1132,7 +1132,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1983';
+var BUILD='20261015-1984';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -6365,6 +6365,92 @@ function companyHeatmapHtml(){
   h+='</tbody></table></div></div>';
   return h;
 }
+/* ---------- Pattern Detective (Company Dashboard) ----------
+   Surfaces only the clearest patterns in REAL roster/leave data —
+   nothing invented, nothing inferred. Threshold: 3+ occurrences.
+   Two kinds:
+   (A) person + leave type + weekday — e.g. "Thabo — called in sick on 3 Fridays"
+   (B) shift + weekday short (an open slot on that shift) — e.g. "Night shift short on 3 Fridays"
+   Counts are distinct DATES (one absence day / one short day = 1, even if
+   several shifts or bases are involved that day). Below threshold, or no
+   data → returns '' and the section shows nothing at all. Live rosters
+   only — drafts never feed patterns. */
+var PATTERN_MIN_COUNT=3;
+var PATTERN_WD=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+function companyDetectPatterns(){
+  var abs={}, short={};
+  companyWorkplaces().forEach(function(wp){
+    (wp.rosters||[]).forEach(function(u){
+      var R=u.roster; if(!R) return;
+      (R.leaveLog||[]).forEach(function(lg){
+        if(!lg||!lg.person||!lg.date) return;
+        var t=lg.type||'';
+        if(t==='Swap'||t==='Cover') return;
+        if(lg.person===OPEN_MARK) return;
+        var wd=PATTERN_WD[parseISO(lg.date).getDay()];
+        var key=lg.person+'|'+t+'|'+wd;
+        if(!abs[key]) abs[key]={kind:'absence', person:lg.person, type:t, wd:wd, dates:{}};
+        abs[key].dates[lg.date]=1; /* one absence day, even if 2 shifts that day */
+      });
+      for(var di=0; di<(R.days||0); di++){
+        var dateISO=isoDate(addDays(parseISO(R.startISO), di));
+        var wd2=PATTERN_WD[parseISO(dateISO).getDay()];
+        var seenShift={};
+        calSlotCrewsFor(wp.base, R, di).forEach(function(ps){
+          var isOpen=false;
+          ps.list.forEach(function(x){
+            effShiftMembers(R, dateISO, ps.sl.id, x.c).forEach(function(nm){
+              if(nm===OPEN_MARK) isOpen=true;
+            });
+          });
+          if(!isOpen) return;
+          var sName=(ps.sl&&ps.sl.name)||ps.sl.id;
+          if(seenShift[sName]) return; /* one roster, one shift, one day = 1 */
+          seenShift[sName]=1;
+          var key2=sName+'|'+wd2;
+          if(!short[key2]) short[key2]={kind:'short', shift:sName, wd:wd2, dates:{}};
+          short[key2].dates[dateISO]=1;
+        });
+      }
+    });
+  });
+  var out=[];
+  Object.keys(abs).forEach(function(k){
+    var a=abs[k], n=Object.keys(a.dates).length;
+    if(n>=PATTERN_MIN_COUNT) out.push({kind:'absence', person:a.person, type:a.type, wd:a.wd, count:n});
+  });
+  Object.keys(short).forEach(function(k){
+    var s=short[k], n=Object.keys(s.dates).length;
+    if(n>=PATTERN_MIN_COUNT) out.push({kind:'short', shift:s.shift, wd:s.wd, count:n});
+  });
+  out.sort(function(a,b){
+    if(b.count!==a.count) return b.count-a.count;
+    return (a.person||a.shift).localeCompare(b.person||b.shift);
+  });
+  return out;
+}
+function companyPatternsHtml(){
+  var pats=companyDetectPatterns();
+  if(!pats.length) return '';
+  var h='<div id="companyPatterns"><h3 style="margin-top:14px;">Patterns</h3>'
+    +'<p class="sub">Repeated patterns in your real roster and leave data — only shown when something has happened 3+ times.</p>';
+  pats.forEach(function(p){
+    var text='';
+    if(p.kind==='absence'){
+      var isSick=p.type.toLowerCase().indexOf('sick')>=0;
+      text=isSick
+        ? escapeHtml(p.person)+' — called in sick on <b>'+p.count+' '+escapeHtml(p.wd)+'s</b>'
+        : escapeHtml(p.person)+' — off on '+escapeHtml(p.type)+' on <b>'+p.count+' '+escapeHtml(p.wd)+'s</b>';
+    }else{
+      text=escapeHtml(p.shift)+' shift short on <b>'+p.count+' '+escapeHtml(p.wd)+'s</b>';
+    }
+    h+='<div class="avail" data-pattern="1" data-pattern-kind="'+p.kind+'" data-pattern-count="'+p.count+'" data-pattern-weekday="'+escapeHtml(p.wd)+'"'
+      +(p.kind==='absence'?' data-pattern-person="'+escapeHtml(p.person)+'" data-pattern-type="'+escapeHtml(p.type)+'"':' data-pattern-shift="'+escapeHtml(p.shift)+'"')
+      +'><span><span class="nm">'+text+'</span></span></div>';
+  });
+  h+='</div>';
+  return h;
+}
 function companyDashHtml(){
   var c=S.company;
   var tISO=companyDashDateISO();
@@ -6388,6 +6474,7 @@ function companyDashHtml(){
     +'<div class="avail" onclick="companySetDrill({type:\'filled\'})"><span><span class="nm">Shifts filled vs open</span> <span class="meta">'+st.filled+' filled \u00b7 '+st.openSlots+' open</span></span><span class="meta">View</span></div>'
     +'</div>'
     +companyHeatmapHtml()
+    +companyPatternsHtml()
     +'<h3 style="margin-top:14px;">Workplaces</h3>'
     +companyWorkplaces().map(function(wp){
       var staffN=(wp.base.staff||[]).length;
