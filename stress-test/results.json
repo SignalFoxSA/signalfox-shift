@@ -6,6 +6,13 @@
       "staff": 0,
       "rosters": 0,
       "changes": 0
+    },
+    {
+      "time": "21:18",
+      "companies": 0,
+      "staff": 0,
+      "rosters": 0,
+      "changes": 0
     }
   ],
   "log": [
@@ -19,6 +26,10 @@
     },
     {
       "time": "21:17",
+      "message": "Building up — seeding…"
+    },
+    {
+      "time": "21:18",
       "message": "Building up — seeding…"
     }
   ],
@@ -57,5 +68,5 @@
     "rosters": 0,
     "staff": 0
   },
-  "updatedAt": "2026-10-16T21:17:48.020+02:00"
+  "updatedAt": "2026-10-16T21:18:06.629+02:00"
 }
