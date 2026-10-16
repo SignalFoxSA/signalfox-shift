@@ -1096,7 +1096,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1971';
+var BUILD='20261015-1972';
 /* LEAVE_TYPES — the ONE shared list of leave types (single source of truth).
    Used by EVERY leave-reason picker: the day-sheet removal prompt, the draft
    Long-term leave section, and both On Duty leave flows (baseLeave +
@@ -2785,6 +2785,8 @@ function openDaySheet(dateISO){
 function closeDaySheet(){
   document.getElementById('daySheetWrap').classList.remove('open');
   dayCtx=null;
+  /* staff Open Shifts day sheet state (separate from manager dayCtx) */
+  mkStaffSheetDate=null; mkStaffSheetConfirm=null;
 }
 function daySheetShifts(){
   var R=dayCtx.R, per=calSlotCrews(R, dayCtx.dayIdx);
@@ -4518,34 +4520,45 @@ function rulesWouldBreakForShift(rosterId, dateISO, shiftId, personName, isDraft
    Open Shifts tab gets its own Calendar/List toggle (separate from the
    My Shifts toggle and from the My Shifts Draft view, which stay as-is).
    LIST (default) = the marketplace list, unchanged.
-   CALENDAR = a month calendar showing the SAME available shifts as the
-   List (same filters, via mkAvailableOpen — the exact filter set the
-   List loop applies). Each open shift is a tappable band on its date
-   (shift + team + DRAFT label when from a draft); tapping opens an
-   "Apply for this shift?" confirm, then the SAME mkApply flow as the
-   List (same rules checks, same application record, same manager
-   notification). Shifts NOT available to this staff member are not
-   shown. "My applications" stays below in both views. */
-var mkView='list', mkYear=null, mkMonth=null, mkCalConfirm=null;
+   CALENDAR = the FULL whole-workplace roster calendar for the viewed
+   month (all teams, all days, all shifts, all people — the same bands
+   as the My Shifts Whole base calendar, via msMonthData), NOT just the
+   available open shifts. Days with at least one open shift available
+   to THIS staff member (for overtime — the exact List filter set, via
+   mkAvailableOpen) get a RED border (the existing .cell.open 2px
+   #CC0000 inset). Days with NO available overtime get NO red border.
+   Tapping ANY day opens the day sheet (read-only, STAFF context):
+   that day's shifts + members, plus an Apply button for each available
+   open shift on that day (same mkApply flow as the List). No Apply
+   button when the day has no available overtime. The staff day sheet
+   NEVER shows Approve/Decline/Unapprove/Reopen (manager actions, only
+   in the manager roster view's day sheet, unchanged). "My applications"
+   stays below in both views. */
+var mkView='list', mkYear=null, mkMonth=null;
+var mkStaffSheetDate=null, mkStaffSheetConfirm=null;
 function mkSyncSeg(){
   var c=document.getElementById('mkViewCal'); if(c) c.className=mkView==='cal'?'on':'';
   var l=document.getElementById('mkViewList'); if(l) l.className=mkView==='list'?'on':'';
   var list=document.getElementById('mkList'); if(list) list.style.display=mkView==='list'?'':'none';
   var cal=document.getElementById('mkCal'); if(cal) cal.style.display=mkView==='cal'?'':'none';
 }
-function mkSetView(v){ mkView=v; mkCalConfirm=null; mkSyncSeg(); renderMarketplace(); }
+function mkSetView(v){
+  mkView=v;
+  if(mkStaffSheetDate) closeDaySheet();
+  mkSyncSeg(); renderMarketplace();
+}
 function mkCalNavInit(){ if(mkYear===null){ var n=new Date(); mkYear=n.getFullYear(); mkMonth=n.getMonth(); } }
 function mkCalNav(d){
   mkCalNavInit();
   mkMonth+=d;
   if(mkMonth<0){ mkMonth=11; mkYear--; }
   if(mkMonth>11){ mkMonth=0; mkYear++; }
-  mkCalConfirm=null;
+  mkStaffSheetConfirm=null;
   renderMarketplace();
 }
 function mkCalToday(){
   var n=new Date(); mkYear=n.getFullYear(); mkMonth=n.getMonth();
-  mkCalConfirm=null;
+  mkStaffSheetConfirm=null;
   renderMarketplace();
 }
 /* The List's filter set, as a reusable function: every open shift in
@@ -4562,41 +4575,104 @@ function mkAvailableOpen(){
   });
   return out;
 }
-function mkCalConfirmHtml(){
-  if(!mkCalConfirm) return '';
-  var s=(S._mkOpen||[])[mkCalConfirm.idx];
-  if(!s) return '';
-  var already=(S.shiftApps||[]).some(function(a){
-    return a.rosterId===s.rosterId&&a.dateISO===s.dateISO&&a.shiftId===s.shiftId
-      &&a.applicant===msPerson&&a.status==='pending';
+/* Staff day sheet for the Open Shifts Calendar: read-only. Shows the
+   day's roster shifts + members (active base, all teams) and, when the
+   day has available open shift(s) for THIS staff member, an Apply
+   button per available shift (same List display: shift + DRAFT label +
+   team + Crew). Apply → inline "Apply for this shift?" confirm →
+   SAME mkApply flow as the List. No Edit / Week view / Approve /
+   Decline / Unapprove / Reopen — those are manager actions. */
+function mkOpenStaffDaySheet(dateISO){
+  mkStaffSheetDate=dateISO;
+  mkStaffSheetConfirm=null;
+  mkRenderStaffDaySheet();
+  document.getElementById('daySheetWrap').classList.add('open');
+}
+function mkRenderStaffDaySheet(){
+  var dateISO=mkStaffSheetDate;
+  if(!dateISO) return;
+  var parts=String(dateISO).split('-');
+  if(parts.length!==3) return;
+  var y=+parts[0], m=+parts[1]-1;
+  loadShiftApps();
+  var rosterDay=msMonthData(y, m).filter(function(s){ return s.date===dateISO; });
+  var dayAvail=mkAvailableOpen().filter(function(e){ return e.s.dateISO===dateISO; });
+  document.getElementById('daySheetTitle').textContent=fmtDayTitle(dateISO);
+  document.getElementById('daySheetSub').textContent=rosterDay.length
+    ?rosterDay.length+' shift'+(rosterDay.length===1?'':'s')+' on duty'
+    :'No shifts rostered';
+  var html='';
+  if(!rosterDay.length){
+    html+='<p class="fine">No shifts rostered for this day.</p>';
+  }
+  rosterDay.forEach(function(s){
+    var mems=s.members.map(function(nm){ return rosterMemberHtml(nm, s.original||[]); }).join(', ');
+    html+='<div class="dshift" style="border-left:5px solid '+s.color+'">'
+      +'<div class="dh"><span class="t">'+escapeHtml(s.shift)+'</span>'
+      +'<span class="c">'+escapeHtml(s.team)+'</span></div>'
+      +(s.time?'<div style="color:var(--muted);font-size:13px;">'+escapeHtml(s.time)+'</div>':'')
+      +'<div style="color:var(--muted);font-size:13px;">Crew '+escapeHtml(s.crew)+'</div>'
+      +'<div style="margin-top:4px;font-size:13px;">'+mems+'</div>'
+      +'</div>';
   });
-  var h='<div class="card" id="mkCalConfirm" style="border-left:3px solid var(--accent);margin:10px 0;">'
-    +'<div style="font-weight:800;">Apply for this shift?</div>'
-    +'<div style="font-size:13px;color:var(--muted);margin-top:2px;">'
-    +escapeHtml(s.dt.toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'}))
-    +' &middot; '+(s.isDraft?'<span class="draftbadge">DRAFT</span> ':'')+escapeHtml(s.shift)
-    +' &middot; '+escapeHtml(s.team)+' &middot; Crew '+escapeHtml(s.crew)+'</div>'
-    +(already
-      ?'<p class="fine" style="margin:8px 0 0;">Applied — waiting for approval</p>'
-        +'<div class="btnrow" style="margin-top:8px;"><button class="btn ghost" onclick="mkCalConfirmClear()">Close</button></div>'
-      :'<div class="btnrow" style="margin-top:8px;"><button class="btn" onclick="mkCalApply()">Apply</button>'
-        +'<button class="btn ghost" onclick="mkCalConfirmClear()">Cancel</button></div>')
-    +'</div>';
-  return h;
+  if(dayAvail.length){
+    html+='<div class="card" id="mkStaffSheetApply" style="border-left:3px solid var(--accent);margin-top:10px;padding:10px 12px;">'
+      +'<div style="font-size:14px;font-weight:800;">Overtime available to you ('+dayAvail.length+')</div>'
+      +'<p class="sub" style="margin:2px 0 8px;">Tap Apply to request a shift.</p>';
+    dayAvail.forEach(function(e){
+      var s=e.s;
+      var already=(S.shiftApps||[]).some(function(a){
+        return a.rosterId===s.rosterId&&a.dateISO===s.dateISO&&a.shiftId===s.shiftId
+          &&a.applicant===msPerson&&a.status==='pending';
+      });
+      var confirming=!!(mkStaffSheetConfirm&&mkStaffSheetConfirm.idx===e.idx);
+      html+='<div class="dshift" style="border-left:5px solid '+s.color+'">'
+        +'<div class="dh"><span class="t">'+(s.isDraft?'<span class="draftbadge">DRAFT</span> ':'')+escapeHtml(s.shift)+'</span>'
+        +'<span class="c">'+escapeHtml(s.team)+'</span></div>'
+        +'<div style="color:var(--muted);font-size:13px;">Crew '+escapeHtml(s.crew)
+        +(s.workplaceId&&S.company&&s.workplaceId!==S.company.activeId?' \u00b7 '+escapeHtml(s.workplaceName||'Other base'):'')
+        +'</div>';
+      if(confirming){
+        html+='<div style="margin-top:8px;"><div style="font-weight:800;">Apply for this shift?</div>'
+          +'<div style="font-size:13px;color:var(--muted);margin-top:2px;">'
+          +escapeHtml(fmtDayTitle(dateISO))
+          +' &middot; '+(s.isDraft?'<span class="draftbadge">DRAFT</span> ':'')+escapeHtml(s.shift)
+          +' &middot; '+escapeHtml(s.team)+' &middot; Crew '+escapeHtml(s.crew)+'</div>'
+          +'<div class="btnrow" style="margin-top:8px;"><button class="btn" onclick="mkStaffSheetDoApply()">Apply</button>'
+          +'<button class="btn ghost" onclick="mkStaffSheetConfirmClear()">Cancel</button></div></div>';
+      }else if(already){
+        html+='<div style="margin-top:6px;"><span class="fine">Applied — waiting for approval</span></div>';
+      }else{
+        html+='<div class="btnrow" style="margin-top:6px;"><button class="btn" onclick="mkStaffSheetApplyTap('+e.idx+')">Apply</button></div>';
+      }
+      html+='</div>';
+    });
+    html+='</div>';
+  }else{
+    html+='<p class="fine" style="margin-top:8px;">No overtime available to you on this day.</p>';
+  }
+  document.getElementById('daySheetBody').innerHTML=html;
+  /* Staff footer: Close only — no Edit, no Week view, no manager actions. */
+  document.getElementById('daySheetFoot').innerHTML=
+    '<div class="btnrow"><button class="btn ghost" onclick="closeDaySheet()">Close</button></div>';
 }
-function mkCalTap(idx){
-  mkCalConfirm={idx:idx};
-  renderMarketplace();
-  setTimeout(function(){
-    var c=document.getElementById('mkCalConfirm');
-    if(c) c.scrollIntoView({behavior:'smooth',block:'nearest'});
-  }, 50);
+function mkStaffSheetApplyTap(idx){
+  mkStaffSheetConfirm={idx:idx};
+  mkRenderStaffDaySheet();
 }
-function mkCalConfirmClear(){ mkCalConfirm=null; renderMarketplace(); }
-function mkCalApply(){
-  var c=mkCalConfirm; if(!c) return;
-  mkCalConfirm=null;
-  mkApply(c.idx);
+function mkStaffSheetConfirmClear(){
+  mkStaffSheetConfirm=null;
+  mkRenderStaffDaySheet();
+}
+function mkStaffSheetDoApply(){
+  var c=mkStaffSheetConfirm;
+  if(!c) return;
+  var idx=c.idx;
+  mkStaffSheetConfirm=null;
+  mkApply(idx);
+  /* mkApply re-renders the marketplace (calendar refreshes); refresh
+     the sheet against the new state (applied row → "Applied — waiting"). */
+  if(mkStaffSheetDate) mkRenderStaffDaySheet();
 }
 function mkRenderCal(){
   var wrap=document.getElementById('mkCal');
@@ -4607,12 +4683,14 @@ function mkRenderCal(){
     var p=String(e.s.dateISO||'').split('-');
     return p.length===3 && +p[0]===mkYear && +p[1]-1===mkMonth;
   });
+  /* POPULATED roster: the full whole-workplace roster for the viewed
+     month (same bands as the My Shifts Whole base calendar). */
+  var rosterData=msMonthData(mkYear, mkMonth);
   var h='<div class="sixnav"><button class="mnav" onclick="mkCalNav(-1)" aria-label="Previous month">&#8249;</button>'
     +'<b>'+MN[mkMonth]+' '+mkYear+'</b>'
     +'<button class="mnav" onclick="mkCalNav(1)" aria-label="Next month">&#8250;</button></div>';
   h+='<div style="text-align:center;margin-bottom:4px"><a href="#" onclick="mkCalToday();return false;" style="font-size:13px;">Today</a></div>';
-  h+='<p class="sub" style="text-align:center;">'+monthAvail.length+' open shift'+(monthAvail.length===1?'':'s')+' you can cover in '+MN[mkMonth]+' '+mkYear+'.</p>';
-  h+=mkCalConfirmHtml();
+  h+='<p class="sub" style="text-align:center;">'+monthAvail.length+' open shift'+(monthAvail.length===1?'':'s')+' you can cover in '+MN[mkMonth]+' '+mkYear+'. Red border = overtime available to you.</p>';
   h+='<div class="dow">'+['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(function(x){ return '<span>'+x+'</span>'; }).join('')+'</div>';
   h+='<div class="grid">';
   var first=new Date(mkYear,mkMonth,1);
@@ -4622,17 +4700,21 @@ function mkRenderCal(){
   for(var d=1; d<=dim; d++){
     var dt=new Date(mkYear,mkMonth,d);
     var dayISO=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var dayRoster=rosterData.filter(function(s){ return s.d===d; });
+    var dayAvail=monthAvail.filter(function(e){ return e.s.dateISO===dayISO; });
     var inner='<div class="dnum">'+d+'</div>';
-    monthAvail.forEach(function(e){
-      if(e.s.dateISO!==dayISO) return;
-      var s=e.s;
-      inner+='<span class="band" style="background:'+(s.color||'#888888')+';color:'+textOnBand(s.color||'#888888')+';cursor:pointer;" onclick="mkCalTap('+e.idx+')">'
-        +'<span class="bs">'+escapeHtml(s.team)+'</span>'
-        +'<span class="bc">'+(s.isDraft?'DRAFT · ':'')+escapeHtml(s.shift)+'</span>'
-        +'<span class="bm">Crew '+escapeHtml(s.crew)+'</span>'
+    dayRoster.forEach(function(s){
+      var band=s.color||'#888888';
+      var mems=s.members.map(function(nm){ return rosterMemberHtml(nm, s.original||[]); }).join(', ');
+      inner+='<span class="band" style="background:'+band+';color:'+textOnBand(band)+'">'
+        +'<span class="bs">'+escapeHtml(shiftBandShort(s.shift))+'</span>'
+        +'<span class="bc">'+escapeHtml(s.crew)+'</span>'
+        +(mems?'<span class="bm">'+mems+'</span>':'')
         +'</span>';
     });
-    h+='<div class="cell'+(isToday(dt)?' today':'')+'">'+inner+'</div>';
+    /* RED border (existing .cell.open) ONLY on days with available
+       overtime for THIS staff member — same set as the List. */
+    h+='<div class="cell'+(isToday(dt)?' today':'')+(dayAvail.length?' open':'')+'" data-date="'+dayISO+'" style="cursor:pointer;" onclick="mkOpenStaffDaySheet(\''+dayISO+'\')">'+inner+'</div>';
   }
   var trail=(lead+dim)%7;
   if(trail) for(var t=trail;t<7;t++) h+='<div class="cell out"></div>';
