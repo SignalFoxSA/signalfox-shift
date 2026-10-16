@@ -159,6 +159,10 @@
     {
       "label": "Rosters list render",
       "value": "419ms"
+    },
+    {
+      "label": "On Duty render",
+      "value": "414ms"
     }
   ],
   "progress": {
@@ -178,5 +182,5 @@
     "rosters": 120,
     "staff": 200
   },
-  "updatedAt": "2026-10-16T21:18:41.343+02:00"
+  "updatedAt": "2026-10-16T21:18:43.894+02:00"
 }
