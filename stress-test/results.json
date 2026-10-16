@@ -1154,6 +1154,13 @@
       "staff": 700,
       "rosters": 1680,
       "changes": 18200
+    },
+    {
+      "time": "21:35",
+      "companies": 0,
+      "staff": 720,
+      "rosters": 1728,
+      "changes": 18720
     }
   ],
   "log": [
@@ -1988,6 +1995,10 @@
     {
       "time": "21:35",
       "message": "Added teams — staff 700, rosters 1680, changes 18200"
+    },
+    {
+      "time": "21:35",
+      "message": "Added teams — staff 720, rosters 1728, changes 18720"
     }
   ],
   "metrics": [
@@ -1997,15 +2008,15 @@
     },
     {
       "label": "Staff rostered",
-      "value": "700"
+      "value": "720"
     },
     {
       "label": "Active rosters",
-      "value": "1680"
+      "value": "1728"
     },
     {
       "label": "Changes",
-      "value": "18200"
+      "value": "18720"
     }
   ],
   "progress": {
@@ -2020,12 +2031,12 @@
     "perfect": null
   },
   "totals": {
-    "changes": 18200,
+    "changes": 18720,
     "companies": 0,
-    "rosters": 1680,
-    "staff": 700
+    "rosters": 1728,
+    "staff": 720
   },
-  "updatedAt": "2026-10-16T21:35:26.411+02:00",
+  "updatedAt": "2026-10-16T21:35:28.878+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
