@@ -1188,7 +1188,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1995';
+var BUILD='20261015-1996';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -6872,28 +6872,43 @@ function companyEnsure(){
   }
   if(!S.company.rules || typeof S.company.rules!=='object') S.company.rules={};
   /* Q6 invite code: generated once when the company profile is created
-     (existing companies get one on first load after this build) */
+     (existing companies get one on first load after this build).
+     NEVER persisted here on its own: persisting at this point saved a
+     HALF-BUILT company (workplaces [], no activeId) to storage, and the
+     next loadSaved() → companyLoad() restored that half-built copy,
+     discarding the completed in-memory company. companyEnsure() then
+     built a BRAND-NEW workplace id, so drafts stamped with the old id
+     were missed by every workplace-filtered lookup (findDraftFor →
+     null, draftsForWorkplace counts wrong, duplicate drafts for the
+     same team+month, replace-confirm skipped, Company draft drill
+     broken). The code is persisted below, only once fully built. */
+  var _codeAdded=false;
   if(!S.company.inviteCode || typeof S.company.inviteCode!=='string'){
     S.company.inviteCode=companyInviteCodeGen();
-    /* Q1: NEVER companyPersist() here. companyEnsure() runs on READ
-       paths (e.g. companyMonthStats) and companyPersist() runs
-       companySyncActive(), which overwrites this workplace's STORED
-       rosters with live S.rosters — so merely viewing Stats on a
-       company whose only base has no rosters yet showed the live
-       base's 18 slots instead of 0. Save the code as-is, no sync. */
-    companyPersistNoSync();
+    _codeAdded=true;
   }
   if(!Array.isArray(S.company.crossBaseLog)) S.company.crossBaseLog=[];
+  var _built=false;
   if(!S.company.workplaces.length){
-    if(!S._rostersLoaded) return S.company; /* migration waits until rosters are loaded */
+    /* migration waits until rosters are loaded — and a half-built
+       company is NEVER persisted (see note above) */
+    if(!S._rostersLoaded) return S.company;
     S.company.workplaces.push(companySnapCurrent());
     S.company.activeId=S.company.workplaces[0].id;
+    _built=true;
   }
-  if(!S.company.activeId && S.company.workplaces.length) S.company.activeId=S.company.workplaces[0].id;
+  if(!S.company.activeId && S.company.workplaces.length){ S.company.activeId=S.company.workplaces[0].id; _built=true; }
   if(S.company.activeId && !S.company.workplaces.some(function(w){ return w.id===S.company.activeId; })){
     S.company.workplaces.unshift(companySnapCurrent());
     S.company.activeId=S.company.workplaces[0].id;
+    _built=true;
   }
+  /* Persist ONLY once FULLY BUILT (workplaces + activeId present), via
+     no-sync so a read path never rewrites stored rosters (Q1). This
+     also HEALS a stored half-built company in place: the healed id is
+     persisted, so later loads reuse it instead of regenerating a new
+     workplace id — activeId stays STABLE across reloads. */
+  if((_built || _codeAdded) && S.company.workplaces.length && S.company.activeId) companyPersistNoSync();
   return S.company;
 }
 function companySnapCurrent(){
@@ -6975,8 +6990,10 @@ function companyInviteCodeGen(){
 function companyInviteCode(){
   var c=companyEnsure(); if(!c) return '';
   /* Q1: no-sync save — generating a missing code must not run
-     companySyncActive() and overwrite stored rosters. */
-  if(!c.inviteCode){ c.inviteCode=companyInviteCodeGen(); companyPersistNoSync(); }
+     companySyncActive() and overwrite stored rosters. Never persist a
+     half-built company (no workplaces / no activeId) — companyEnsure()
+     above persists only once fully built. */
+  if(!c.inviteCode){ c.inviteCode=companyInviteCodeGen(); if(c.workplaces.length && c.activeId) companyPersistNoSync(); }
   return c.inviteCode;
 }
 function companyRegenerateCode(){
