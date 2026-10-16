@@ -1602,6 +1602,10 @@
     {
       "label": "Storage (JSON bytes)",
       "value": "18563895"
+    },
+    {
+      "label": "Heap used",
+      "value": "33.5 MB"
     }
   ],
   "progress": {
@@ -1621,7 +1625,7 @@
     "rosters": 3600,
     "staff": 2000
   },
-  "updatedAt": "2026-10-16T21:29:55.143+02:00",
+  "updatedAt": "2026-10-16T21:29:57.496+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
