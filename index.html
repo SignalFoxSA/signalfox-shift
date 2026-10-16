@@ -715,7 +715,7 @@
     </div>
     <div class="card" id="coRulesCard" style="display:none;">
       <h3>Company rules</h3>
-      <p class="sub">The company floor — every workplace follows these. Where a workplace is stricter, the stricter rule applies. Leave a rule unset to leave it to each workplace.</p>
+      <p class="sub">When any rule is set here, these company rules replace each workplace’s own rules entirely — the workplace rules fall away. When no company rule is set, each workplace’s own rules apply.</p>
       <div id="coRulesList"></div>
     </div>
     <div class="card">
@@ -971,7 +971,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1875';
+var BUILD='20261015-1880';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2232,7 +2232,8 @@ function renderCalMonth(ctx){
     rwWrap=document.createElement('div'); rwWrap.id='calRuleWrap';
     grid.parentNode.appendChild(rwWrap);
   }
-  rwWrap.innerHTML=rosterRulesHtml(rulesCheckRoster(R));
+  var rrResults=rulesCheckRoster(R);
+  rwWrap.innerHTML=rosterRulesHtml(rrResults.concat(rulesCheckRosterCompanyExtra(R, rrResults)));
   var cells=grid.querySelectorAll('.cell[data-d]');
   for(var i=0;i<cells.length;i++){
     (function(el){
@@ -3751,6 +3752,12 @@ function companyEnsure(){
     S.company={name:(S.base.name||'My Company'), rules:{}, workplaces:[], crossBaseLog:[]};
   }
   if(!S.company.rules || typeof S.company.rules!=='object') S.company.rules={};
+  /* Q6 invite code: generated once when the company profile is created
+     (existing companies get one on first load after this build) */
+  if(!S.company.inviteCode || typeof S.company.inviteCode!=='string'){
+    S.company.inviteCode=companyInviteCodeGen();
+    companyPersist();
+  }
   if(!Array.isArray(S.company.crossBaseLog)) S.company.crossBaseLog=[];
   if(!S.company.workplaces.length){
     if(!S._rostersLoaded) return S.company; /* migration waits until rosters are loaded */
@@ -3811,6 +3818,50 @@ function companyAddWorkplace(name){
   c.workplaces.push(w);
   companyPersist();
   return w;
+}
+/* ---------- Q6 — COMPANY INVITE CODE ----------
+   The company gets a short code; a base manager enters it to link their
+   base into the company. Local linking mechanism: the code is checked
+   against this company's code and the current base is marked linked.
+   Real server-side code validation / cross-account joining comes with
+   Phase 2 separate logins (Q7/Q10) — the role switcher stays the stand-in. */
+var CO_INVITE_CHARS='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+function companyInviteCodeGen(){
+  var out='';
+  for(var i=0;i<6;i++) out+=CO_INVITE_CHARS.charAt(Math.floor(Math.random()*CO_INVITE_CHARS.length));
+  return out;
+}
+function companyInviteCode(){
+  var c=companyEnsure(); if(!c) return '';
+  if(!c.inviteCode){ c.inviteCode=companyInviteCodeGen(); companyPersist(); }
+  return c.inviteCode;
+}
+function companyRegenerateCode(){
+  var c=companyEnsure(); if(!c) return;
+  if(!confirm('Generate a new company invite code? The old code will stop working.')) return;
+  c.inviteCode=companyInviteCodeGen(); companyPersist(); renderCompany();
+  toast('New invite code generated');
+}
+function companyJoinWithCode(raw){
+  var c=companyEnsure(); if(!c) return false;
+  var code=String(raw||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  var msgEl=document.getElementById('coJoinMsg');
+  function msg(t, ok){ if(msgEl){ msgEl.textContent=t; msgEl.style.color=ok?'var(--accent)':'#CC0000'; } }
+  if(!code){ msg('Enter the company invite code.', false); return false; }
+  if(code!==String(c.inviteCode||'').toUpperCase()){
+    msg('That code doesn\u2019t match a company. Check the code and try again.', false);
+    return false;
+  }
+  /* link the current base into the company (add it if it isn't listed) */
+  companySyncActive();
+  var wp=companyWorkplaceById(c.activeId);
+  if(!wp){ var snap=companySnapCurrent(); c.workplaces.push(snap); c.activeId=snap.id; wp=snap; }
+  wp.joinedViaCode=true; wp.joinedAt=new Date().toISOString();
+  companyPersist();
+  msg('This base is linked to the company.', true);
+  toast('Base linked to the company');
+  renderCompany();
+  return true;
 }
 function companySwitchWorkplace(id){
   var c=companyEnsure(); if(!c) return;
@@ -3982,6 +4033,15 @@ function companyDashHtml(){
 function companyBasesHtml(){
   var h='<h3 style="margin-top:4px;">Workplaces</h3>'
     +'<p class="sub">Each workplace keeps its own rosters, staff, qualifications and rules. Switch to a workplace to manage it.</p>'
+    +'<div class="card" style="padding:10px;"><h3>Company invite code</h3>'
+    +'<p class="sub">Share this code with a base to link it to this company. The base enters the code below and it links automatically.</p>'
+    +'<div style="font-size:28px;font-weight:800;letter-spacing:4px;margin:6px 0;" id="coInviteCode">'+escapeHtml(companyInviteCode())+'</div>'
+    +'<button class="btn ghost" onclick="companyRegenerateCode()">Generate new code</button></div>'
+    +'<div class="card" style="padding:10px;"><h3>Join this company</h3>'
+    +'<p class="sub">Enter the company invite code to link this base to the company.</p>'
+    +'<div style="display:flex;gap:6px;"><input id="coJoinCodeInp" placeholder="Invite code" maxlength="12" style="flex:1;min-width:0;text-transform:uppercase;">'
+    +'<button class="btn" style="margin-top:0;width:auto;flex:none;padding:12px 16px;" onclick="companyJoinWithCode(document.getElementById(\'coJoinCodeInp\').value)">Join</button></div>'
+    +'<p class="fine" id="coJoinMsg" style="margin:6px 0 0;"></p></div>'
     +companyWorkplaces().map(function(wp){
       var staffN=(wp.base.staff||[]).length;
       var teamN=(wp.base.vehicles||[]).length;
@@ -3990,6 +4050,7 @@ function companyBasesHtml(){
       var qualParts2=Object.keys(bst.quals).map(function(q){ return escapeHtml(q)+' '+bst.quals[q]; }).join(' \u00b7 ');
       return '<div class="card" style="padding:10px;"><div style="display:flex;justify-content:space-between;align-items:center;"><b>'+escapeHtml(wp.name||'Workplace')+'</b>'
         +(isActive?'<span class="fine">Active</span>':'')
+        +(wp.joinedViaCode?'<span class="fine">Linked via invite code</span>':'')
         +'</div><p class="fine">'+teamN+' team'+(teamN===1?'':'s')+' \u00b7 '+staffN+' staff</p>'
         +'<p class="fine">Today: '+bst.teams+' on \u00b7 '+bst.full+' staffed \u00b7 '+bst.open+' open \u00b7 '+bst.filled+' filled \u00b7 '+bst.openSlots+' open slots \u00b7 '+bst.sick.length+' sick \u00b7 '+bst.leave.length+' leave'+(qualParts2?' \u00b7 '+qualParts2:'')+'</p>'
         +'<div class="btnrow"><button class="btn" onclick="companySetDrill({type:\'base\', id:\''+wp.id+'\'})">View</button>'
@@ -4192,7 +4253,7 @@ function companyOpenShiftGo(idx){
   switchTab('rosters');
   openDaySheet(o.dateISO);
 }
-/* Company Rules form (the 9 rules + stricter-wins floor). Lives in Settings
+/* Company Rules form (the 9 rules — when any is set here, they replace base rules). Lives in Settings
    under "Company rules" when role = Company — NOT a Company tab. */
 function companyRulesFormHtml(){
   var r=(S.company&&S.company.rules)||{};
@@ -4240,7 +4301,7 @@ function renderCompanyRulesInSettings(){
      (a subset of overtime) and is shown separately.
    - Violations: the same 9-rule engine (rulesCheckShifts) run on each
      person's shifts within the selected month, with the merged
-     (stricter-wins) rules — labelled "this month's shifts". */
+     (the one active rule set — company rules when set, else the active base’s rules) — labelled "this month’s shifts". */
 function companyStatsYmGet(){
   var c=S.company;
   if(c && c.statsYm) return c.statsYm;
@@ -4326,16 +4387,7 @@ function companyMonthStats(y, m, withViol){
     Object.keys(peopleSet).sort().forEach(function(nm){
       var shifts=companyPersonShifts(nm).filter(function(s){ return s.dateISO.slice(0,7)===ym; });
       if(!shifts.length) return;
-      var merged=(S.company&&S.company.rules)?JSON.parse(JSON.stringify(S.company.rules)):{};
-      var basesSeen={};
-      shifts.forEach(function(s){
-        if(s.workplaceId && !basesSeen[s.workplaceId]){
-          basesSeen[s.workplaceId]=1;
-          var wpx=companyWorkplaceById(s.workplaceId);
-          if(wpx && wpx.base) merged=rulesMergeStricter(merged, wpx.base.rules||{});
-        }
-      });
-      rulesCheckShifts(shifts, nm, merged).forEach(function(v){
+      rulesCheckShifts(shifts, nm, rulesEffectiveObj()).forEach(function(v){
         var lab=v.split(':')[0]||'Rule';
         byLabel[lab]=(byLabel[lab]||0)+1;
         items.push(v);
@@ -4508,7 +4560,7 @@ function companyDrillHtml(drill){
     var sp=companyStatsYmGet().split('-');
     var st2=companyMonthStats(+sp[0], +sp[1]-1, true);
     h+='Rule violations — '+escapeHtml(st2.label)+'</h3>';
-    h+='<p class="sub">Violations found in this month\u2019s shifts (same 9-rule engine, stricter-wins rules).</p>';
+    h+='<p class="sub">Violations found in this month\u2019s shifts (same 9-rule engine, company rules when set, else base rules).</p>';
     if(!st2.violItems.length) h+='<p class="fine">No violations in this month.</p>';
     st2.violItems.forEach(function(v){ h+='<div style="font-size:14px;color:#CC0000;margin-bottom:2px;">'+escapeHtml(v)+'</div>'; });
   } else if(drill.type==='open'){ h+='Open shifts — '+dateLbl+'</h3>';
@@ -5890,6 +5942,7 @@ function rulesObj(){
 }
 function openRules(){ renderRules(); show('v-rules'); }
 function rulesSet(key, raw, kind){
+  if(companyRulesSetAny()) return; /* base rules fall away while any company rule is set */
   var r=rulesObj();
   if(kind==='yesno'){
     r[key]=(raw==='yes');
@@ -5915,19 +5968,14 @@ function renderRules(){
     {key:'workHolidays', label:'Work public holidays', desc:'Do staff work on public holidays (from your Settings)?', type:'yesno'},
     {key:'weekendsOff', label:'Weekends off per month', desc:'How many weekends (Saturday + Sunday) off someone gets each month.', type:'pick', opts:[null,1,2,3,'all'], unit:'weekends'}
   ];
-  var eff=rulesEffectiveObj();
-  var co=(S.company&&S.company.rules)||{};
+  var coSet=companyRulesSetAny();
   var out='';
+  if(coSet) out+='<div class="card" style="margin:0 0 10px;border:2px solid var(--accent);padding:10px;"><b>Company rules are in effect</b><p class="sub" style="margin:4px 0 0;">The company has set its own rules, so these base rules don\u2019t apply. To change the rules, edit them in Settings \u2192 Company rules.</p></div>';
   defs.forEach(function(d){
     var cur=r[d.key];
-    var effNote='';
-    if(co[d.key]!==undefined&&co[d.key]!==null && String(eff[d.key])!==String(cur)){
-      var effLab=(eff[d.key]===false)?'No':(eff[d.key]===true)?'Yes':(eff[d.key]==='all')?'All':String(eff[d.key]);
-      effNote='<p class="fine" style="color:var(--accent);margin:6px 0 0;">Effective: '+escapeHtml(effLab)+(d.unit?' '+escapeHtml(d.unit):'')+' — company floor applies</p>';
-    }
     var ctl='';
     if(d.type==='pick'){
-      ctl='<select onchange="rulesSet(\''+d.key+'\', this.value, \'pick\')">'+d.opts.map(function(o){
+      ctl='<select'+(coSet?' disabled':'')+' onchange="rulesSet(\''+d.key+'\', this.value, \'pick\')">'+d.opts.map(function(o){
         var val=(o===null?'':String(o));
         var lab=(o===null?'None':(o==='all'?'All':String(o)));
         var sel=((cur==null&&o===null)||(cur!=null&&String(cur)===String(o)))?' selected':'';
@@ -5935,9 +5983,9 @@ function renderRules(){
       }).join('')+'</select>';
     }else if(d.type==='yesno'){
       var yesVal=(cur===undefined||cur===null)?true:!!cur;
-      ctl='<select onchange="rulesSet(\''+d.key+'\', this.value, \'yesno\')"><option value="yes"'+(yesVal?' selected':'')+'>Yes</option><option value="no"'+(!yesVal?' selected':'')+'>No</option></select>';
+      ctl='<select'+(coSet?' disabled':'')+' onchange="rulesSet(\''+d.key+'\', this.value, \'yesno\')"><option value="yes"'+(yesVal?' selected':'')+'>Yes</option><option value="no"'+(!yesVal?' selected':'')+'>No</option></select>';
     }
-    out+='<div class="card" style="margin:0 0 10px;"><b>'+escapeHtml(d.label)+'</b><p class="sub" style="margin:4px 0 8px;">'+escapeHtml(d.desc)+'</p>'+ctl+(d.unit?' <span class="fine">'+escapeHtml(d.unit)+'</span>':'')+effNote+'</div>';
+    out+='<div class="card" style="margin:0 0 10px;"><b>'+escapeHtml(d.label)+'</b><p class="sub" style="margin:4px 0 8px;">'+escapeHtml(d.desc)+'</p>'+ctl+(d.unit?' <span class="fine">'+escapeHtml(d.unit)+'</span>':'')+'</div>';
   });
   wrap.innerHTML=out;
 }
@@ -6149,10 +6197,10 @@ function rulesCheckPersonFor(R, personName, base, rules){
   return rulesCheckShifts(rulesPersonShiftsFor(R, personName, base), personName, rules||rulesEffectiveObj(base.rules));
 }
 /* company-wide check: merge one person's shifts from ALL workplaces'
-   rosters into one timeline and run the same 9 checks. Rules used =
-   strictest across the company rules + every base where the person has
-   shifts (company rules for the check are the strictest set that could
-   apply to them). extraShift (optional) is a hypothetical shift to include
+   rosters into one timeline and run the same 9 checks. Rules used = the
+   one active rule set (Q1): company rules when any is set, else the
+   active base's rules as the single rule set for the merged timeline.
+   extraShift (optional) is a hypothetical shift to include
    (e.g. a cross-base cover being evaluated). */
 function companyPersonShifts(personName, extraShift){
   var all=[];
@@ -6173,17 +6221,7 @@ function companyPersonShifts(personName, extraShift){
 }
 function rulesCheckPersonCompany(personName, extraShift){
   var shifts=companyPersonShifts(personName, extraShift);
-  var merged=(S.company&&S.company.rules)?JSON.parse(JSON.stringify(S.company.rules)):{};
-  /* strictest across every base where the person has shifts */
-  var basesSeen={};
-  shifts.forEach(function(s){
-    if(s.workplaceId && !basesSeen[s.workplaceId]){
-      basesSeen[s.workplaceId]=1;
-      var wp=companyWorkplaceById(s.workplaceId);
-      if(wp && wp.base) merged=rulesMergeStricter(merged, wp.base.rules||{});
-    }
-  });
-  return rulesCheckShifts(shifts, personName, merged);
+  return rulesCheckShifts(shifts, personName, rulesEffectiveObj());
 }
 
 /* check EVERYONE on a roster -> [{person, violations[]}] (only people with violations) */
@@ -6212,12 +6250,14 @@ function rulesConfirmViolations(violations, label){
   return confirm(msg);
 }
 /* HTML for the Rule warnings section under the calendar (like the Leave list) */
+/* results entries may carry company:true (Q5) — those lines are prefixed
+   "Company: " so the manager can tell company-level violations apart. */
 function rosterRulesHtml(results){
   if(!results||!results.length) return '';
   var h='<div style="margin-top:16px;"><div style="font-size:15px;font-weight:800;margin-bottom:6px;">Rule warnings</div>';
   results.forEach(function(r){
     r.violations.forEach(function(v){
-      h+='<div style="font-size:14px;color:#CC0000;margin-bottom:2px;">'+escapeHtml(v)+'</div>';
+      h+='<div style="font-size:14px;color:#CC0000;margin-bottom:2px;">'+escapeHtml((r.company?'Company: ':'')+v)+'</div>';
     });
   });
   return h+'</div>';
@@ -6993,38 +7033,57 @@ function holMapForBase(base, y){
   }catch(e){}
   return null;
 }
-/* merge company rules + base rules, stricter wins (spec Option B).
-   restBetween/restAfterNights: higher = stricter. maxContinuous/maxConsecutive/
-   maxHours/maxOvertime: lower = stricter. backToBack/workHolidays: No = stricter.
-   weekendsOff: 'all' strictest, else higher = stricter. Off in one + on in the
-   other = on wins (a base turning a rule off never undercuts a company rule). */
-function rulesMergeStricter(companyRules, baseRules){
-  var out={};
-  var keys=['restBetween','backToBack','maxContinuous','restAfterNights','maxConsecutiveShifts','maxHoursMonth','maxOvertimeShifts','workHolidays','weekendsOff'];
-  keys.forEach(function(k){
-    var co=companyRules?companyRules[k]:undefined;
-    var ba=baseRules?baseRules[k]:undefined;
-    var coOn=(co!==undefined&&co!==null), baOn=(ba!==undefined&&ba!==null);
-    if(!coOn && !baOn) return;
-    if(coOn && !baOn){ out[k]=co; return; }
-    if(!coOn && baOn){ out[k]=ba; return; }
-    if(k==='restBetween'||k==='restAfterNights'){ out[k]=Math.max(+co,+ba); }
-    else if(k==='maxContinuous'||k==='maxConsecutiveShifts'||k==='maxHoursMonth'||k==='maxOvertimeShifts'){ out[k]=Math.min(+co,+ba); }
-    else if(k==='backToBack'||k==='workHolidays'){ out[k]=(co===false||ba===false)?false:true; }
-    else if(k==='weekendsOff'){
-      if(co==='all'||ba==='all') out[k]='all';
-      else out[k]=Math.max(+co,+ba);
-    }
-  });
-  return out;
+/* Q1 — ONE set of rules. If ANY company rule is set, the company rules
+   replace base rules entirely (base rules fall away). If NO company rule
+   is set, the base's own rules apply (manager-only case). No merging
+   — only one set of rules is ever active. */
+function companyRulesSetAny(){
+  var r=(S.company&&S.company.rules)||{};
+  return Object.keys(r).some(function(k){ return r[k]!==undefined&&r[k]!==null; });
 }
-/* effective rules for a base: company rules merged with that base's own rules.
-   With no company rules set, this is exactly the base's own rules. */
+/* effective rules for a base: company rules when any is set, else that
+   base's own rules. baseRules defaults to the active base's rules. */
 function rulesEffectiveObj(baseRules){
-  var c=S.company;
-  var co=(c&&c.rules)?c.rules:{};
+  if(companyRulesSetAny()){
+    var co=(S.company&&S.company.rules)||{};
+    return JSON.parse(JSON.stringify(co));
+  }
   var ba=baseRules||((S.base&&S.base.rules)||{});
-  return rulesMergeStricter(co, ba);
+  return JSON.parse(JSON.stringify(ba));
+}
+/* people on a roster (same set rulesCheckRoster uses) */
+function rulesRosterPeople(R){
+  var people={};
+  (R.crews||[]).forEach(function(c){ (c.members||[]).forEach(function(nm){ if(nm&&nm!==OPEN_MARK) people[nm]=1; }); });
+  Object.keys(R.memberOverrides||{}).forEach(function(dateISO){
+    var per=R.memberOverrides[dateISO]||{};
+    Object.keys(per).forEach(function(sid){
+      (per[sid]||[]).forEach(function(nm){ if(nm&&nm!==OPEN_MARK) people[nm]=1; });
+    });
+  });
+  return Object.keys(people).sort();
+}
+/* Q5 — company-level violations for people on THIS roster that are NOT
+   already shown by the per-roster check (dedup by identical message text).
+   Returned entries carry company:true so the warnings list labels them.
+   Calendar dot / day sheet are untouched (day-based; company violations
+   like monthly hours don't map to one day on this roster). */
+function rulesCheckRosterCompanyExtra(R, perRosterResults){
+  var out=[];
+  try{
+    var perMap={};
+    (perRosterResults||[]).forEach(function(r){
+      perMap[r.person]={};
+      (r.violations||[]).forEach(function(v){ perMap[r.person][v]=1; });
+    });
+    rulesRosterPeople(R).forEach(function(nm){
+      var extra=rulesCheckPersonCompany(nm).filter(function(v){
+        return !(perMap[nm]&&perMap[nm][v]);
+      });
+      if(extra.length) out.push({person:nm, violations:extra, company:true});
+    });
+  }catch(e){}
+  return out;
 }
 
 function migrateShifts(){
