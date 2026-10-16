@@ -1120,7 +1120,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1980';
+var BUILD='20261015-1981';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -6191,6 +6191,65 @@ function companyDashToday(){
   var c=companyEnsure(); if(!c) return;
   c.dashDateISO=isoDate(new Date()); companyPersist(); renderCompany();
 }
+/* Staffing Heatmap (Company Dashboard): one row per base, one column per day
+   for the next 14 days from today. Each cell counts real roster slots for that
+   base on that day — filled vs open (OPEN_MARK) — using the same counting as
+   companyTodayStats. Colours: green = fully staffed (100% filled),
+   amber = short (50-99% filled), red = very short (<50% filled),
+   grey = no roster / no slots that day (never faked as staffed). */
+function companyHeatmapCell(wp, dateISO){
+  var total=0, filled=0, open=0;
+  (wp.rosters||[]).forEach(function(u){
+    var R=u.roster;
+    if(!rosterCoversDate(R, dateISO)) return;
+    var di=dayDiff(parseISO(R.startISO), parseISO(dateISO));
+    if(di<0||di>=R.days) return;
+    calSlotCrewsFor(wp.base, R, di).forEach(function(ps){
+      ps.list.forEach(function(x){
+        effShiftMembers(R, dateISO, ps.sl.id, x.c).forEach(function(nm){
+          total++;
+          if(nm===OPEN_MARK) open++; else filled++;
+        });
+      });
+    });
+  });
+  if(!total) return {total:0, filled:0, open:0, level:'nodata'};
+  var rate=filled/total;
+  var level=(rate===1)?'full':(rate>=0.5?'short':'critical');
+  return {total:total, filled:filled, open:open, level:level};
+}
+function companyHeatmapHtml(){
+  var wps=companyWorkplaces();
+  var h='<div id="companyHeatmap"><h3 style="margin-top:14px;">Staffing Heatmap</h3>'
+    +'<p class="sub">Filled vs open slots per base, next 14 days. Green = fully staffed &middot; Amber = short &middot; Red = very short &middot; Grey = no roster.</p>';
+  if(!wps.length){ return h+'<p class="fine">No workplaces yet.</p></div>'; }
+  var d0=parseISO(isoDate(new Date()));
+  var dates=[];
+  for(var i=0;i<14;i++){ var d=new Date(d0); d.setDate(d0.getDate()+i); dates.push(isoDate(d)); }
+  var WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var style={full:'background:#51CF66;color:#141414;', short:'background:#FFC13E;color:#141414;', critical:'background:#CC0000;color:#ffffff;', nodata:'background:rgba(128,128,128,0.18);color:var(--muted);'};
+  var label={full:'Fully staffed', short:'Short', critical:'Very short', nodata:'No roster'};
+  h+='<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px;font-size:12px;">'
+    +'<span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#51CF66;vertical-align:middle;"></span> Fully staffed</span>'
+    +'<span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#FFC13E;vertical-align:middle;"></span> Short</span>'
+    +'<span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#CC0000;vertical-align:middle;"></span> Very short</span>'
+    +'<span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(128,128,128,0.35);vertical-align:middle;"></span> No roster</span></div>';
+  h+='<div style="overflow-x:auto;"><table style="border-collapse:separate;border-spacing:3px;min-width:660px;width:100%;"><thead><tr>'
+    +'<th style="text-align:left;font-size:12px;padding:6px 4px;white-space:nowrap;min-width:92px;">Base</th>'
+    +dates.map(function(ds){ var pd=parseISO(ds); return '<th style="font-size:11px;padding:6px 2px;min-width:42px;text-align:center;">'+WD[pd.getDay()]+'<br>'+pd.getDate()+'</th>'; }).join('')
+    +'</tr></thead><tbody>';
+  wps.forEach(function(wp){
+    h+='<tr><td style="font-size:12px;font-weight:700;padding:6px 4px;white-space:nowrap;">'+escapeHtml(wp.name||'Workplace')+'</td>';
+    dates.forEach(function(ds){
+      var cell=companyHeatmapCell(wp, ds);
+      var txt=cell.level==='nodata'?'&mdash;':(cell.filled+'/'+cell.total);
+      h+='<td data-heatmap-cell="1" data-base="'+escapeHtml(wp.name||'Workplace')+'" data-date="'+ds+'" data-level="'+cell.level+'" data-filled="'+cell.filled+'" data-open="'+cell.open+'" data-total="'+cell.total+'" title="'+escapeHtml(wp.name||'Workplace')+' '+ds+': '+label[cell.level]+' ('+cell.filled+' filled, '+cell.open+' open of '+cell.total+')" style="text-align:center;font-size:12px;font-weight:700;padding:8px 2px;border-radius:6px;white-space:nowrap;'+style[cell.level]+'">'+txt+'</td>';
+    });
+    h+='</tr>';
+  });
+  h+='</tbody></table></div></div>';
+  return h;
+}
 function companyDashHtml(){
   var c=S.company;
   var tISO=companyDashDateISO();
@@ -6213,6 +6272,7 @@ function companyDashHtml(){
     +'<div class="avail" onclick="companySetDrill({type:\'leave\'})"><span><span class="nm">On leave</span> <span class="meta">'+st.leave.length+' person'+(st.leave.length===1?'':'s')+'</span></span><span class="meta">View</span></div>'
     +'<div class="avail" onclick="companySetDrill({type:\'filled\'})"><span><span class="nm">Shifts filled vs open</span> <span class="meta">'+st.filled+' filled \u00b7 '+st.openSlots+' open</span></span><span class="meta">View</span></div>'
     +'</div>'
+    +companyHeatmapHtml()
     +'<h3 style="margin-top:14px;">Workplaces</h3>'
     +companyWorkplaces().map(function(wp){
       var staffN=(wp.base.staff||[]).length;
