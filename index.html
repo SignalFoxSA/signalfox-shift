@@ -1138,7 +1138,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1985';
+var BUILD='20261015-1986';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -11058,19 +11058,45 @@ function expData(){
       dark:expMix(col,'#000000',0.45),
       names:nm.length?nm.map(dispMemberQual):[label]};
   });
-  var pairs=[], pairsMembers=[], changedDays=[];
+  var pairs=[], pairsMembers=[], changedDays=[], changedShifts=[], openShifts=[];
   for(var d=1;d<=dim;d++){
     var info=calRosterDay(R,y,m,d);
-    if(!info){ pairs.push(null); pairsMembers.push(null); changedDays.push(false); continue; }
+    if(!info){ pairs.push(null); pairsMembers.push(null); changedDays.push(false);
+      changedShifts.push(rslots.map(function(){ return false; }));
+      openShifts.push(rslots.map(function(){ return false; }));
+      continue; }
     var per=calSlotCrews(R,info.dayIdx), row=[], mrow=[];
     var dateISO=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-    /* AUDIT TRAIL: a day counts as changed exactly when the in-app calendar
-       marks it changed (yellow border): a manual crew override for that day
-       (R.overrides) OR a member-level edit for that date (memberOverrides —
-       written by leave / replacement / swap / cover / manual edit flows). */
+    /* AUDIT TRAIL (day level, for Text — unchanged): a day counts as changed
+       exactly when the in-app calendar marks it changed (yellow border): a
+       manual crew override for that day (R.overrides) OR a member-level edit
+       for that date (memberOverrides — written by leave / replacement /
+       swap / cover / manual edit flows). */
     var ed=R.crews.some(function(c,ci){ return (R.overrides||{})[info.dayIdx+':'+ci]; });
     var med=R.memberOverrides&&R.memberOverrides[dateISO];
     changedDays.push(!!(ed||med));
+    /* PER-SHIFT marks (Excel / PDF / PNG): each shift block gets its own
+       mark — a changed Day must NOT mark the Night block, and vice versa.
+       changed = member edit for THIS shift (memberOverrides[date][shiftId])
+       OR a crew override that moved a crew onto / off THIS shift (compare
+       the crew's base shift with its overridden shift, so a crew moved
+       Day -> Night marks BOTH shifts). open = the displayed block's
+       effective members still contain an OPEN slot. */
+    var chgRow=rslots.map(function(){ return false; });
+    var moDay=R.memberOverrides&&R.memberOverrides[dateISO];
+    if(moDay){
+      rslots.forEach(function(sl,si){ if(moDay[sl.id]) chgRow[si]=true; });
+    }
+    R.crews.forEach(function(c,ci){
+      if((R.overrides||{})[info.dayIdx+':'+ci]===undefined) return;
+      var curr=cellState(R,info.dayIdx,ci);
+      var orig=baseState(R.rotation,ci,info.dayIdx+(R.anchorAbs||0));
+      if(orig!=='OFF'&&R.shiftIds&&R.shiftIds.length&&R.shiftIds.indexOf(orig)<0) orig='OFF';
+      [orig,curr].forEach(function(st){
+        if(!st||st==='OFF') return;
+        rslots.forEach(function(sl,si){ if(sl.id===st) chgRow[si]=true; });
+      });
+    });
     rslots.forEach(function(sl){
       var ci=-1, crew=null;
       for(var i=0;i<per.length;i++){
@@ -11080,6 +11106,10 @@ function expData(){
       /* effective members: day override wins over crew roster */
       mrow.push(ci>=0?effShiftMembers(R, dateISO, sl.id, crew):[]);
     });
+    var openRow=rslots.map(function(sl,si){
+      return row[si]>=0 && mrow[si].indexOf(OPEN_MARK)>=0;
+    });
+    changedShifts.push(chgRow); openShifts.push(openRow);
     pairs.push(row); pairsMembers.push(mrow);
   }
   var expPerson=S.expPerson;
@@ -11106,6 +11136,20 @@ function expData(){
       }
     }catch(e){}
   }
+  /* Per-shift marks follow the DISPLAYED slots only: a filtered-out slot
+     (or a day with no personal shift) carries no mark in this export, so
+     the legend only appears when a displayed block is actually marked. */
+  var hasChangedShifts=false, hasOpenShifts=false;
+  try{
+    for(var fd2=0; fd2<pairs.length; fd2++){
+      var pr2=pairs[fd2];
+      for(var si2=0; si2<nsh; si2++){
+        if(!pr2||pr2[si2]<0){ changedShifts[fd2][si2]=false; openShifts[fd2][si2]=false; }
+        if(changedShifts[fd2][si2]) hasChangedShifts=true;
+        if(openShifts[fd2][si2]) hasOpenShifts=true;
+      }
+    }
+  }catch(e){}
   var title=(expPerson?expPerson+' \u2014 ':'')+vname+' \u2014 '+MN[m]+' '+y, sub;
   try{
     var stT={rotation:R.rotation, startTime:v.startTime||'06:00', shiftLen:rot.hours||12};
@@ -11118,6 +11162,8 @@ function expData(){
   var leaveEntries=collectLeaveEntries(R,y,m,expPerson||null);
   return {y:y, m:m, dim:dim, title:title, sub:sub, expPerson:expPerson, expColor:expColor, leave:leaveEntries,
     changedDays:changedDays, hasChanges:changedDays.some(function(x){ return x; }),
+    changedShifts:changedShifts, openShifts:openShifts,
+    hasChangedShifts:hasChangedShifts, hasOpenShifts:hasOpenShifts,
     subXlsx:sub.replace(/ rotation/,''),
     footer:'Generated with SignalFox Shift · build '+BUILD,
     vname:vname,
@@ -11194,6 +11240,25 @@ function expBuildText(E, mode){
   L.push('', E.footer);
   return L.join('\n');
 }
+/* ---- Per-shift export marks (Excel / PDF / PNG) ----
+   Returns 'red' | 'gold' | '' for one displayed shift block.
+   OPEN BEATS CHANGED (same as the in-app calendar): a shift that is both
+   changed AND still has an Open member gets the RED border, not gold.
+   A changed, fully-filled shift gets the GOLD border. Unchanged + filled
+   gets no border. The block ALWAYS keeps its crew-colour fill — the mark
+   is a border only, never a fill. */
+function expShiftMark(E, day, si, pr){
+  if(!pr||pr[si]<0) return '';
+  if(E.openShifts&&E.openShifts[day-1]&&E.openShifts[day-1][si]) return 'red';
+  if(E.changedShifts&&E.changedShifts[day-1]&&E.changedShifts[day-1][si]) return 'gold';
+  return '';
+}
+/* One member name as HTML for the PDF/PNG grid: an Open slot renders in
+   red bold (as in-app); real names render plain (already qual-suffixed). */
+function expNameHtml(nm){
+  if(nm===OPEN_MARK) return '<span style="color:#CC0000;font-weight:800;">Open</span>';
+  return escapeHtml(dispMemberQual(nm));
+}
 /* ---- Excel export (LOCKED 14 Oct 2026) ----
    Manager: date row + Day block row + Night block row per week. Full crew colours. No times.
    Personal: date row + one block row per week. Profile colour. Times included. Off-days empty white.
@@ -11203,10 +11268,13 @@ function expBuildWorkbook(E, mode){
   var cells=expMonthCells(E.y,E.m), weeks=Math.ceil(cells.length/7);
   var rowsPerWeek=isPersonal?2:3;
   var leaveCount=(E.leave&&E.leave.length)?E.leave.length+1:0; // +1 for Leave header
-  /* AUDIT TRAIL: one legend line explaining the gold border — only when
-     the roster has changes, so unchanged exports are byte-identical in layout. */
-  var changedNote=E.hasChanges?1:0;
-  var totalRows=3+weeks*rowsPerWeek+1+E.crews.length+leaveCount+changedNote+1;
+  /* Legend lines (only when a DISPLAYED block is actually marked, so
+     unchanged exports are byte-identical in layout): gold = a displayed
+     shift changed; red = a displayed shift still has an Open member. */
+  var goldNote=E.hasChangedShifts?1:0;
+  var redNote=E.hasOpenShifts?1:0;
+  var legendLines=goldNote+redNote;
+  var totalRows=3+weeks*rowsPerWeek+1+E.crews.length+leaveCount+legendLines+1;
   var rows=[];
   for(var r=0;r<totalRows;r++) rows.push(['','','','','','','']);
   var ws=XLSX.utils.aoa_to_sheet(rows);
@@ -11214,11 +11282,16 @@ function expBuildWorkbook(E, mode){
   var BLACK='FF000000';
   var bdrThin={style:'thin',color:{rgb:'FFBFBFBF'}};
   var bdrMed={style:'medium',color:{rgb:'FF333333'}};
-  /* AUDIT TRAIL: changed days get a GOLD border (same gold as the app's
-     changed-day yellow border) instead of the standard border. */
+  /* Per-shift borders: a marked shift block gets ONLY a coloured border
+     (gold = changed, red = open, open beats changed) on all four sides;
+     the block keeps its crew-colour fill. Unmarked cells keep the
+     standard thin/medium border. The date cell is never marked — it is
+     not a shift block. */
   var bdrGold={style:'medium',color:{rgb:'FFFFC13E'}};
-  function dayBorder(col, isFirst, isLast, isTop, isBottom, changed){
-    if(changed) return {top:bdrGold, bottom:bdrGold, left:bdrGold, right:bdrGold};
+  var bdrRed={style:'medium',color:{rgb:'FFCC0000'}};
+  function shiftBorder(col, isTop, isBottom, mark){
+    if(mark==='gold') return {top:bdrGold, bottom:bdrGold, left:bdrGold, right:bdrGold};
+    if(mark==='red') return {top:bdrRed, bottom:bdrRed, left:bdrRed, right:bdrRed};
     return {top:isTop?bdrMed:bdrThin, bottom:isBottom?bdrMed:bdrThin,
       left:col===0?bdrMed:bdrThin, right:col===6?bdrMed:bdrThin};
   }
@@ -11242,21 +11315,19 @@ function expBuildWorkbook(E, mode){
       if(!c.inMonth){
         set(dateAddr,String(c.date),{font:{sz:12,color:{rgb:'FF999999'}},
           fill:{patternType:'solid',fgColor:{rgb:'FFF2F2F2'}},
-          border:dayBorder(col,true,false,true,false)});
+          border:shiftBorder(col,true,false,'')});
         set(blockAddr,'',{fill:{patternType:'solid',fgColor:{rgb:'FFF2F2F2'}},
-          border:dayBorder(col,false,false,false,!isPersonal)});
+          border:shiftBorder(col,false,!isPersonal,'')});
         if(!isPersonal) set(nightAddr,'',{fill:{patternType:'solid',fgColor:{rgb:'FFF2F2F2'}},
-          border:dayBorder(col,false,true,false,true)});
+          border:shiftBorder(col,false,true,'')});
         continue;
       }
       var pr=E.pairs[c.date-1];
       var pm=((E.pairsMembers||[])[c.date-1])||[];
-      /* AUDIT TRAIL: gold border on changed days (see expData). */
-      var chg=E.changedDays&&E.changedDays[c.date-1];
-      // Date cell: always white
+      // Date cell: always white, never marked (it is not a shift block)
       set(dateAddr,String(c.date),{font:{sz:12,bold:true,color:{rgb:BLACK}},
         fill:{patternType:'solid',fgColor:{rgb:'FFFFFFFF'}},
-        border:dayBorder(col,true,false,true,false,chg)});
+        border:shiftBorder(col,true,false,'')});
       if(isPersonal){
         // Personal: ONE block — Day OR Night (person is only on one shift/day)
         var foundIdx=-1, foundShift=null;
@@ -11270,11 +11341,11 @@ function expBuildWorkbook(E, mode){
           set(blockAddr,v,{font:{sz:12,bold:true,color:{rgb:BLACK}},
             alignment:{horizontal:'left',vertical:'top',wrapText:true},
             fill:{patternType:'solid',fgColor:{rgb:bg}},
-            border:dayBorder(col,false,true,false,true,chg)});
+            border:shiftBorder(col,false,true,expShiftMark(E,c.date,foundIdx,pr))});
         }else{
           // Off day: empty white, NO black
           set(blockAddr,'',{fill:{patternType:'solid',fgColor:{rgb:'FFFFFFFF'}},
-            border:dayBorder(col,false,true,false,true,chg)});
+            border:shiftBorder(col,false,true,'')});
         }
       }else{
         // Manager: Day block + Night block, full crew colours, NO times
@@ -11289,10 +11360,10 @@ function expBuildWorkbook(E, mode){
           set(blockAddr,dv,{font:{sz:12,bold:true,color:{rgb:BLACK}},
             alignment:{horizontal:'left',vertical:'top',wrapText:true},
             fill:{patternType:'solid',fgColor:{rgb:'FF'+dcrew.color.replace('#','')}},
-            border:dayBorder(col,false,false,false,false,chg)});
+            border:shiftBorder(col,false,false,expShiftMark(E,c.date,dayIdx,pr))});
         }else{
           set(blockAddr,'',{fill:{patternType:'solid',fgColor:{rgb:'FFFFFFFF'}},
-            border:dayBorder(col,false,false,false,false,chg)});
+            border:shiftBorder(col,false,false,'')});
         }
         if(nightIdx>=0){
           var ncrew=E.crews[pr[nightIdx]];
@@ -11301,10 +11372,10 @@ function expBuildWorkbook(E, mode){
           set(nightAddr,nv,{font:{sz:12,bold:true,color:{rgb:BLACK}},
             alignment:{horizontal:'left',vertical:'top',wrapText:true},
             fill:{patternType:'solid',fgColor:{rgb:'FF'+ncrew.color.replace('#','')}},
-            border:dayBorder(col,false,true,false,true,chg)});
+            border:shiftBorder(col,false,true,expShiftMark(E,c.date,nightIdx,pr))});
         }else{
           set(nightAddr,'',{fill:{patternType:'solid',fgColor:{rgb:'FFFFFFFF'}},
-            border:dayBorder(col,false,true,false,true,chg)});
+            border:shiftBorder(col,false,true,'')});
         }
       }
     }
@@ -11327,12 +11398,17 @@ function expBuildWorkbook(E, mode){
     });
   }
   var noteRow=legRow+E.crews.length+leaveCount;
-  if(E.hasChanges){
-    set('B'+noteRow,'Gold border = changed day (leave / replacement / swap / manual edit)',
+  if(E.hasChangedShifts){
+    set('B'+noteRow,'Gold border = changed shift (leave / replacement / swap / manual edit)',
       {font:{sz:12,color:{rgb:BLACK}}});
     ws['!merges'].push({s:{r:noteRow-1,c:1},e:{r:noteRow-1,c:6}});
   }
-  var fRow=noteRow+changedNote;
+  if(E.hasOpenShifts){
+    set('B'+(noteRow+goldNote),'Red border = open shift',
+      {font:{sz:12,color:{rgb:BLACK}}});
+    ws['!merges'].push({s:{r:noteRow+goldNote-1,c:1},e:{r:noteRow+goldNote-1,c:6}});
+  }
+  var fRow=noteRow+legendLines;
   set('A'+fRow,E.footer,{font:{sz:11,color:{rgb:'FF999999'}}});
   ws['!merges'].push({s:{r:fRow-1,c:0},e:{r:fRow-1,c:6}});
   ws['!cols']=Array(7).fill({wch:26});
@@ -11369,21 +11445,28 @@ function expGridEl(E, mode, variant){
   });
   h+='</div>';
   var cells=expMonthCells(E.y,E.m);
+  /* Per-shift mark → real CSS border on the block. MUST be a real border,
+     NOT box-shadow:inset: html2canvas (PNG/PDF) renders an inset shadow
+     as a SOLID FILL over the whole block — that is exactly the "solid
+     gold block" bug. border-box keeps the block the same size. */
+  function markSh(mark){
+    if(mark==='gold') return 'box-sizing:border-box;border:2px solid #FFC13E;';
+    if(mark==='red') return 'box-sizing:border-box;border:2px solid #CC0000;';
+    return '';
+  }
   for(var wi=0;wi<cells.length;wi+=7){
     h+='<div style="display:flex;">';
     for(var ci=0;ci<7;ci++){
       var idx=wi+ci, c=cells[idx];
       var pr=c.inMonth?E.pairs[c.date-1]:null;
       var pm=c.inMonth?(((E.pairsMembers||[])[c.date-1])||[]):[];
-      /* AUDIT TRAIL: gold inset border on changed days (same gold as the
-         app's changed-day border). The shadow is applied to the date row
-         AND each block row: opaque block backgrounds would paint over a
-         shadow on the outer day div alone, hiding it. Unchanged days
+      /* PER-SHIFT marks: each shift block gets its own real border (gold =
+         changed, red = open, open beats changed) via expShiftMark. The
+         date row is never marked — it is not a shift block. The border
+         sits on each block div itself: opaque block backgrounds would
+         paint over a border on the outer day div alone. Unmarked blocks
          render exactly as before. */
-      var chg=c.inMonth&&E.changedDays&&E.changedDays[c.date-1];
-      var chgSh=chg?'box-shadow:inset 0 0 0 3px #FFC13E;':'';
-      var dayStyle='flex:1;box-sizing:border-box;border-right:2px solid #333;border-bottom:2px solid #333;'
-        +(chg?'box-shadow:inset 0 0 0 3px #FFC13E;':'');
+      var dayStyle='flex:1;box-sizing:border-box;border-right:2px solid #333;border-bottom:2px solid #333;';
       if(!pr){
         h+='<div style="'+dayStyle+'">'
           +'<div style="font-size:14px;font-weight:700;padding:6px 8px;background:#F2F2F2;color:#999;">'+c.date+'</div>'
@@ -11392,20 +11475,21 @@ function expGridEl(E, mode, variant){
         continue;
       }
       var dayHtml='<div style="'+dayStyle+'">'
-        +'<div style="font-size:14px;font-weight:700;padding:6px 8px;background:#FFFFFF;'+chgSh+'">'+c.date+'</div>';
+        +'<div style="font-size:14px;font-weight:700;padding:6px 8px;background:#FFFFFF;">'+c.date+'</div>';
       if(isPersonal){
         var foundIdx=-1, foundShift=null;
         E.shifts.forEach(function(s,i){ if(pr[i]>=0&&foundIdx<0){ foundIdx=i; foundShift=s; } });
         if(foundIdx>=0){
           var crew=E.crews[pr[foundIdx]];
-          var names=(pm[foundIdx]&&pm[foundIdx].length)?pm[foundIdx].map(dispMemberQual):crew.names;
+          var namesHtml=(pm[foundIdx]&&pm[foundIdx].length)?pm[foundIdx].map(expNameHtml).join('<br>')
+            :crew.names.map(escapeHtml).join('<br>');
           var time=foundShift.id==='D'?'06:00–18:00':foundShift.id==='N'?'18:00–06:00':slotTime({startTime:'06:00'},foundShift.id);
           var bg=E.expColor?E.expColor:crew.color;
           var content=escapeHtml(shiftBandShort(foundShift.band))+'<br>'+escapeHtml(time)+'<br>'
-            +(isNames?names.map(escapeHtml).join('<br>'):escapeHtml('Shift '+crew.name));
-          dayHtml+='<div style="font-size:14px;font-weight:700;padding:6px 8px;background:'+bg+';color:'+BLACK+';min-height:50px;line-height:1.4;'+chgSh+'">'+content+'</div>';
+            +(isNames?namesHtml:escapeHtml('Shift '+crew.name));
+          dayHtml+='<div style="font-size:14px;font-weight:700;padding:6px 8px;background:'+bg+';color:'+BLACK+';min-height:50px;line-height:1.4;'+markSh(expShiftMark(E,c.date,foundIdx,pr))+'">'+content+'</div>';
         }else{
-          dayHtml+='<div style="min-height:50px;background:#FFFFFF;'+chgSh+'"></div>';
+          dayHtml+='<div style="min-height:50px;background:#FFFFFF;"></div>';
         }
       }else{
         var dayIdx=-1, nightIdx=-1;
@@ -11413,19 +11497,21 @@ function expGridEl(E, mode, variant){
         if(dayIdx<0&&nightIdx<0&&E.shifts.length){ dayIdx=pr[0]>=0?0:-1; nightIdx=(E.shifts.length>1&&pr[1]>=0)?1:-1; }
         if(dayIdx>=0){
           var dcrew=E.crews[pr[dayIdx]];
-          var dnames=(pm[dayIdx]&&pm[dayIdx].length)?pm[dayIdx].map(dispMemberQual):dcrew.names;
-          var dcontent=isNames?('Day<br>'+dnames.map(escapeHtml).join('<br>')):escapeHtml('Day: '+dcrew.name);
-          dayHtml+='<div style="font-size:14px;font-weight:700;padding:6px 8px;background:'+dcrew.color+';color:'+BLACK+';min-height:30px;line-height:1.4;border-top:1px solid #BFBFBF;'+chgSh+'">'+dcontent+'</div>';
+          var dnamesHtml=(pm[dayIdx]&&pm[dayIdx].length)?pm[dayIdx].map(expNameHtml).join('<br>')
+            :dcrew.names.map(escapeHtml).join('<br>');
+          var dcontent=isNames?('Day<br>'+dnamesHtml):escapeHtml('Day: '+dcrew.name);
+          dayHtml+='<div style="font-size:14px;font-weight:700;padding:6px 8px;background:'+dcrew.color+';color:'+BLACK+';min-height:30px;line-height:1.4;border-top:1px solid #BFBFBF;'+markSh(expShiftMark(E,c.date,dayIdx,pr))+'">'+dcontent+'</div>';
         }else{
-          dayHtml+='<div style="min-height:30px;background:#FFFFFF;border-top:1px solid #BFBFBF;'+chgSh+'"></div>';
+          dayHtml+='<div style="min-height:30px;background:#FFFFFF;border-top:1px solid #BFBFBF;"></div>';
         }
         if(nightIdx>=0){
           var ncrew=E.crews[pr[nightIdx]];
-          var nnames=(pm[nightIdx]&&pm[nightIdx].length)?pm[nightIdx].map(dispMemberQual):ncrew.names;
-          var ncontent=isNames?('Night<br>'+nnames.map(escapeHtml).join('<br>')):escapeHtml('Night: '+ncrew.name);
-          dayHtml+='<div style="font-size:14px;font-weight:700;padding:6px 8px;background:'+ncrew.color+';color:'+BLACK+';min-height:30px;line-height:1.4;border-top:1px solid #BFBFBF;'+chgSh+'">'+ncontent+'</div>';
+          var nnamesHtml=(pm[nightIdx]&&pm[nightIdx].length)?pm[nightIdx].map(expNameHtml).join('<br>')
+            :ncrew.names.map(escapeHtml).join('<br>');
+          var ncontent=isNames?('Night<br>'+nnamesHtml):escapeHtml('Night: '+ncrew.name);
+          dayHtml+='<div style="font-size:14px;font-weight:700;padding:6px 8px;background:'+ncrew.color+';color:'+BLACK+';min-height:30px;line-height:1.4;border-top:1px solid #BFBFBF;'+markSh(expShiftMark(E,c.date,nightIdx,pr))+'">'+ncontent+'</div>';
         }else{
-          dayHtml+='<div style="min-height:30px;background:#FFFFFF;border-top:1px solid #BFBFBF;'+chgSh+'"></div>';
+          dayHtml+='<div style="min-height:30px;background:#FFFFFF;border-top:1px solid #BFBFBF;"></div>';
         }
       }
       dayHtml+='</div>';
@@ -11438,8 +11524,11 @@ function expGridEl(E, mode, variant){
   E.crews.forEach(function(c){
     h+='<div style="margin-bottom:3px;">Crew '+escapeHtml(c.name)+' — '+escapeHtml(c.names.join(', '))+'</div>';
   });
-  if(E.hasChanges){
-    h+='<div style="margin-bottom:3px;">Gold border = changed day (leave / replacement / swap / manual edit)</div>';
+  if(E.hasChangedShifts){
+    h+='<div style="margin-bottom:3px;">Gold border = changed shift (leave / replacement / swap / manual edit)</div>';
+  }
+  if(E.hasOpenShifts){
+    h+='<div style="margin-bottom:3px;">Red border = open shift</div>';
   }
   h+='</div>';
   if(E.leave&&E.leave.length){
