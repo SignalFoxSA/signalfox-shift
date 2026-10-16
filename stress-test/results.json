@@ -412,6 +412,10 @@
     {
       "label": "Heap used",
       "value": "9.5 MB"
+    },
+    {
+      "label": "Persist",
+      "value": "83ms, 4944287 bytes"
     }
   ],
   "progress": {
@@ -431,5 +435,5 @@
     "rosters": 1200,
     "staff": 1000
   },
-  "updatedAt": "2026-10-16T21:22:34.661+02:00"
+  "updatedAt": "2026-10-16T21:22:37.090+02:00"
 }
