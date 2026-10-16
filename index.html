@@ -592,6 +592,14 @@
   #expSheet .done-btn{border:none; border-radius:12px; background:#1c1c1e; color:#fff; font-size:15px;
     font-weight:700; padding:13px 34px; cursor:pointer;}
   #expSheet .fine{font-size:12.5px; color:#888; margin:10px 0 0; line-height:1.45;}
+  #expSheet .linkrow{display:flex; align-items:center; gap:10px; background:#f7f6f3;
+    border:1px solid #e7e5e0; border-radius:14px; padding:11px 14px; margin-top:10px; text-align:left;}
+  #expSheet .linkrow .ltx{flex:1; min-width:0;}
+  #expSheet .linkrow .llab{display:block; font-size:12.5px; color:#6e6e73; line-height:1.35;}
+  #expSheet .linkrow .lurl{display:block; font-size:12.5px; font-weight:700; color:#1c1c1e;
+    word-break:break-all; line-height:1.35;}
+  #expSheet .linkrow .lbtn{flex:none; border:none; border-radius:10px; background:#1c1c1e; color:#fff;
+    font-size:13px; font-weight:700; padding:9px 14px; cursor:pointer; font-family:inherit;}
   #expRenderRoot{position:fixed; left:-10000px; top:0;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -1088,12 +1096,22 @@
         <span class="go">&#8250;</span><span class="spin"></span>
       </button>
     </div>
+    <div class="linkrow" id="expLinkRow">
+      <span class="ltx"><span class="llab">Share alongside the image — opens the app:</span>
+      <span class="lurl">https://signalfoxsa.github.io/signalfox-shift/</span></span>
+      <button class="lbtn" id="expCopyLinkBtn" type="button">Copy link</button>
+    </div>
     <p class="fine">Files generate right on your device — nothing is uploaded anywhere.</p>
   </div>
   <div id="expSheetDone" class="success" style="display:none">
     <div class="check">&#10003;</div>
     <div class="m1" id="expDoneTitle">Done.</div>
     <div class="m2" id="expDoneSub"></div>
+    <div class="linkrow" id="expDoneLinkRow" style="display:none">
+      <span class="ltx"><span class="llab">Share alongside the image — opens the app:</span>
+      <span class="lurl">https://signalfoxsa.github.io/signalfox-shift/</span></span>
+      <button class="lbtn" id="expDoneCopyLinkBtn" type="button">Copy link</button>
+    </div>
     <button class="done-btn" id="expDoneBtn">Done</button>
   </div>
 </div>
@@ -1102,7 +1120,12 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1979';
+var BUILD='20261015-1980';
+/* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
+   Plain text in the export sheet + copied by "Copy link" + attached as share
+   text when the PNG is shared. The image itself is unchanged. */
+var APP_URL='https://signalfoxsa.github.io/signalfox-shift/';
+var APP_SHARE_TEXT='Open in SignalFox Shift: '+APP_URL;
 /* LEAVE_TYPES — the ONE shared list of leave types (single source of truth).
    Used by EVERY leave-reason picker: the day-sheet removal prompt, the draft
    Long-term leave section, and both On Duty leave flows (baseLeave +
@@ -10731,10 +10754,10 @@ function expFname(E, mode, kind){
   var base=E.slug+(mode==='names'?'-names':'');
   return base+(kind==='xlsx'?'.xlsx':kind==='pdf'?'.pdf':kind==='png'?'-whatsapp.png':'-whatsapp.txt');
 }
-async function expDeliver(blob, filename, mime){
+async function expDeliver(blob, filename, mime, shareText){
   var file=new File([blob],filename,{type:mime||blob.type});
   if(navigator.canShare&&navigator.canShare({files:[file]})){
-    try{ await navigator.share({files:[file],title:filename}); return 'shared'; }
+    try{ await navigator.share({files:[file],title:filename,text:shareText||undefined}); return 'shared'; }
     catch(e){ if(e&&e.name==='AbortError') return 'cancelled'; }
   }
   var a=document.createElement('a');
@@ -10785,11 +10808,27 @@ function closeExportSheet(){
     document.getElementById('expSheetMain').style.display='block';
   },300);
 }
-function expShowSuccess(title,sub){
+function expShowSuccess(title,sub,showLink){
   document.getElementById('expDoneTitle').textContent=title;
   document.getElementById('expDoneSub').textContent=sub;
+  var lr=document.getElementById('expDoneLinkRow');
+  if(lr) lr.style.display=showLink?'flex':'none';
   document.getElementById('expSheetMain').style.display='none';
   document.getElementById('expSheetDone').style.display='block';
+}
+/* Copy the live app link — used by both "Copy link" buttons in the export sheet. */
+async function expCopyAppLink(){
+  var done=false;
+  try{ await navigator.clipboard.writeText(APP_URL); done=true; }
+  catch(e){
+    try{
+      var ta=document.createElement('textarea'); ta.value=APP_URL;
+      ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      done=document.execCommand('copy'); ta.remove();
+    }catch(_){ done=false; }
+  }
+  toast(done?'Link copied \u2014 paste it alongside the image.':'Could not copy the link.');
 }
 async function expGenerateFormat(fmt){
   var E=S.exp; if(!E) return;
@@ -10811,9 +10850,9 @@ async function expGenerateFormat(fmt){
       expShowSuccess(r2==='shared'?'Done \u2014 file shared.':'Done \u2014 file downloaded.',
         what+' roster as a one-page PDF.');
     }else if(fmt==='image'){
-      var r3=await expDeliver(await expGenerateImage(E,expMode),expFname(E,expMode,'png'),'image/png');
+      var r3=await expDeliver(await expGenerateImage(E,expMode),expFname(E,expMode,'png'),'image/png',APP_SHARE_TEXT);
       expShowSuccess(r3==='shared'?'Done \u2014 file shared.':'Done \u2014 file downloaded.',
-        what+' roster as a picture, ready for WhatsApp.');
+        what+' roster as a picture, ready for WhatsApp.', true);
     }else if(fmt==='text'){
       var txt=expBuildText(E,expMode);
       try{ await navigator.clipboard.writeText(txt); }
@@ -10838,6 +10877,8 @@ async function expGenerateFormat(fmt){
   on('expClose','click',closeExportSheet);
   on('expOverlay','click',closeExportSheet);
   on('expDoneBtn','click',closeExportSheet);
+  on('expCopyLinkBtn','click',expCopyAppLink);
+  on('expDoneCopyLinkBtn','click',expCopyAppLink);
   on('expModeShifts','click',function(){ expSetMode('shifts'); });
   on('expModeNames','click',function(){ expSetMode('names'); });
   var fmtBtns=document.querySelectorAll('#expFmtList .fmt');
