@@ -1594,6 +1594,10 @@
     {
       "label": "Changes",
       "value": "98090"
+    },
+    {
+      "label": "Seed time",
+      "value": "n/a"
     }
   ],
   "progress": {
@@ -1613,7 +1617,7 @@
     "rosters": 3600,
     "staff": 2000
   },
-  "updatedAt": "2026-10-16T21:29:51.427+02:00",
+  "updatedAt": "2026-10-16T21:29:53.440+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
