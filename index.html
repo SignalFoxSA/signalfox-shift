@@ -363,9 +363,31 @@
     display:flex; flex-direction:column; align-items:center; gap:3px; font-family:inherit;}
   .tabs button .ti{font-size:20px;}
   .tabs button.sel{color:var(--accent);}
-  .draftbadge{display:none; font-size:10px; font-weight:800; letter-spacing:1px;
-    color:var(--accent-ink); background:var(--accent); border-radius:20px;
-    padding:4px 12px; margin-left:8px; vertical-align:middle;}
+  .draftbanner{display:none; background:var(--accent); color:var(--accent-ink);
+    border-radius:10px; padding:12px 14px; margin:10px 0; font-size:20px; font-weight:900;
+    letter-spacing:.5px; text-align:center;}
+  .drafttopbar{display:none; background:var(--card); border:1px solid var(--line);
+    border-radius:10px; padding:10px 12px; margin:0 0 10px;}
+  .draftopencount{font-size:14px; font-weight:800; margin-top:6px;}
+  .draftopencount .ok{color:var(--green);}
+  .pubalert{background:var(--card); border:2px solid var(--accent); border-radius:var(--radius);
+    padding:12px 14px; margin:12px 0;}
+  .pubalert b{font-size:15px;}
+  .pubalert .pline{font-size:14px; margin-top:4px;}
+  /* removal-reason prompt (day-sheet edit on a LIVE roster) */
+  #removalReasonWrap{position:fixed; inset:0; z-index:70; display:none;}
+  #removalReasonWrap.open{display:block;}
+  #removalReasonBg{position:absolute; inset:0; background:rgba(0,0,0,.6);}
+  #removalReasonBox{position:absolute; left:0; right:0; bottom:0; max-width:480px; margin:0 auto;
+    background:var(--card); border-radius:20px 20px 0 0; padding:18px 18px 24px;
+    border-top:1px solid var(--line);}
+  #removalReasonBox h3{margin:6px 0 2px; font-size:18px;}
+  #removalReasonBox .rr-opt{display:flex; align-items:center; justify-content:space-between;
+    background:var(--card2); border:1px solid var(--line); border-radius:10px;
+    padding:12px; margin:8px 0; cursor:pointer; font-weight:700; font-size:15px;}
+  #removalReasonBox .rr-opt.sel{border-color:var(--accent);}
+  #removalReasonBox input[type=text]{width:100%; padding:10px; border:1px solid var(--line);
+    border-radius:8px; background:var(--card2); color:var(--text); margin-top:4px;}
   .countchip{font-size:12px; font-weight:700; color:var(--muted); background:var(--card2);
     border:1px solid var(--line); border-radius:20px; padding:3px 10px; margin-left:6px; vertical-align:middle;}
   .srow{flex-wrap:wrap;}
@@ -570,6 +592,7 @@
   </div>
 
   <!-- HOME -->
+  <!-- HOME -->
   <div class="view" id="v-home">
     <div class="hero">
       <div class="herofox" id="heroLogo"><button class="hero-edit" id="heroEdit" title="Change logo">&#9998;</button></div>
@@ -578,6 +601,7 @@
       <h1 id="homeTitle">Hi there</h1>
       <p>Complicated rotations without complicated spreadsheets.</p>
     </div>
+    <div id="publishAlertHome"></div>
     <div class="card" id="setupCta" style="display:none;border-color:var(--accent)">
       <h3>&#128075; Set up your workplace first</h3>
       <p class="sub">Name it, add your teams, pair your crews &mdash; two minutes, once. Then every roster takes four taps.</p>
@@ -597,6 +621,7 @@
 
   <!-- ROSTERS -->
   <div class="view" id="v-rosters">
+    <div id="publishAlertRosters"></div>
     <div class="card">
       <h3>My rosters</h3>
       <p class="sub">Every saved roster, ready to open.</p>
@@ -725,6 +750,9 @@
       <label class="f">Public holidays</label>
       <select id="setHolidays"></select>
       <p class="fine">Marks public holidays on the calendar. Fetched once per year when you're online.</p>
+      <label class="f">Roster publish reminder</label>
+      <select id="setPublishReminder"></select>
+      <p class="fine">When on, a banner on Home and Rosters warns you near month-end if any team still has no published roster for next month.</p>
     </div>
     <div class="card" id="coRulesCard" style="display:none;">
       <h3>Company rules</h3>
@@ -815,7 +843,15 @@
 
   <!-- CALENDAR -->
   <div class="view" id="v-cal">
-    <div class="calhead"><b><span id="calTitle"></span><span class="draftbadge" id="draftBadge" style="display:none">DRAFT</span></b></div>
+    <div class="calhead"><b><span id="calTitle"></span></b></div>
+    <div id="draftBanner" class="draftbanner">DRAFT &mdash; Not published yet</div>
+    <div id="draftTopBar" class="drafttopbar">
+      <label style="display:flex;gap:8px;align-items:center;font-size:14px;font-weight:700;cursor:pointer;">
+        <input type="checkbox" id="draftOfferToggle" onchange="toggleDraftOffer(this.checked)" style="width:18px;height:18px;accent-color:var(--accent);"> Offer open shifts for booking
+      </label>
+      <p class="fine" style="margin:4px 0 0;">When on, this draft&apos;s open shifts appear in Open Shifts (labelled DRAFT) so staff can book them before the roster goes live.</p>
+      <div id="draftOpenCount" class="draftopencount"></div>
+    </div>
     <div class="vswitch" id="calVehicles"></div>
     <div class="monthnav">
       <button class="mnav" id="calPrevM" onclick="calMonthNav(-1)" aria-label="Previous month">&#8249;</button>
@@ -836,10 +872,6 @@
       <button class="btn" id="publishBtn" onclick="publishDraft()">Publish</button>
       <button class="btn" id="saveDraftBtn" onclick="saveDraft()">Save draft</button>
       <button class="btn ghost" id="deleteDraftBtn" onclick="deleteDraft()">Delete draft</button>
-      <label style="display:flex;gap:8px;align-items:center;margin:10px 0 2px;font-size:14px;font-weight:700;cursor:pointer;">
-        <input type="checkbox" id="draftOfferToggle" onchange="toggleDraftOffer(this.checked)" style="width:18px;height:18px;accent-color:var(--accent);"> Offer open shifts for booking
-      </label>
-      <p class="fine" style="margin:0 0 4px;">When on, this draft&apos;s open shifts appear in Open Shifts (labelled DRAFT) so staff can book them before the roster goes live.</p>
     </div>
     <button class="btn ghost" id="exportBtn" onclick="openExportSheet()">&#8681; Export roster</button>
     <button class="btn ghost" onclick="openCrewSheet()">&#9998;&#65039; Edit crews</button>
@@ -931,6 +963,22 @@
     <div id="daySheetFoot"></div>
   </div>
 </div>
+<div id="removalReasonWrap">
+  <div id="removalReasonBg" onclick="removalReasonCancel()"></div>
+  <div id="removalReasonBox">
+    <h3 id="removalReasonTitle">Why is this person being removed?</h3>
+    <p class="sub" style="margin:0 0 8px;">Pick a reason — it will be logged in the Leave list.</p>
+    <div class="rr-opt" data-rr="Sick leave" onclick="removalReasonPick('Sick leave',this)">Sick leave <span>&#8594;</span></div>
+    <div class="rr-opt" data-rr="Annual leave" onclick="removalReasonPick('Annual leave',this)">Annual leave <span>&#8594;</span></div>
+    <div class="rr-opt" data-rr="Other" onclick="removalReasonPick('Other',this)">Other <span>&#8594;</span></div>
+    <label class="f" style="margin-top:10px;">Note (optional)</label>
+    <input type="text" id="removalReasonNote" maxlength="120" placeholder="e.g. Called in sick, family emergency…">
+    <div class="btnrow">
+      <button class="btn ghost" onclick="removalReasonCancel()">Cancel</button>
+      <button class="btn" onclick="removalReasonConfirm()">Remove</button>
+    </div>
+  </div>
+</div>
 <div id="sheetWrap">
   <div id="sheetBg" onclick="closeSheet()"></div>
   <div id="sheet">
@@ -993,7 +1041,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1905';
+var BUILD='20261015-1910';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2083,9 +2131,11 @@ function renderCalendar(){
     else if(cal.mode==='agenda'){ wA.style.display=''; renderCalAgenda(ctx); }
     else { wM.style.display=''; renderCalMonth(ctx); }
   }
-  var b=document.getElementById('draftBadge');
-  if(b) b.style.display=(ctx&&!ctx.saved)?'inline-block':'none';
   var isDraftView=!!(ctx&&!ctx.saved);
+  var bannerEl=document.getElementById('draftBanner');
+  if(bannerEl) bannerEl.style.display=isDraftView?'block':'none';
+  var topBarEl=document.getElementById('draftTopBar');
+  if(topBarEl) topBarEl.style.display=isDraftView?'block':'none';
   var saveBtnEl=document.getElementById('saveBtn');
   if(saveBtnEl) saveBtnEl.style.display='none'; /* draft view uses Publish / Save draft / Delete draft instead */
   var draftBtnsEl=document.getElementById('draftBtns');
@@ -2097,6 +2147,28 @@ function renderCalendar(){
     var _de=draftEntryForCurrent();
     offerTog.checked=!!(_de&&_de.offerOpenShifts);
   }
+  var ocEl=document.getElementById('draftOpenCount');
+  if(ocEl && isDraftView && ctx && ctx.R){
+    var nOpen=countOpenSlots(ctx.R, cal.y, cal.m);
+    ocEl.innerHTML=nOpen>0
+      ? '<span style="color:#CC0000;">'+nOpen+' open shift'+(nOpen>1?'s':'')+' to fill</span>'
+      : '<span class="ok">All shifts filled</span>';
+  }
+}
+/* Count OPEN slots (OPEN_MARK entries) across a whole month roster — draft
+   view only ("X open shifts to fill"). Each OPEN_MARK is one unfilled slot. */
+function countOpenSlots(R,y,m){
+  var n=0, dim=daysInMonth(y,m);
+  for(var d=1;d<=dim;d++){
+    var info=calRosterDay(R,y,m,d); if(!info) continue;
+    var dateISO=isoDate(info.date);
+    calSlotCrews(R,info.dayIdx).forEach(function(ps){
+      ps.list.forEach(function(x){
+        effShiftMembers(R,dateISO,ps.sl.id,x.c).forEach(function(nm){ if(nm===OPEN_MARK) n++; });
+      });
+    });
+  }
+  return n;
 }
 function renderCalChrome(ctx){
   var cal=ensureCal();
@@ -2708,6 +2780,7 @@ function allStaffNames(){
 function openDayEdit(){
   dayCtx.edit=true;
   dayCtx.removedNames=[]; /* people removed in this edit — never offered as replacements */
+  dayCtx.removalReasons=[]; /* live-removal reasons, logged to Leave on Save */
   /* snapshot current members per shift for editing */
   dayCtx.editData=daySheetShifts().map(function(ps){
     return {sl:ps.sl, idx:ps.list[0]?ps.list[0].ci:-1,
@@ -2881,7 +2954,7 @@ function renderDayEdit(){
     '<label><input type="radio" name="deScope" value="now"'+(dayCtx.scope==='now'?' checked':'')+' onchange="dayCtx.scope=\'now\'"> From now on<br><span style="color:var(--muted);font-size:12px;">Permanent crew change</span></label></div>';
   document.getElementById('daySheetBody').innerHTML=html;
   document.getElementById('daySheetFoot').innerHTML=
-    '<div class="btnrow"><button class="btn ghost" onclick="dayCtx.removedNames=[];dayCtx.edit=false;renderDaySheet()">Back</button>'+
+    '<div class="btnrow"><button class="btn ghost" onclick="dayCtx.removedNames=[];dayCtx.removalReasons=[];dayCtx.edit=false;renderDaySheet()">Back</button>'+
     '<button class="btn" onclick="saveDayEdit()">Save</button></div>';
 }
 function dayEditSelPick(si){
@@ -2891,18 +2964,75 @@ function dayEditSelPick(si){
 }
 function dayEditRemove(si, mi){
   var nm=dayCtx.editData[si].members[mi];
-  dayCtx.editData[si].members.splice(mi,1);
+  if(nm===OPEN_MARK){
+    /* explicitly deleting the Open placeholder itself */
+    dayCtx.editData[si].members.splice(mi,1);
+    renderDayEdit(); return;
+  }
+  /* LIVE roster: capture WHY before removing (logged to Leave on Save).
+     Drafts: no prompt — a draft is not live, nothing to log. */
+  if(S.fromSaved){
+    openRemovalReason(si, mi, nm);
+    return;
+  }
+  dayEditApplyRemoval(si, mi, null);
+}
+/* Apply a removal: the slot stays — it becomes an OPEN placeholder, so the
+   block keeps its size and the vacancy shows as red "Open" everywhere. */
+function dayEditApplyRemoval(si, mi, reason){
+  var nm=dayCtx.editData[si].members[mi];
+  dayCtx.editData[si].members[mi]=OPEN_MARK;
   if(nm && nm!==OPEN_MARK){
     if(!dayCtx.removedNames) dayCtx.removedNames=[];
     if(dayCtx.removedNames.indexOf(nm)<0) dayCtx.removedNames.push(nm);
   }
+  if(reason){
+    if(!dayCtx.removalReasons) dayCtx.removalReasons=[];
+    dayCtx.removalReasons.push({name:nm, type:reason.type, note:reason.note||'',
+      shiftId:dayCtx.editData[si].sl.id});
+  }
   renderDayEdit();
+}
+/* Removal-reason prompt (LIVE rosters only). Cancel = removal cancelled. */
+var removalReasonCtx=null; /* {si, mi, name, type} pending a reason choice */
+function openRemovalReason(si, mi, nm){
+  removalReasonCtx={si:si, mi:mi, name:nm, type:'Sick leave'};
+  document.getElementById('removalReasonTitle').textContent='Why is '+nm+' being removed?';
+  document.getElementById('removalReasonNote').value='';
+  removalReasonPick('Sick leave');
+  document.getElementById('removalReasonWrap').classList.add('open');
+}
+function removalReasonPick(type){
+  if(removalReasonCtx) removalReasonCtx.type=type;
+  var opts=document.querySelectorAll('#removalReasonBox .rr-opt');
+  for(var i=0;i<opts.length;i++) opts[i].classList.toggle('sel', opts[i].getAttribute('data-rr')===type);
+}
+function removalReasonCancel(){
+  /* Cancel = removal cancelled: nothing removed, nothing logged. */
+  removalReasonCtx=null;
+  document.getElementById('removalReasonWrap').classList.remove('open');
+}
+function removalReasonConfirm(){
+  var ctx=removalReasonCtx; if(!ctx) return;
+  var note=(document.getElementById('removalReasonNote').value||'').trim();
+  document.getElementById('removalReasonWrap').classList.remove('open');
+  removalReasonCtx=null;
+  dayEditApplyRemoval(ctx.si, ctx.mi, {type:ctx.type||'Sick leave', note:note});
 }
 function dayEditAdd(si){
   var inp=document.getElementById('deAddNew'+si);
   var nm=(inp.value||'').trim();
   if(!nm) return;
-  if(dayCtx.editData[si].members.indexOf(nm)<0) dayCtx.editData[si].members.push(nm);
+  var mems=dayCtx.editData[si].members;
+  if(mems.indexOf(nm)<0){
+    var oi=mems.indexOf(OPEN_MARK);
+    if(oi>=0) mems[oi]=nm; /* fill the open slot — size stays the same */
+    else mems.push(nm);
+  }
+  /* back on the roster — no longer treated as "removed" for this shift */
+  if(dayCtx.removalReasons) dayCtx.removalReasons=dayCtx.removalReasons.filter(function(r){
+    return !(r.name===nm && r.shiftId===dayCtx.editData[si].sl.id);
+  });
   /* back on the roster — no longer treated as "removed" */
   if(dayCtx.removedNames){
     var ri=dayCtx.removedNames.indexOf(nm);
@@ -2967,12 +3097,40 @@ function saveDayEdit(){
     }else{
       /* from now on: update the crew's permanent member list */
       if(ed.idx>=0 && R.crews[ed.idx]){
-        R.crews[ed.idx].members=ed.members.slice();
+        /* permanent crew change: drop OPEN placeholders — the crew itself is
+           now smaller. Once-off removals keep OPEN in the day override. */
+        R.crews[ed.idx].members=ed.members.filter(function(nm){ return nm!==OPEN_MARK; });
         /* clear any once-off override for this date+shift since crew now matches */
         if(R.memberOverrides[dayCtx.dateISO]) delete R.memberOverrides[dayCtx.dateISO][ed.sl.id];
       }
     }
   });
+  /* Removal reasons (LIVE rosters only): each removal that survived this edit
+     becomes a leaveLog entry, so it shows in the Leave list + exports. */
+  if(S.fromSaved && dayCtx.removalReasons && dayCtx.removalReasons.length){
+    if(!R.leaveLog) R.leaveLog=[];
+    dayCtx.removalReasons.forEach(function(rr){
+      var ed=null;
+      dayCtx.editData.forEach(function(e2){ if(e2.sl.id===rr.shiftId) ed=e2; });
+      if(!ed) return;
+      if(ed.members.indexOf(rr.name)>=0) return; /* re-added — removal undone */
+      /* replacement added in this same edit? (someone new on this shift —
+         `added` was computed before the edit was written) */
+      var cover='OPEN';
+      added.forEach(function(nm){
+        if(cover!=='OPEN') return;
+        if(ed.members.indexOf(nm)>=0) cover=nm;
+      });
+      /* don't double-log the same removal */
+      var dup=R.leaveLog.some(function(lg){
+        return lg && lg.date===dayCtx.dateISO && lg.shift===rr.shiftId && lg.person===rr.name && lg.type===rr.type;
+      });
+      if(dup) return;
+      R.leaveLog.push({date:dayCtx.dateISO, shift:rr.shiftId, person:rr.name,
+        type:rr.type, cover:cover, note:rr.note||'', ts:Date.now()});
+    });
+    dayCtx.removalReasons=[];
+  }
   /* cross-base log: once-off (or permanent) covers from another base */
   if(S.company && added.length){
     added.forEach(function(nm){
@@ -6195,6 +6353,7 @@ function renderHome(){
   document.getElementById('newRosterBtn').style.display=hasBase?'block':'none';
   renderToday();
   renderRosters();
+  renderPublishAlerts();
 }
 function renderToday(){
   loadSaved();
@@ -6261,7 +6420,7 @@ function renderRosters(){
   var all=document.getElementById('allRosterList');
   if(all) renderRosterList(all, 0);
 }
-function renderAllRosters(){ renderRosterList(document.getElementById('allRosterList'), 0); renderDrafts(); }
+function renderAllRosters(){ renderRosterList(document.getElementById('allRosterList'), 0); renderDrafts(); renderPublishAlerts(); }
 
 /* ---------- workplace setup (teams + crews + custom rotations; rendered into Shift setup) ---------- */
 function openBaseSetup(){ switchTab('staff'); }
@@ -7309,7 +7468,7 @@ function collectLeaveEntries(R,y,m,personFilter){
       dateLabel:expWeekdayShort(y,m,ld)+' '+ld+' '+MNS[m],
       person:lg.person, personQual:dispMemberQual(lg.person),
       type:lg.type||'Leave', isOpen:isOpen,
-      cover:lg.cover,
+      cover:lg.cover, note:lg.note||'',
       coverQual:(lg.cover&&lg.cover!=='OPEN')?dispMemberQual(lg.cover):null});
   });
   entries.sort(function(a,b){ return a.date<b.date?-1:a.date>b.date?1:0; });
@@ -7377,7 +7536,8 @@ function rosterLeaveHtml(entries){
   entries.forEach(function(lv){
     var col=lv.isOpen?'#CC0000':'#B8860B';
     h+='<div style="font-size:14px;color:'+col+';margin-bottom:2px;">'
-      +escapeHtml(lv.dateLabel+' — '+lv.personQual+', '+lv.type+', '+(lv.isOpen?'OPEN':'replaced by '+lv.coverQual))+'</div>';
+      +escapeHtml(lv.dateLabel+' — '+lv.personQual+', '+lv.type+', '+(lv.isOpen?'OPEN':'replaced by '+lv.coverQual))
+      +(lv.note?' ('+escapeHtml(lv.note)+')':'')+'</div>';
   });
   return h+'</div>';
 }
@@ -7577,7 +7737,7 @@ function setTheme(t){
 }
 
 function defaultSettings(){
-  return {weekStart:1, timeFmt:24, holidays:''};
+  return {weekStart:1, timeFmt:24, holidays:'', publishReminder:0};
 }
 function appSettings(){
   if(!S.base) return defaultSettings();
@@ -7586,7 +7746,52 @@ function appSettings(){
   if(s.weekStart!==0 && s.weekStart!==1) s.weekStart=d.weekStart;
   if(s.timeFmt!==12 && s.timeFmt!==24) s.timeFmt=d.timeFmt;
   if(typeof s.holidays!=='string') s.holidays=d.holidays;
+  if([0,2,5,7,14].indexOf(s.publishReminder)<0) s.publishReminder=d.publishReminder;
   return s;
+}
+/* Roster publish reminder (Settings): lines for teams missing a published
+   roster for NEXT month. Only when the setting is ON (X days) and today is
+   within X days of the end of the CURRENT month. Returns [] otherwise.
+   `now` is injectable for testing (defaults to the real today). */
+function publishReminderLines(now){
+  var st=appSettings();
+  var days=st.publishReminder||0;
+  if(!days) return [];
+  var t=now||new Date();
+  var y=t.getFullYear(), m=t.getMonth();
+  var daysLeft=daysInMonth(y,m)-t.getDate();
+  if(daysLeft>days) return [];
+  var nm=m+1, ny=y; if(nm>11){ nm=0; ny++; }
+  var monthLabel=MN[nm]+' '+ny;
+  loadSaved();
+  var lines=[];
+  (S.base.vehicles||[]).forEach(function(v){
+    var published=(S.rosters||[]).some(function(u){
+      var R=u.roster; if(!R||R.kind!=='month') return false;
+      if(R.year!==ny||R.month!==nm) return false;
+      return (R.vehicleId&&R.vehicleId===v.id)||(!R.vehicleId&&u.name===vehicleName(v.id));
+    });
+    if(published) return;
+    var hasDraft=(S.drafts||[]).some(function(d){
+      return d.teamId===v.id && d.year===ny && d.month===nm;
+    });
+    var tname=vehicleName(v.id)||v.name||'Team';
+    lines.push(hasDraft
+      ? tname+' \u2014 '+monthLabel+' roster is still in draft \u2014 publish it.'
+      : tname+' \u2014 No roster for '+monthLabel+' yet \u2014 build one.');
+  });
+  return lines;
+}
+function renderPublishAlerts(){
+  var lines=publishReminderLines(new Date());
+  var html='';
+  if(lines.length){
+    html='<div class="pubalert"><b>\u23F0 Roster publish reminder</b>'
+      +lines.map(function(l){ return '<div class="pline">'+escapeHtml(l)+'</div>'; }).join('')
+      +'</div>';
+  }
+  var h=document.getElementById('publishAlertHome'); if(h) h.innerHTML=html;
+  var r=document.getElementById('publishAlertRosters'); if(r) r.innerHTML=html;
 }
 /* week start: 1=Monday (default), 0=Sunday */
 function wsDow(){ return appSettings().weekStart===0?0:1; }
@@ -7675,6 +7880,12 @@ function renderSettings(){
   }).join('');
   hs.value=st.holidays||'';
   hs.onchange=function(){ st.holidays=this.value; persistBase(); renderCalendar(); };
+  var pr=document.getElementById('setPublishReminder');
+  pr.innerHTML='<option value="0">Off</option>'+[2,5,7,14].map(function(v){
+    return '<option value="'+v+'">'+v+' days</option>';
+  }).join('');
+  pr.value=String(st.publishReminder||0);
+  pr.onchange=function(){ st.publishReminder=parseInt(this.value,10)||0; persistBase(); renderPublishAlerts(); };
   renderCompanyRulesInSettings();
 }
 /* workplace shift manager: name + hours per shift, as many as the day needs.
