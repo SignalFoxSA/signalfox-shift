@@ -183,6 +183,10 @@
     {
       "time": "21:20",
       "message": "Added teams — staff 500, rosters 600, changes 7000"
+    },
+    {
+      "time": "21:20",
+      "message": "Added notifications — 1000 of 2000"
     }
   ],
   "metrics": [
@@ -220,5 +224,5 @@
     "rosters": 600,
     "staff": 500
   },
-  "updatedAt": "2026-10-16T21:20:26.501+02:00"
+  "updatedAt": "2026-10-16T21:20:28.562+02:00"
 }
