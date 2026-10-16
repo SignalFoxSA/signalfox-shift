@@ -66,7 +66,16 @@ live).
 - Do NOT touch the app (`index.html`, `sw.js`, BUILD) or the private repo.
   Only `stress-test/` in the public repo.
 
-## Devices Active
+## Test buttons (UI only)
+
+Two buttons at the top: **Run functionality test** and **Run stress
+test**. For NOW they are UI only — clicking one shows
+"Not connected — trigger coming soon" and does nothing else. No API
+calls, no tokens, no keys.
+
+The trigger (GitHub Actions + a safe proxy) is a SEPARATE later build.
+Do NOT wire the buttons to run tests from this page. Do NOT put any
+token/key in this folder.
 
 Placeholder: the section shows "Not connected — device ping comes later."
 

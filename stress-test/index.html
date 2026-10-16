@@ -65,6 +65,12 @@
   .sw{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
   .graphwrap{width:100%;overflow:hidden}
   .graphwrap svg{width:100%;height:auto;display:block}
+  .btnrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 12px}
+  .bigbtn{border:none;border-radius:12px;padding:15px 10px;font-size:16px;
+    font-weight:700;cursor:pointer;line-height:1.25}
+  .bigbtn.gold{background:var(--gold);color:#1a1a1a}
+  .bigbtn.dark{background:var(--card2);color:var(--text);border:1px solid var(--line)}
+  .trigmsg{font-size:13px;color:var(--muted);text-align:center;margin:0 0 12px;min-height:18px}
   a{color:var(--blue)}
 </style>
 </head>
@@ -74,6 +80,12 @@
   <p class="sub">Watch the stress test as it runs. No login needed.</p>
 
   <div id="banner" class="banner waiting">Waiting…</div>
+
+  <div class="btnrow">
+    <button type="button" class="bigbtn gold" id="btn-func">Run functionality test</button>
+    <button type="button" class="bigbtn dark" id="btn-stress">Run stress test</button>
+  </div>
+  <p class="trigmsg" id="trigmsg"></p>
 
   <div class="card">
     <h2>Progress</h2>
@@ -239,6 +251,14 @@ async function poll(){
 }
 poll();
 setInterval(poll, 5000);
+
+/* ---- Test buttons: UI ONLY. No wiring, no API calls, no tokens/keys.
+   The trigger (GitHub Actions + a safe proxy) is a separate later build. ---- */
+function trigSoon(){
+  $("trigmsg").textContent = "Not connected — trigger coming soon";
+}
+$("btn-func").addEventListener("click", trigSoon);
+$("btn-stress").addEventListener("click", trigSoon);
 </script>
 </body>
 </html>
