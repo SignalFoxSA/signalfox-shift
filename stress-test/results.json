@@ -1614,6 +1614,10 @@
     {
       "label": "Persist",
       "value": "FAILED (sfshift_apps:Failed to execute 'setItem' on 'Storage': Setting the value of 'sfshift_apps' exceeded the quota.)"
+    },
+    {
+      "label": "Calendar render",
+      "value": "1369ms"
     }
   ],
   "progress": {
@@ -1633,7 +1637,7 @@
     "rosters": 3600,
     "staff": 2000
   },
-  "updatedAt": "2026-10-16T21:30:04.787+02:00",
+  "updatedAt": "2026-10-16T21:30:08.029+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
