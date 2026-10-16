@@ -13,6 +13,13 @@
       "staff": 0,
       "rosters": 0,
       "changes": 0
+    },
+    {
+      "time": "21:18",
+      "companies": 0,
+      "staff": 40,
+      "rosters": 24,
+      "changes": 340
     }
   ],
   "log": [
@@ -31,6 +38,10 @@
     {
       "time": "21:18",
       "message": "Building up — seeding…"
+    },
+    {
+      "time": "21:18",
+      "message": "Added teams — staff 40, rosters 24, changes 340"
     }
   ],
   "metrics": [
@@ -40,15 +51,15 @@
     },
     {
       "label": "Staff rostered",
-      "value": "0"
+      "value": "40"
     },
     {
       "label": "Active rosters",
-      "value": "0"
+      "value": "24"
     },
     {
       "label": "Changes",
-      "value": "0"
+      "value": "340"
     }
   ],
   "progress": {
@@ -63,10 +74,10 @@
     "perfect": null
   },
   "totals": {
-    "changes": 0,
+    "changes": 340,
     "companies": 0,
-    "rosters": 0,
-    "staff": 0
+    "rosters": 24,
+    "staff": 40
   },
-  "updatedAt": "2026-10-16T21:18:06.629+02:00"
+  "updatedAt": "2026-10-16T21:18:08.593+02:00"
 }
