@@ -24,6 +24,8 @@ while the stress test runs.
   "totals": { "companies": null, "staff": null, "rosters": null, "changes": null },
   "perfHistory": [],
   "storageHistory": [],
+  "speedPerLevel": [],
+  "problems": [],
   "log": [ { "time": "20:55", "message": "Dashboard ready — waiting for the stress test to start." } ],
   "updatedAt": "2026-10-16T20:55:00+02:00"
 }
@@ -50,6 +52,21 @@ while the stress test runs.
   SAST, oldest first. Drives the "Storage" chart (localStorage usage in
   KB over time). Append as localStorage usage changes — this shows when
   storage nears its limit.
+- `speedPerLevel`: array of `{ "level": "Low" | "Medium" | "High",
+  "staff": 200, "loadMs": 800, "renderMs": 120, "exportMs": 4000 }`.
+  Drives the "Speed by level" table (one row per level: Load / Render /
+  Export times, plus a change note like "Load: 0.8s → 2.1s → 8.4s"
+  showing how speed changes as the test scales). Write one entry per
+  stress test level. This gives NEW information (speed at each level),
+  not a repeat of the counters.
+- `problems`: array of `{ "time": "HH:MM", "message": "...",
+  "detail": "...", "fix": "..." }`. Drives the ONE "Problems" section
+  (errors and problems are the same thing — do NOT use separate
+  findings/errors fields). Each entry shows: time + message (bold) +
+  detail (full text, wrapped, not truncated) + "Fix: …" (or "No fix
+  suggested yet." if `fix` is null/empty). Append immediately when any
+  error / crash / timeout / data loss / failure occurs, with the full
+  message + detail. Never invent problems or errors.
 - `log`: array of `{ "time": "HH:MM", "message": "..." }`,
   SAST, newest last (dashboard renders in file order).
 - `updatedAt`: ISO timestamp with SAST offset (`+02:00`).
@@ -70,6 +87,12 @@ live).
   `storageHistory` as localStorage usage changes — never invent numbers.
   The dashboard shows "Waiting for data…" for any of these fields until
   you write them.
+- Write `speedPerLevel` per stage (one entry per level: Low / Medium /
+  High, with staff + loadMs + renderMs + exportMs).
+- Append to `problems` immediately when any error / crash / timeout /
+  data loss / failure occurs, with the full message + detail + a
+  suggested fix (or `fix: null` if none yet). Never invent problems
+  or errors.
 - **Breakdown + Movement graph removed per Ian (16 Oct 2026)** — both
   had no meaning at scale ("That movement one also becomes irrelevant
   once it's higher. Both of those are not very good."); the relevant

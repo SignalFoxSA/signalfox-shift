@@ -70,6 +70,15 @@
   .bigbtn.gold{background:var(--gold);color:#1a1a1a}
   .bigbtn.dark{background:var(--card2);color:var(--text);border:1px solid var(--line)}
   .trigmsg{font-size:13px;color:var(--muted);text-align:center;margin:0 0 12px;min-height:18px}
+  th{font-size:12px;color:var(--muted);text-align:left;padding:8px 0;border-bottom:1px solid var(--line);font-weight:600}
+  th.num{text-align:right}
+  .speedtbl td.num{text-align:right}
+  .speednote{font-size:12px;color:var(--muted);margin:8px 0 0;line-height:1.5}
+  .prob{padding:10px 0;border-bottom:1px solid var(--line)}
+  .prob:last-child{border-bottom:none}
+  .prob-detail{font-size:13px;line-height:1.5;word-break:break-word;white-space:pre-wrap;margin-top:4px}
+  .prob-fix{font-size:13px;line-height:1.5;word-break:break-word;margin-top:4px;color:var(--muted)}
+  .prob-fix b{color:var(--gold)}
   a{color:var(--blue)}
 </style>
 </head>
@@ -115,6 +124,13 @@
   </div>
 
   <div class="card">
+    <h2>Speed by level</h2>
+    <p class="empty" id="speed-empty">Waiting for data…</p>
+    <table id="speed-table" class="speedtbl" style="display:none"><thead><tr><th>Level</th><th class="num">Load</th><th class="num">Render</th><th class="num">Export</th></tr></thead><tbody id="speed-body"></tbody></table>
+    <p class="speednote" id="speed-note"></p>
+  </div>
+
+  <div class="card">
     <h2>Storage</h2>
     <p class="chart-sub">localStorage usage over time</p>
     <div class="graphwrap" id="storage-chart"><p class="empty">Waiting for data…</p></div>
@@ -131,6 +147,11 @@
     <h2>Metrics</h2>
     <p class="empty" id="metrics-empty">No metrics yet.</p>
     <table id="metrics-table" style="display:none"><tbody id="metrics-body"></tbody></table>
+  </div>
+
+  <div class="card">
+    <h2>Problems</h2>
+    <div id="problems-list"><p class="empty">No problems so far.</p></div>
   </div>
 
   <div class="card">
@@ -247,6 +268,38 @@ function renderStorage(d){
   $("storage-chart").innerHTML = storageChart(sh) || "<p class='empty'>Waiting for data…</p>";
 }
 
+function renderSpeed(d){
+  const rows = Array.isArray(d.speedPerLevel) ? d.speedPerLevel : [];
+  const empty = $("speed-empty"), tbl = $("speed-table"), note = $("speed-note");
+  if(!rows.length){
+    empty.style.display = "block"; tbl.style.display = "none"; note.textContent = "";
+    return;
+  }
+  empty.style.display = "none"; tbl.style.display = "table";
+  const order = {Low:0, Medium:1, High:2};
+  const sorted = rows.slice().sort((a,b)=> (order[a.level]??9) - (order[b.level]??9));
+  $("speed-body").innerHTML = sorted.map(r =>
+    "<tr><td><b>"+esc(r.level)+"</b><br><span style='color:var(--muted);font-size:12px'>"+esc(fmtNum(r.staff))+" staff</span></td>"+
+    "<td class='num'>"+esc(fmtMs(r.loadMs))+"</td><td class='num'>"+esc(fmtMs(r.renderMs))+"</td><td class='num'>"+esc(fmtMs(r.exportMs))+"</td></tr>").join("");
+  const chain = key => sorted.map(r => r[key]).every(v => typeof v === "number") ? sorted.map(r => fmtMs(r[key])).join(" → ") : null;
+  const parts = [];
+  const l = chain("loadMs"); if(l) parts.push("Load: " + l);
+  const re = chain("renderMs"); if(re) parts.push("Render: " + re);
+  const ex = chain("exportMs"); if(ex) parts.push("Export: " + ex);
+  note.textContent = parts.length ? "Change as the test scales — " + parts.join(" · ") : "";
+}
+function renderProblems(d){
+  const probs = Array.isArray(d.problems) ? d.problems : [];
+  const wrap = $("problems-list");
+  if(!probs.length){
+    wrap.innerHTML = "<p class='empty'>No problems so far.</p>";
+    return;
+  }
+  wrap.innerHTML = probs.map(p =>
+    "<div class='prob'><div><span class='logtime'>"+esc(p.time||"")+"</span><b>"+esc(p.message||"")+"</b></div>"+
+    (p.detail ? "<div class='prob-detail'>"+esc(p.detail)+"</div>" : "")+
+    "<div class='prob-fix'><b>Fix:</b> "+esc((p.fix && String(p.fix).trim()) ? p.fix : "No fix suggested yet.")+"</div></div>").join("");
+}
 function render(d){
   const status = d.status || "waiting";
   const banner = $("banner");
@@ -276,6 +329,8 @@ function render(d){
   renderTotals(d);
   renderPerf(d);
   renderStorage(d);
+  renderSpeed(d);
+  renderProblems(d);
 
   const log = Array.isArray(d.log) ? d.log : [];
   $("log").innerHTML = log.map(l =>
