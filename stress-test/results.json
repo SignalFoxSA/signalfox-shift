@@ -4714,6 +4714,18 @@
     {
       "time": "21:41",
       "message": "Stage 5 done — countsOk=false"
+    },
+    {
+      "time": "21:42",
+      "message": "Problem: localStorage quota exceeded — persist FAILED (sfshift_notifications:Failed to execute 'setItem' on 'Storage': Setting the value of 'sfshift_notifications' exceeded the quota.)"
+    },
+    {
+      "time": "21:42",
+      "message": "Problem: Company data LOST — company rosters dropped from 9600 to 1920 (workplaces 5 → 1) after viewing a calendar while over quota"
+    },
+    {
+      "time": "21:42",
+      "message": "Problem: Company Stats compute took 64669ms at 4000 staff — near-freeze (break threshold >10s)"
     }
   ],
   "metrics": [
@@ -4787,7 +4799,7 @@
     "rosters": 9600,
     "staff": 4000
   },
-  "updatedAt": "2026-10-16T21:42:25.815+02:00",
+  "updatedAt": "2026-10-16T21:42:28.049+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
@@ -5080,6 +5092,24 @@
       "time": "21:30",
       "message": "Company Stats compute took 11,580ms at 2,000 staff — break threshold crossed (>10s) (measured AFTER the wipe, over 720 rosters, not the full 3,600)",
       "detail": "Stage 4 Stats measured after the company wipe, over the wiped 1-workplace company = 720 rosters (not the full 3,600). 720 rosters → ~11.6s matches Stage 2's 600 rosters → 11.6s. True Stats time at 3,600 rosters would be far higher.",
+      "fix": "Stats recomputes over every roster on every view — cache per-workplace aggregates, compute incrementally, or paginate the Stats view."
+    },
+    {
+      "time": "21:42",
+      "message": "localStorage quota exceeded — persist FAILED (sfshift_notifications:Failed to execute 'setItem' on 'Storage': Setting the value of 'sfshift_notifications' exceeded the quota.)",
+      "detail": "{\"ok\":false,\"ms\":133,\"bytes\":9186942,\"failed\":\"sfshift_notifications:Failed to execute 'setItem' on 'Storage': Setting the value of 'sfshift_notifications' exceeded the quota.\"}",
+      "fix": "Persist must warn the user when a save fails instead of silently continuing; the app should not keep running on unsaved state. Consider chunked storage / IndexedDB for large companies."
+    },
+    {
+      "time": "21:42",
+      "message": "Company data LOST — company rosters dropped from 9600 to 1920 (workplaces 5 → 1) after viewing a calendar while over quota",
+      "detail": "Final state: {\"staff\":800,\"teams\":40,\"rostersActive\":1920,\"companyWorkplaces\":1,\"companyRosters\":1920,\"drafts\":800,\"notif\":0,\"apps\":0,\"opensActive\":1600,\"changesActive\":20800,\"storageBytes\":10209070,\"heapUsedMB\":51,\"heapLimitMB\":3586}",
+      "fix": "companyLoad must not null S.company when storage is empty AND S.company already has workplaces; findSavedRoster must not call loadSaved unconditionally; persist must warn on quota failure instead of silently continuing."
+    },
+    {
+      "time": "21:42",
+      "message": "Company Stats compute took 64669ms at 4000 staff — near-freeze (break threshold >10s)",
+      "detail": "ok ms=64664 total=12400",
       "fix": "Stats recomputes over every roster on every view — cache per-workplace aggregates, compute incrementally, or paginate the Stats view."
     }
   ]
