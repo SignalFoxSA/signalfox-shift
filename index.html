@@ -1096,7 +1096,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1972';
+var BUILD='20261015-1973';
 /* LEAVE_TYPES — the ONE shared list of leave types (single source of truth).
    Used by EVERY leave-reason picker: the day-sheet removal prompt, the draft
    Long-term leave section, and both On Duty leave flows (baseLeave +
@@ -4225,20 +4225,24 @@ function msRenderCal(){
     var inner='<div class="dnum">'+d+'</div>';
     dayShifts.forEach(function(s){
       var band=s.color||'#888888';
-      var mems=s.members.map(function(nm){ return rosterMemberHtml(nm, s.original||[]); }).join(', ');
+      /* ONE-MEMBER-PER-LINE: each member on its own .bmn line
+         (white-space:nowrap, never wrapping) — same as the manager
+         roster calendar and the Open Shifts Calendar. A name NEVER
+         drops to a second line. */
+      var memHtml=s.members.map(function(nm){ return '<span class="bmn">'+rosterMemberHtml(nm, s.original||[])+'</span>'; }).join('');
       /* in "me" mode highlight the employee's own name */
       if(msScope==='me'){
         inner+='<span class="band" style="background:'+band+';color:'+textOnBand(band)+'">'
           +'<span class="bs">'+escapeHtml(shiftBandShort(s.shift))+'</span>'
           +'<span class="bc">'+escapeHtml(s.crew)+'</span>'
           +(s.time?'<span class="bm">'+escapeHtml(s.time)+'</span>':'')
-          +(mems?'<span class="bm">'+mems+'</span>':'')
+          +(memHtml?'<span class="bm">'+memHtml+'</span>':'')
           +'</span>';
       }else{
         inner+='<span class="band" style="background:'+band+';color:'+textOnBand(band)+'">'
           +'<span class="bs">'+escapeHtml(shiftBandShort(s.shift))+'</span>'
           +'<span class="bc">'+escapeHtml(s.crew)+'</span>'
-          +(mems?'<span class="bm">'+mems+'</span>':'')
+          +(memHtml?'<span class="bm">'+memHtml+'</span>':'')
           +'</span>';
       }
     });
@@ -4523,10 +4527,17 @@ function rulesWouldBreakForShift(rosterId, dateISO, shiftId, personName, isDraft
    CALENDAR = the FULL whole-workplace roster calendar for the viewed
    month (all teams, all days, all shifts, all people — the same bands
    as the My Shifts Whole base calendar, via msMonthData), NOT just the
-   available open shifts. Days with at least one open shift available
-   to THIS staff member (for overtime — the exact List filter set, via
-   mkAvailableOpen) get a RED border (the existing .cell.open 2px
-   #CC0000 inset). Days with NO available overtime get NO red border.
+   available open shifts.
+   Bands: ONE-MEMBER-PER-LINE (each member on their own .bmn line,
+   white-space:nowrap, never wrapping — same as the manager roster
+   calendar): a member name NEVER drops to a second line.
+   RED border ON THE SHIFT BAND (2px #CC0000 inset, the same red as the
+   manager calendar's open-shift band border) ONLY on an open shift band
+   whose shift is AVAILABLE TO THIS staff member (for overtime — the
+   exact List filter set, via mkAvailableOpen). An open shift band that
+   is NOT available to this staff member gets NO red border — just
+   "Open" in red text. A filled shift band gets NO red border. The DAY
+   CELL never gets a red border in this view.
    Tapping ANY day opens the day sheet (read-only, STAFF context):
    that day's shifts + members, plus an Apply button for each available
    open shift on that day (same mkApply flow as the List). No Apply
@@ -4690,7 +4701,7 @@ function mkRenderCal(){
     +'<b>'+MN[mkMonth]+' '+mkYear+'</b>'
     +'<button class="mnav" onclick="mkCalNav(1)" aria-label="Next month">&#8250;</button></div>';
   h+='<div style="text-align:center;margin-bottom:4px"><a href="#" onclick="mkCalToday();return false;" style="font-size:13px;">Today</a></div>';
-  h+='<p class="sub" style="text-align:center;">'+monthAvail.length+' open shift'+(monthAvail.length===1?'':'s')+' you can cover in '+MN[mkMonth]+' '+mkYear+'. Red border = overtime available to you.</p>';
+  h+='<p class="sub" style="text-align:center;">'+monthAvail.length+' open shift'+(monthAvail.length===1?'':'s')+' you can cover in '+MN[mkMonth]+' '+mkYear+'. Red border = shift available to you.</p>';
   h+='<div class="dow">'+['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(function(x){ return '<span>'+x+'</span>'; }).join('')+'</div>';
   h+='<div class="grid">';
   var first=new Date(mkYear,mkMonth,1);
@@ -4705,16 +4716,29 @@ function mkRenderCal(){
     var inner='<div class="dnum">'+d+'</div>';
     dayRoster.forEach(function(s){
       var band=s.color||'#888888';
-      var mems=s.members.map(function(nm){ return rosterMemberHtml(nm, s.original||[]); }).join(', ');
-      inner+='<span class="band" style="background:'+band+';color:'+textOnBand(band)+'">'
+      /* ONE-MEMBER-PER-LINE: each member on its own .bmn line
+         (white-space:nowrap, never wrapping) — same as the manager
+         roster calendar. A name NEVER drops to a second line. */
+      var memHtml=s.members.map(function(nm){ return '<span class="bmn">'+rosterMemberHtml(nm, s.original||[])+'</span>'; }).join('');
+      /* RED border ON THIS BAND only when this open shift is AVAILABLE
+         TO THIS staff member (same List filter set, via mkAvailableOpen).
+         Matching is per (date, shift, team): memberOverrides are keyed
+         by shiftId, so every crew band of the slot shares the same
+         OPEN — crew is deliberately NOT part of the match. Draft and
+         other-base avail entries never match a live active-base band. */
+      var bandAvail=s.members.indexOf(OPEN_MARK)>=0 && avail.some(function(e){
+        return e.s.dateISO===dayISO && e.s.shift===s.shift && e.s.team===s.team
+          && !e.s.isDraft && !(e.s.workplaceId&&S.company&&e.s.workplaceId!==S.company.activeId);
+      });
+      inner+='<span class="band" style="background:'+band+';color:'+textOnBand(band)+(bandAvail?';box-shadow:inset 0 0 0 2px #CC0000':'')+'">'
         +'<span class="bs">'+escapeHtml(shiftBandShort(s.shift))+'</span>'
         +'<span class="bc">'+escapeHtml(s.crew)+'</span>'
-        +(mems?'<span class="bm">'+mems+'</span>':'')
+        +(memHtml?'<span class="bm">'+memHtml+'</span>':'')
         +'</span>';
     });
-    /* RED border (existing .cell.open) ONLY on days with available
-       overtime for THIS staff member — same set as the List. */
-    h+='<div class="cell'+(isToday(dt)?' today':'')+(dayAvail.length?' open':'')+'" data-date="'+dayISO+'" style="cursor:pointer;" onclick="mkOpenStaffDaySheet(\''+dayISO+'\')">'+inner+'</div>';
+    /* NO red border on the DAY CELL in this view — the red border lives
+       on the available shift BAND only. */
+    h+='<div class="cell'+(isToday(dt)?' today':'')+'" data-date="'+dayISO+'" style="cursor:pointer;" onclick="mkOpenStaffDaySheet(\''+dayISO+'\')">'+inner+'</div>';
   }
   var trail=(lead+dim)%7;
   if(trail) for(var t=trail;t<7;t++) h+='<div class="cell out"></div>';
