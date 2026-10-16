@@ -1188,7 +1188,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1994';
+var BUILD='20261015-1995';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -2893,7 +2893,7 @@ function renderCalMonth(ctx){
         inner+='<span class="rvdot" title="'+escapeHtml(rvTitle).replace(/"/g,'&quot;')+'"></span>';
       }
       var ed=R.crews.some(function(c,ci){ return R.overrides[info.dayIdx+':'+ci]; });
-      var med=R.memberOverrides&&info.date&&R.memberOverrides[isoDate(info.date)];
+      var med=info.date&&hasMemberEdits(R, isoDate(info.date));
       /* cell border: RED while any shift on the day is still open, YELLOW once
          the change is concluded and the shift is full, none if untouched */
       var cellCls=dayHasOpen?' open':((ed||med)?' changed':'');
@@ -3700,6 +3700,8 @@ function saveDayEdit(){
         R.crews[ed.idx].members=ed.members.filter(function(nm){ return nm!==OPEN_MARK; });
         /* clear any once-off override for this date+shift since crew now matches */
         if(R.memberOverrides[dayCtx.dateISO]) delete R.memberOverrides[dayCtx.dateISO][ed.sl.id];
+        /* drop the emptied date entry too, so the day stops counting as changed */
+        if(R.memberOverrides[dayCtx.dateISO] && !Object.keys(R.memberOverrides[dayCtx.dateISO]).length) delete R.memberOverrides[dayCtx.dateISO];
       }
     }
   });
@@ -6224,7 +6226,7 @@ function msRenderDraftCal(){
         +'<span class="bc">'+crews+'</span>'+memLine+'</span>';
     });
     var ed=R.crews.some(function(c,ci){ return R.overrides[cInfo.dayIdx+':'+ci]; });
-    var med=R.memberOverrides&&cInfo.date&&R.memberOverrides[isoDate(cInfo.date)];
+    var med=cInfo.date&&hasMemberEdits(R, isoDate(cInfo.date));
     var cellCls=dayHasOpen?' open':((ed||med)?' changed':'');
     h+='<div class="cell'+(isToday(cInfo.date)?' today':'')+cellCls+'"><div class="dnum">'+dd+'</div>'+blocksHtml+'</div>';
   }
@@ -7954,7 +7956,7 @@ function companyDraftReadOnlyHtml(drill){
         +'<span class="bc">'+crews+'</span>'+memLine+'</span>';
     });
     var ed=R.crews.some(function(c,ci){ return R.overrides[info.dayIdx+':'+ci]; });
-    var med=R.memberOverrides&&info.date&&R.memberOverrides[isoDate(info.date)];
+    var med=info.date&&hasMemberEdits(R, isoDate(info.date));
     var cellCls=dayHasOpen?' open':((ed||med)?' changed':'');
     h+='<div class="cell'+(isToday(info.date)?' today':'')+cellCls+'"><div class="dnum">'+dd+'</div>'+blocksHtml+'</div>';
   }
@@ -10410,6 +10412,16 @@ function staffDel(si){
 
 /* ---------- settings ---------- */
 /* effective member list for a shift on a date: day override wins, else crew members */
+/* A date counts as member-edited only when it still holds at least one
+   shift override. An emptied {} (left behind when the last shift entry
+   for a date was deleted) is NOT an edit — without this, the gold
+   changed border would stick on a day that no longer has any override. */
+function hasMemberEdits(R, dateISO){
+  try{
+    var per=R&&R.memberOverrides&&dateISO&&R.memberOverrides[dateISO];
+    return !!(per&&Object.keys(per).length);
+  }catch(e){ return false; }
+}
 function effShiftMembers(R, dateISO, shiftId, crew){
   try{
     var mo=R&&R.memberOverrides&&dateISO&&R.memberOverrides[dateISO];
@@ -11443,7 +11455,7 @@ function expData(){
        for that date (memberOverrides — written by leave / replacement /
        swap / cover / manual edit flows). */
     var ed=R.crews.some(function(c,ci){ return (R.overrides||{})[info.dayIdx+':'+ci]; });
-    var med=R.memberOverrides&&R.memberOverrides[dateISO];
+    var med=hasMemberEdits(R, dateISO);
     changedDays.push(!!(ed||med));
     /* PER-SHIFT marks (Excel / PDF / PNG): each shift block gets its own
        mark — a changed Day must NOT mark the Night block, and vice versa.
