@@ -1086,7 +1086,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1950';
+var BUILD='20261015-1955';
 /* LEAVE_TYPES — the ONE shared list of leave types (single source of truth).
    Used by EVERY leave-reason picker: the day-sheet removal prompt, the draft
    Long-term leave section, and both On Duty leave flows (baseLeave +
@@ -2212,13 +2212,15 @@ function renderCalendar(){
   }
 }
 /* Count OPEN slots (OPEN_MARK entries) across a whole month roster — draft
-   view only ("X open shifts to fill"). Each OPEN_MARK is one unfilled slot. */
-function countOpenSlots(R,y,m){
+   view only ("X open shifts to fill"). Each OPEN_MARK is one unfilled slot.
+   Per-base variant (Company read-only draft view) resolves shifts from
+   THAT workplace's definitions, not the active base's. */
+function countOpenSlotsFor(base, R, y, m){
   var n=0, dim=daysInMonth(y,m);
   for(var d=1;d<=dim;d++){
     var info=calRosterDay(R,y,m,d); if(!info) continue;
     var dateISO=isoDate(info.date);
-    calSlotCrews(R,info.dayIdx).forEach(function(ps){
+    calSlotCrewsFor(base, R, info.dayIdx).forEach(function(ps){
       ps.list.forEach(function(x){
         effShiftMembers(R,dateISO,ps.sl.id,x.c).forEach(function(nm){ if(nm===OPEN_MARK) n++; });
       });
@@ -2226,6 +2228,7 @@ function countOpenSlots(R,y,m){
   }
   return n;
 }
+function countOpenSlots(R,y,m){ return countOpenSlotsFor(S.base, R, y, m); }
 function renderCalChrome(ctx){
   var cal=ensureCal();
   document.getElementById('calTitle').textContent=vehicleName(cal.vehicleId);
@@ -3382,18 +3385,31 @@ function deleteRoster(id){
    S.rosters when ready. The ONE exception to "drafts are not live": a
    draft with offerOpenShifts ON shows its open shifts in the Staff
    marketplace (labelled DRAFT) for booking before it goes live. */
+/* ---------- Drafts per workplace ----------
+   Every draft belongs to one workplace (draft.workplaceId). Drafts with no
+   workplaceId are legacy: they belong to the ACTIVE base (stamped on load).
+   The Drafts list, findDraftFor and auto-save dedupe all filter by
+   workplace, and company snapshots store each base's drafts separately. */
+function activeWorkplaceId(){ return (S.company && S.company.activeId) || null; }
+function draftWorkplaceId(d){ return (d && d.workplaceId) || activeWorkplaceId(); }
+function draftBelongsTo(d, wid){ return !!d && draftWorkplaceId(d)===wid; }
+function draftsForWorkplace(wid){ return (S.drafts||[]).filter(function(d){ return draftBelongsTo(d, wid); }); }
 function loadDrafts(){
   try{ S.drafts=JSON.parse(localStorage.getItem('sfshift_drafts')||'[]'); }catch(e){ S.drafts=[]; }
   S._draftsLoaded=true;
   if(!Array.isArray(S.drafts)) S.drafts=[];
   var before=S.drafts.length;
   S.drafts=S.drafts.filter(function(d){ return d && d.roster && Array.isArray(d.roster.crews); });
+  var stamped=false;
   S.drafts.forEach(function(d){
     if(!d.roster.memberOverrides) d.roster.memberOverrides={};
     if(typeof d.offerOpenShifts!=='boolean') d.offerOpenShifts=false;
     if(!d.createdAt) d.createdAt=Date.now();
+    /* legacy drafts (no workplaceId) belong to the active base — stamp them
+       so they are never lost and never leak into another base's list */
+    if(!d.workplaceId && activeWorkplaceId()){ d.workplaceId=activeWorkplaceId(); stamped=true; }
   });
-  if(S.drafts.length!==before) persistDrafts();
+  if(S.drafts.length!==before || stamped) persistDrafts();
 }
 function persistDrafts(){
   try{ localStorage.setItem('sfshift_drafts', JSON.stringify(S.drafts||[])); }catch(e){}
@@ -3448,17 +3464,19 @@ function autoSaveDraft(){
   loadDrafts();
   var R=S.draft, ex=null;
   if(S.draftId) ex=(S.drafts||[]).find(function(x){ return x.id===S.draftId; });
-  if(!ex) ex=(S.drafts||[]).find(function(x){ return x.teamId===R.vehicleId && x.year===R.year && x.month===R.month; });
+  if(!ex) ex=(S.drafts||[]).find(function(x){ return x.teamId===R.vehicleId && x.year===R.year && x.month===R.month && draftBelongsTo(x, activeWorkplaceId()); });
   if(ex){
     ex.roster=JSON.parse(JSON.stringify(R));
     ex.name=S.unitName||R.name||ex.name;
     ex.teamId=R.vehicleId||ex.teamId; ex.year=R.year; ex.month=R.month;
+    if(!ex.workplaceId && activeWorkplaceId()) ex.workplaceId=activeWorkplaceId();
     if(typeof ex.offerOpenShifts!=='boolean') ex.offerOpenShifts=false;
     S.draftId=ex.id;
   }else{
     ex={id:'d'+Date.now()+Math.floor(Math.random()*1000), teamId:R.vehicleId||null,
       year:R.year, month:R.month, name:S.unitName||R.name||'Draft',
-      roster:JSON.parse(JSON.stringify(R)), createdAt:Date.now(), offerOpenShifts:false};
+      roster:JSON.parse(JSON.stringify(R)), createdAt:Date.now(), offerOpenShifts:false,
+      workplaceId:activeWorkplaceId()||null};
     S.drafts.unshift(ex);
     S.draftId=ex.id;
   }
@@ -3556,11 +3574,14 @@ function renderDrafts(){
   var el=document.getElementById('draftList'); if(!el) return;
   loadDrafts();
   el.innerHTML='';
-  if(!S.drafts.length){
+  /* Drafts list shows ONLY the ACTIVE workplace's drafts */
+  var wid=activeWorkplaceId();
+  var list=(S.drafts||[]).filter(function(d){ return !wid || draftBelongsTo(d, wid); });
+  if(!list.length){
     el.innerHTML='<p class="fine">No drafts yet \u2014 build a roster and save it as a draft.</p>';
     return;
   }
-  S.drafts.forEach(function(d){
+  list.forEach(function(d){
     var R=d.roster;
     var staff=(R.crews||[]).reduce(function(a,c){ return a+(((c.members||[]).length)); },0);
     var team=vehicleName(d.teamId)||d.name||'Team';
@@ -3654,6 +3675,7 @@ function newDraftCopyForm(){
     opts+='<option value="live:'+escapeHtml(u.id)+'">'+escapeHtml((R.name||u.name||'Roster')+' \u00b7 Live')+'</option>';
   });
   (S.drafts||[]).forEach(function(d){
+    if(activeWorkplaceId() && !draftBelongsTo(d, activeWorkplaceId())) return; /* copy sources: active base's drafts only */
     opts+='<option value="draft:'+escapeHtml(d.id)+'">'+escapeHtml((d.name||'Draft')+' \u00b7 Draft')+'</option>';
   });
   box.innerHTML=
@@ -3667,10 +3689,11 @@ function newDraftCopyForm(){
     '<button class="btn" id="ndCopyCreate" onclick="newDraftCreateCopy()"'+(opts?'':' disabled')+'>Create draft</button></div>';
   newDraftMonthDefault('ndCopyTeam','ndCopyMonth');
 }
-/* The persisted draft for a team+month, if one exists. */
+/* The persisted draft for a team+month in the ACTIVE workplace, if one exists. */
 function findDraftFor(teamId, y, m){
   loadDrafts();
-  return (S.drafts||[]).find(function(d){ return d.teamId===teamId && d.year===y && d.month===m; })||null;
+  var wid=activeWorkplaceId();
+  return (S.drafts||[]).find(function(d){ return d.teamId===teamId && d.year===y && d.month===m && (!wid || draftBelongsTo(d, wid)); })||null;
 }
 /* Anchor for a fresh Generate-style roster, without the anchor screen:
    the same suggestion the anchor step uses (previous roster's end), or the
@@ -3774,7 +3797,8 @@ function newDraftCreateCopy(){
   R.memberOverrides={};
   R.leaveLog=[];
   var entry={id:'d'+Date.now()+Math.floor(Math.random()*1000), teamId:teamId,
-    year:y, month:m, name:vehicleName(teamId)||'Team', roster:R, createdAt:Date.now(), offerOpenShifts:false};
+    year:y, month:m, name:vehicleName(teamId)||'Team', roster:R, createdAt:Date.now(), offerOpenShifts:false,
+    workplaceId:activeWorkplaceId()||null};
   S.drafts.unshift(entry);
   persistDrafts();
   renderDrafts();
@@ -4489,11 +4513,14 @@ function renderMarketplace(){
   }else{
     var h2='';
     mine.forEach(function(a){
-      var st=a.status==='pending'?'⏳ Pending':a.status==='approved'?'✅ Approved':'❌ Declined';
-      h2+='<div class="dshift"><div class="dh"><span class="t">'
+      var st=a.status==='pending'?'⏳ Pending':a.status==='approved'?'✅ Approved':a.status==='withdrawn'?'↩️ Withdrawn':'❌ Declined';
+      var grey=a.status==='withdrawn'?'opacity:0.55;':'';
+      h2+='<div class="dshift" style="'+grey+'"><div class="dh"><span class="t">'
         +new Date(a.ts).toLocaleDateString('en-ZA',{day:'numeric',month:'short'})+' — '+escapeHtml(a.shift)
         +'</span><span class="c">'+st+'</span></div>'
-        +'<div style="color:var(--muted);font-size:13px;">'+escapeHtml(a.dateISO)+' · Crew '+escapeHtml(a.crew)+(a.isDraft?' · DRAFT':'')+'</div></div>';
+        +'<div style="color:var(--muted);font-size:13px;">'+escapeHtml(a.dateISO)+' · Crew '+escapeHtml(a.crew)+(a.isDraft?' · DRAFT':'')+'</div>'
+        +(a.status==='pending'?'<div class="btnrow" style="margin-top:6px;"><button class="btn ghost" style="padding:6px 12px;font-size:13px;" onclick="mkWithdrawApp(\''+escapeHtml(a.id)+'\')">Withdraw</button></div>':'')
+        +'</div>';
     });
     mh.innerHTML=h2;
   }
@@ -4670,6 +4697,30 @@ function mkDecline(appId){
   toast('Application declined.');
   renderBase();
 }
+/* Staff: withdraw their OWN PENDING application (My applications only).
+   The application stays in history as "withdrawn" — never deleted. The
+   slot is unaffected (a pending application never filled it). No rules
+   checks, no leaveLog changes. Only the applicant, only PENDING:
+   approved applications cannot be withdrawn (removal goes via the
+   manager's Unapprove / leave flow), and the manager Declines. */
+function mkWithdrawApp(appId){
+  loadShiftApps();
+  var a=(S.shiftApps||[]).find(function(x){ return x.id===appId; });
+  if(!a) return;
+  if(a.applicant!==msPerson){ toast('You can only withdraw your own applications.'); return; }
+  if(a.status!=='pending') return;
+  if(!confirm('Withdraw your application for '+a.shift+' on '+a.dateISO+'?')) return;
+  a.status='withdrawn';
+  persistShiftApps();
+  /* Inbox: the manager gets the news */
+  addNotification({forRole:'manager', forPerson:'manager', type:'withdrawn',
+    title:'Withdrawn: '+a.shift+' on '+a.dateISO,
+    body:a.applicant+' withdrew their application for '+a.shift+' on '+a.dateISO+' — '+(a.team||'')+'.',
+    rosterId:a.rosterId||null, applicationId:a.id, isDraft:!!a.isDraft});
+  persistBase();
+  toast('Application withdrawn.');
+  renderMarketplace();
+}
 /* manager: UNAPPROVE a shift application (roster-view list only) — undo an
    approval: the filler comes out of the slot (back to OPEN), the
    application goes back to pending (so it can be re-approved or declined),
@@ -4758,8 +4809,14 @@ function rosterAppsHtml(ctx){
       btns='<div class="btnrow" style="margin-top:4px;">'
         +'<button class="btn ghost" style="padding:6px 12px;font-size:13px;" onclick="rosterAppUnapprove(\''+escapeHtml(a.id)+'\')">Unapprove</button>'
         +'</div>';
+    }else if(group==='declined'){
+      /* manager only: reopen a manager-DECLINED application (never a
+         staff-WITHDRAWN one — you can only reverse your own action) */
+      btns='<div class="btnrow" style="margin-top:4px;">'
+        +'<button class="btn ghost" style="padding:6px 12px;font-size:13px;" onclick="rosterAppReopen(\''+escapeHtml(a.id)+'\')">Reopen</button>'
+        +'</div>';
     }
-    var style=group==='declined'?'opacity:0.55;':'';
+    var style=(group==='declined'||group==='withdrawn')?'opacity:0.55;':'';
     return '<div style="font-size:13px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--line);'+style+'">'
       +'<b>'+escapeHtml(a.applicant)+'</b> wants <b>'+escapeHtml(a.shift)+'</b>'
       +'<div style="color:var(--muted);font-size:12px;">'+escapeHtml(a.dateISO)+' \u00b7 Crew '+escapeHtml(a.crew)+labels+'</div>'
@@ -4767,7 +4824,7 @@ function rosterAppsHtml(ctx){
   }
   var h='<div class="card" style="border-left:3px solid #4DABF7;margin-bottom:10px;padding:10px 12px;">'
     +'<div style="font-size:13px;font-weight:700;margin-bottom:6px;">Shift applications ('+apps.length+')</div>';
-  [['pending','Pending'],['approved','Approved'],['declined','Declined']].forEach(function(g){
+  [['pending','Pending'],['approved','Approved'],['declined','Declined'],['withdrawn','Withdrawn']].forEach(function(g){
     var list=apps.filter(function(a){ return a.status===g[0]; });
     if(!list.length) return;
     h+='<div style="font-size:12px;font-weight:700;color:var(--muted);margin:8px 0 4px;">'+g[1]+' ('+list.length+')</div>';
@@ -4780,12 +4837,50 @@ function rosterAppsHtml(ctx){
 function rosterAppApprove(appId){ mkApprove(appId); renderCalendar(); }
 function rosterAppDecline(appId){ mkDecline(appId); renderCalendar(); }
 function rosterAppUnapprove(appId){ mkUnapprove(appId); renderCalendar(); }
+/* Manager: REOPEN a manager-DECLINED application (roster-view list only) —
+   back to pending (pending list + On Duty card), approvable/declinable
+   again. Only reverses the manager's own action: staff-WITHDRAWN
+   applications have NO Reopen — the manager must not override the staff
+   member's own withdrawal. */
+function mkReopen(appId){
+  loadShiftApps();
+  var a=(S.shiftApps||[]).find(function(x){ return x.id===appId; });
+  if(!a || a.status!=='declined') return;
+  /* the roster/draft must still exist — a reopened application needs a home */
+  var rosterId=a.rosterId, isDraft=a.isDraft, wpId=a.workplaceId, exists=false;
+  if(isDraft){
+    loadDrafts();
+    exists=(S.drafts||[]).some(function(d){ return d && d.id===rosterId; });
+  }else if(wpId && S.company && wpId!==S.company.activeId){
+    var wp=companyWorkplaceById(wpId);
+    exists=!!(wp && (wp.rosters||[]).some(function(u){ return u && u.id===rosterId; }));
+  }else{
+    loadSaved();
+    exists=(S.rosters||[]).some(function(u){ return u && u.id===rosterId; });
+  }
+  if(!exists){ toast('That roster is no longer available.'); return; }
+  /* loadSaved may have re-read S.shiftApps from storage — re-find */
+  a=(S.shiftApps||[]).find(function(x){ return x.id===appId; });
+  if(!a || a.status!=='declined') return;
+  if(!confirm("Reopen "+a.applicant+"'s application for "+a.shift+" on "+a.dateISO+"? It will go back to pending.")) return;
+  a.status='pending';
+  persistShiftApps();
+  /* Inbox: the staff applicant gets the news */
+  addNotification({forRole:'staff', forPerson:a.applicant, type:'reopened',
+    title:'Reopened: '+a.shift+' on '+a.dateISO,
+    body:'Your application for '+a.shift+' on '+a.dateISO+' — '+(a.team||'')+' was reopened. It\'s pending approval again.',
+    rosterId:a.rosterId||null, applicationId:a.id, isDraft:!!a.isDraft});
+  persistBase();
+  toast('Application reopened — pending again.');
+}
+function rosterAppReopen(appId){ mkReopen(appId); renderCalendar(); }
 /* ---------- Inbox / Notifications ----------
    System notifications, NOT two-way chat — staff cannot reply through it.
    S.notifications lives in localStorage ('sfshift_notifications') + cloud
    sync via collectState, exactly like S.shiftApps. addNotification() is the
-   general container any future feature can call; only the four
-   application-decision types exist today. */
+   general container any future feature can call; the application types
+   are application / approved / declined / unapproved / withdrawn /
+   reopened. */
 function loadNotifications(){
   try{ S.notifications=JSON.parse(localStorage.getItem('sfshift_notifications')||'[]'); }catch(e){ S.notifications=[]; }
   S._notificationsLoaded=true;
@@ -4876,9 +4971,10 @@ function renderInbox(){
   });
   wrap.innerHTML=h;
 }
-/* Tap a notification: mark it READ, then navigate. Manager application →
-   the roster view for that roster (draft or live), applications section.
-   Staff → My Shifts. Missing target → mark read, stay in Inbox, toast. */
+/* Tap a notification: mark it READ, then navigate. Manager application /
+   withdrawn → the roster view for that roster (draft or live),
+   applications section. Staff → My Shifts. Missing target → mark read,
+   stay in Inbox, toast. */
 function inboxTap(id){
   loadNotifications();
   var n=(S.notifications||[]).find(function(x){ return x.id===id; });
@@ -4886,7 +4982,7 @@ function inboxTap(id){
   n.read=true;
   persistNotifications();
   renderInbox();
-  if(n.forRole==='manager' && n.type==='application'){
+  if(n.forRole==='manager' && (n.type==='application' || n.type==='withdrawn')){
     if(n.isDraft){
       loadDrafts();
       var d=(S.drafts||[]).find(function(x){ return x.id===n.rosterId; });
@@ -5005,8 +5101,12 @@ function companyEnsure(){
   return S.company;
 }
 function companySnapCurrent(){
+  /* drafts: only THIS base's drafts go in its snapshot (no activeId yet on
+     first creation → include all drafts; they belong to the first base) */
+  var wid=(S.company&&S.company.activeId)||null;
   return {id:'w'+Date.now()+Math.floor(Math.random()*1000), name:(S.base&&S.base.name)||'Workplace',
-    base:JSON.parse(JSON.stringify(S.base||{})), rosters:JSON.parse(JSON.stringify(S.rosters||[]))};
+    base:JSON.parse(JSON.stringify(S.base||{})), rosters:JSON.parse(JSON.stringify(S.rosters||[])),
+    drafts:JSON.parse(JSON.stringify((S.drafts||[]).filter(function(d){ return !wid || draftBelongsTo(d, wid); })))};
 }
 function companySyncActive(){
   var c=companyEnsure(); if(!c) return;
@@ -5018,6 +5118,11 @@ function companySyncActive(){
          storage). A genuine delete-all goes through Clear Data. */
       if((S.rosters||[]).length || !(c.workplaces[i].rosters||[]).length){
         c.workplaces[i].rosters=JSON.parse(JSON.stringify(S.rosters||[]));
+      }
+      /* drafts for THIS base (per-workplace drafts) — only when drafts are
+         actually loaded, so a half-loaded state never wipes the snapshot */
+      if(S._draftsLoaded){
+        c.workplaces[i].drafts=JSON.parse(JSON.stringify((S.drafts||[]).filter(function(d){ return draftBelongsTo(d, c.activeId); })));
       }
       c.workplaces[i].name=(S.base&&S.base.name)||c.workplaces[i].name;
       return;
@@ -5047,7 +5152,7 @@ function companyAddWorkplace(name){
   var c=companyEnsure(); if(!c) return null;
   companySyncActive();
   var b=defaultBase(); b.name=name||('Base '+(c.workplaces.length+1));
-  var w={id:'w'+Date.now()+Math.floor(Math.random()*1000), name:b.name, base:b, rosters:[]};
+  var w={id:'w'+Date.now()+Math.floor(Math.random()*1000), name:b.name, base:b, rosters:[], drafts:[]};
   c.workplaces.push(w);
   companyPersist();
   return w;
@@ -5099,10 +5204,29 @@ function companyJoinWithCode(raw){
 function companySwitchWorkplace(id){
   var c=companyEnsure(); if(!c) return;
   if(id===c.activeId) return;
+  /* stamp legacy (unstamped) drafts to the OUTGOING base before leaving it,
+     so they are saved into its snapshot and never leak into the target */
+  (S.drafts||[]).forEach(function(d){ if(d && !d.workplaceId && c.activeId) d.workplaceId=c.activeId; });
+  persistDrafts();
   companySyncActive();
   var target=companyWorkplaceById(id); if(!target) return;
   S.base=JSON.parse(JSON.stringify(target.base||{}));
   S.rosters=JSON.parse(JSON.stringify(target.rosters||[]));
+  /* drafts: the target's snapshot is authoritative for ITS drafts;
+     other bases' entries in S.drafts stay untouched. Legacy snapshots
+     without a drafts field: keep S.drafts as-is (nothing lost). */
+  if(Array.isArray(target.drafts)){
+    var others=(S.drafts||[]).filter(function(d){ return d && d.workplaceId!==id; });
+    var tDrafts=JSON.parse(JSON.stringify(target.drafts)).filter(function(d){ return d && d.roster && Array.isArray(d.roster.crews); });
+    tDrafts.forEach(function(d){
+      d.workplaceId=id;
+      if(!d.roster.memberOverrides) d.roster.memberOverrides={};
+      if(typeof d.offerOpenShifts!=='boolean') d.offerOpenShifts=false;
+      if(!d.createdAt) d.createdAt=Date.now();
+    });
+    S.drafts=others.concat(tDrafts);
+    persistDrafts();
+  }
   c.activeId=id;
   persistBase(); persist(); companyPersist();
   renderHome(); renderAllRosters(); renderStaffTab(); renderSettings(); renderCalendar();
@@ -5803,6 +5927,106 @@ function companyStatsHtml(){
   }
   return h;
 }
+/* ---------- Company READ-ONLY draft view ----------
+   Company → Bases → base → draft. The ACTIVE base's drafts come from live
+   S.drafts; other bases' from their snapshot (synced on every switch).
+   Calendar + DRAFT banner + open-shift count + Leave list. NO edit
+   controls: no Publish/Save/Delete, no Offer toggle, no long-term leave,
+   no day tap, no applications. Back returns to the base drill-down. */
+function companyDraftsFor(wp){
+  if(!wp) return [];
+  if(wp.id===activeWorkplaceId()){ loadDrafts(); return draftsForWorkplace(wp.id); }
+  return Array.isArray(wp.drafts)?wp.drafts:[];
+}
+function companyDraftOpenCount(wp, d){
+  try{ return countOpenSlotsFor(wp.base, d.roster, d.year, d.month); }catch(e){ return 0; }
+}
+function companyDraftMemberQual(wp, nm){
+  if(nm===OPEN_MARK) return 'Open';
+  var st=((wp.base&&wp.base.staff)||[]).find(function(s){ return s.name===nm; });
+  var qid=st?st.qual:'';
+  var qn=((wp.base&&wp.base.quals)||[]).find(function(q){ return q.id===qid; });
+  return qn&&qn.name?nm+' ('+qn.name+')':nm;
+}
+function companyDraftLeaveHtml(wp, R, y, m){
+  var entries=[];
+  (R.leaveLog||[]).forEach(function(lg){
+    if(!lg||lg.type==='Swap'||lg.type==='Cover'||lg.person===OPEN_MARK) return;
+    var parts=String(lg.date||'').split('-');
+    if(parts.length!==3) return;
+    if(+parts[0]!==y||+parts[1]-1!==m) return;
+    var isOpen=lg.cover==='OPEN'||!lg.cover;
+    entries.push({date:lg.date, d:+parts[2],
+      dateLabel:expWeekdayShort(y,m,+parts[2])+' '+ +parts[2]+' '+MNS[m],
+      person:lg.person, personQual:companyDraftMemberQual(wp, lg.person),
+      type:lg.type||'Leave', isOpen:isOpen,
+      cover:lg.cover, note:lg.note||'',
+      coverQual:(lg.cover&&lg.cover!=='OPEN')?companyDraftMemberQual(wp, lg.cover):null});
+  });
+  entries.sort(function(a,b){ return a.date<b.date?-1:a.date>b.date?1:0; });
+  if(!entries.length) return '';
+  var h='<div style="margin-top:16px;"><div style="font-size:15px;font-weight:800;margin-bottom:6px;">Leave</div>';
+  entries.forEach(function(lv){
+    var col=lv.isOpen?'#CC0000':'#B8860B';
+    h+='<div style="font-size:14px;color:'+col+';margin-bottom:2px;">'
+      +escapeHtml(lv.dateLabel+' — '+lv.personQual+', '+lv.type+', '+(lv.isOpen?'OPEN':'replaced by '+lv.coverQual))
+      +(lv.note?' ('+escapeHtml(lv.note)+')':'')+'</div>';
+  });
+  return h+'</div>';
+}
+function companyDraftReadOnlyHtml(drill){
+  var wp=companyWorkplaceById(drill.workplaceId);
+  var d=wp?companyDraftsFor(wp).find(function(x){ return x.id===drill.id; }):null;
+  if(!wp||!d) return '<h3 style="margin-top:4px;">Draft</h3><p class="fine">That draft is no longer available.</p>';
+  var R=d.roster, y=d.year, m=d.month;
+  var teamName=((wp.base.vehicles||[]).find(function(t){ return t.id===d.teamId; })||{}).name||d.name||'Team';
+  var created=new Date(d.createdAt||Date.now()).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'});
+  var nOpen=companyDraftOpenCount(wp, d);
+  var h='<div class="draftbanner" style="display:block;">DRAFT &mdash; Not published yet</div>'
+    +'<h3 style="margin-top:4px;">'+escapeHtml(teamName)+' &middot; '+escapeHtml(MN[m]+' '+y)+'</h3>'
+    +'<p class="sub">Created '+escapeHtml(created)+' &middot; '+(escapeHtml(wp.name||'Workplace'))+'</p>'
+    +'<div class="draftopencount">'+(nOpen>0?'<span style="color:#CC0000;">'+nOpen+' open shift'+(nOpen>1?'s':'')+' to fill</span>':'<span class="ok">All shifts filled</span>')+'</div>';
+  /* month grid, READ-ONLY: same cell/band markup as the roster calendar,
+     but no onclick on any cell — tapping a day does nothing. */
+  var dim=daysInMonth(y,m), lead=leadDays(y,m), weeks=Math.ceil((lead+dim)/7);
+  var dowL=['S','M','T','W','T','F','S'], ws=wsDow(), dowH='';
+  for(var wi=0;wi<7;wi++) dowH+='<span>'+dowL[(ws+wi)%7]+'</span>';
+  h+='<div class="dow">'+dowH+'</div><div class="grid">';
+  for(var k=0;k<lead;k++) h+='<div class="cell out"></div>';
+  for(var dd=1;dd<=dim;dd++){
+    var info=calRosterDay(R,y,m,dd);
+    if(!info){ h+='<div class="cell out"><div class="dnum">'+dd+'</div></div>'; continue; }
+    var dateISO=info.date?isoDate(info.date):null;
+    var blocksHtml='', dayHasOpen=false;
+    calSlotCrewsFor(wp.base, R, info.dayIdx).forEach(function(ps){
+      if(!ps.list.length) return;
+      var crews=ps.list.map(function(x){ return escapeHtml(x.c.name); }).join(' / ');
+      var memHtml=[], hasOpen=false;
+      ps.list.forEach(function(x){
+        var orig=x.c.members||[];
+        effShiftMembers(R, dateISO, ps.sl.id, x.c).forEach(function(nm){
+          if(nm===OPEN_MARK) hasOpen=true;
+          var mh=rosterMemberHtml(nm, orig);
+          if(memHtml.indexOf(mh)<0) memHtml.push(mh);
+        });
+      });
+      if(hasOpen) dayHasOpen=true;
+      var memLine=memHtml.length?'<span class="bm">'+memHtml.map(function(mh){ return '<span class="bmn">'+mh+'</span>'; }).join('')+'</span>':'';
+      var band=(ps.list[0]&&ps.list[0].c.color)||'#888888';
+      blocksHtml+='<span class="band" style="background:'+band+';color:'+textOnBand(band)+(hasOpen?';box-shadow:inset 0 0 0 2px #CC0000':'')+'">'
+        +'<span class="bs">'+escapeHtml(shiftBandShort(ps.sl.name))+'</span>'
+        +'<span class="bc">'+crews+'</span>'+memLine+'</span>';
+    });
+    var ed=R.crews.some(function(c,ci){ return R.overrides[info.dayIdx+':'+ci]; });
+    var med=R.memberOverrides&&info.date&&R.memberOverrides[isoDate(info.date)];
+    var cellCls=dayHasOpen?' open':((ed||med)?' changed':'');
+    h+='<div class="cell'+(isToday(info.date)?' today':'')+cellCls+'"><div class="dnum">'+dd+'</div>'+blocksHtml+'</div>';
+  }
+  for(var t=lead+dim;t<weeks*7;t++) h+='<div class="cell out"></div>';
+  h+='</div>';
+  h+=companyDraftLeaveHtml(wp, R, y, m);
+  return h;
+}
 function companyDrillHtml(drill){
   var today=companyDashDateISO();
   var st=companyTodayStats(today);
@@ -5898,9 +6122,20 @@ function companyDrillHtml(drill){
       onToday.forEach(function(nm){
         h+='<div class="avail" onclick="companySetDrill({type:\'person\', name:\''+escapeHtml(nm).replace(/\'/g,"\\'")+'\'})"><span><span class="nm">'+escapeHtml(nm)+'</span> <span class="meta">'+escapeHtml(staffQualNameFor(wp.base, nm)||'')+'</span></span><span class="meta">View</span></div>';
       });
+      /* Drafts at this base (view-only from Company — tap to view, not edit) */
+      var wpDrafts=companyDraftsFor(wp);
+      h+='<h3>Drafts</h3>';
+      if(!wpDrafts.length) h+='<p class="fine">No drafts at this base.</p>';
+      wpDrafts.forEach(function(d){
+        var created=new Date(d.createdAt||Date.now()).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'});
+        var nOpen=companyDraftOpenCount(wp, d);
+        var teamName=((wp.base.vehicles||[]).find(function(t){ return t.id===d.teamId; })||{}).name||d.name||'Team';
+        h+='<div class="avail" onclick="companySetDrill({type:\'draft\', id:\''+d.id+'\', workplaceId:\''+wp.id+'\', returnDrill:{type:\'base\', id:\''+wp.id+'\'}})"><span><span class="nm">'+escapeHtml(teamName)+' &middot; '+escapeHtml(MN[d.month]+' '+d.year)+'</span> <span class="meta">Created '+escapeHtml(created)+' &middot; '+nOpen+' open shift'+(nOpen===1?'':'s')+'</span></span><span class="meta">View</span></div>';
+      });
       if(wp.id!==S.company.activeId) h+='<div class="btnrow"><button class="btn" onclick="companySwitchWorkplace(\''+wp.id+'\'); switchTab(\'rosters\');">Open this base</button></div>';
     }
-  } else if(drill.type==='person'){ return companyPersonDrillHtml(drill.name); }
+  } else if(drill.type==='draft'){ return companyDraftReadOnlyHtml(drill); }
+  else if(drill.type==='person'){ return companyPersonDrillHtml(drill.name); }
   return h;
 }
 
@@ -7014,7 +7249,12 @@ function switchTab(name){
 function goBack(){
   var av=document.querySelector('.view.active');
   var active=av&&av.id;
-  if(active==='v-company' && S.company && S.company.drill){ companyClearDrill(); return; }
+  if(active==='v-company' && S.company && S.company.drill){
+    /* a drill with a returnDrill (Company draft view) goes back to its
+       parent drill (the base drill-down), not to the tab list */
+    if(S.company.drill.returnDrill){ S.company.drill=S.company.drill.returnDrill; companyPersist(); renderCompany(); return; }
+    companyClearDrill(); return;
+  }
   if(active==='v-rotbuilder'){ openBaseSetup(); return; }
   if(active==='v-ladder'){ switchTab('staff'); return; }
   if(active==='v-shiftreq'){ switchTab('staff'); return; }
