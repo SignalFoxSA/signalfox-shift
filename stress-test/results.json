@@ -163,6 +163,10 @@
     {
       "label": "On Duty render",
       "value": "414ms"
+    },
+    {
+      "label": "Company Dashboard render",
+      "value": "577ms"
     }
   ],
   "progress": {
@@ -182,5 +186,5 @@
     "rosters": 120,
     "staff": 200
   },
-  "updatedAt": "2026-10-16T21:18:43.894+02:00"
+  "updatedAt": "2026-10-16T21:18:46.016+02:00"
 }
