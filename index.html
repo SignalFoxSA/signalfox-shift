@@ -59,9 +59,12 @@
     display:flex; align-items:center; gap:10px; padding:14px 0 10px;
   }
   /* Small, subtle back arrow: one per sub-view, top-left just under the header.
-     Icon-only, no background/border, muted colour — quiet, not bold. */
+     Icon-only, no background/border, muted colour — quiet, not bold.
+     STICKY: stays visible at the top (just under the sticky header, which is
+     66px tall: 14px + 10px padding + 42px brandfox) when a long sub-view
+     scrolls, so the user never has to scroll back up to go back. */
   #backRow{display:none;}
-  #backRow.show{display:block;}
+  #backRow.show{display:block; position:sticky; top:66px; z-index:19; background:var(--bg);}
   #backBtn, .backmini{
     background:none; border:none; padding:2px 4px; margin:0;
     color:var(--muted); font-size:21px; font-weight:400; line-height:1;
@@ -1099,7 +1102,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1975';
+var BUILD='20261015-1976';
 /* LEAVE_TYPES — the ONE shared list of leave types (single source of truth).
    Used by EVERY leave-reason picker: the day-sheet removal prompt, the draft
    Long-term leave section, and both On Duty leave flows (baseLeave +
@@ -1871,6 +1874,10 @@ function toNewRoster(){
     sel.value=S.nrPrefill.vehicleId;
   }
   nrDefaultMonth();
+  /* Remember where New roster was opened from (Home, Rosters, or the
+     calendar empty state) so the back arrow returns there. */
+  var _av=document.querySelector('.view.active');
+  S._newRosterReturn=_av&&_av.id?_av.id:null;
   show('v-newroster');
 }
 function nrDefaultMonth(){
@@ -2115,6 +2122,7 @@ function generateMonthRoster(){
     year:A.year, month:A.month, anchorAbs:A.abs, startISO:iso, days:dim, crews:crews,
     shiftLen:rot.hours||12, startTime:v.startTime||'06:00', rotation:A.rotKey, coverage:v.coverage||24, shiftIds:teamShiftIds(v), overrides:{}, memberOverrides:{} };
   S.fromSaved=false;
+  S._calBack='anchor'; /* freshly generated → back goes to the anchor step */
   S.cal={vehicleId:v.id, y:A.year, m:A.month, mode:'month', sub:'month', weekISO:null};
   /* RULES: flag if the generated roster breaks a rule — override keeps it, cancel discards it */
   var genResults=rulesCheckRoster(S.draft);
@@ -2559,6 +2567,7 @@ function continueRoster(){
     shiftLen:R0.shiftLen||rot.hours||12, startTime:R0.startTime||v.startTime||'06:00',
     rotation:R0.rotation, coverage:R0.coverage||v.coverage||24, shiftIds:R0.shiftIds?R0.shiftIds.slice():teamShiftIds(v), overrides:{}, memberOverrides:{} };
   S.fromSaved=false; S.unitId=null; S.unitName=S.draft.name;
+  S._calBack='rosters'; /* continued roster → back goes to Rosters (the anchor screen would be stale) */
   S.cal={vehicleId:cal.vehicleId, y:y, m:m, mode:'month', sub:'month', weekISO:null};
   renderCalendar(); show('v-cal');
   toast('Continued from '+MN[R0.month]+' \u2014 review and save');
@@ -3382,6 +3391,7 @@ function openRoster(id){
      tap (inboxTap → openRoster). openDraft() still sets S.draft. */
   autoSaveDraft();
   S.draft=null; S.draftId=null; S.fromSaved=false;
+  S._calBack='rosters'; /* live roster opened from a list → back goes to Rosters */
   var R=u.roster;
   /* stamp the team link on legacy rosters so the switcher can find them */
   if(!R.vehicleId){
@@ -3591,6 +3601,7 @@ function openDraft(id){
   S.cal={vehicleId:vid, y:R.year, m:R.month, mode:'month', sub:'month', weekISO:null};
   S.draft=JSON.parse(JSON.stringify(R));
   S.fromSaved=false; S.draftId=d.id; S.unitId=null; S.unitName=d.name;
+  S._calBack='rosters'; /* saved draft opened from the Rosters list → back goes to Rosters, NOT the anchor step */
   /* fresh Long-term leave section for this draft (collapsed by default) */
   draftLeaveOpen=false;
   var _dlSec=document.getElementById('draftLeaveSection');
@@ -8013,18 +8024,33 @@ function goBack(){
   if(active==='v-rules'){ switchTab('staff'); return; }
   if(active==='v-legal'){ switchTab('settings'); return; }
   if(active==='v-inbox'){
-    /* back to wherever the Inbox was opened from (or the role's home tab) */
-    if(S._inboxReturn && document.getElementById(S._inboxReturn)){ show(S._inboxReturn); return; }
+    /* back to wherever the Inbox was opened from (or the role's home tab).
+       Guard: if the Inbox was opened FROM the Inbox (bell tapped while
+       already in the Inbox), the recorded return IS the Inbox — fall
+       through to the role home instead of going nowhere. */
+    if(S._inboxReturn && S._inboxReturn!=='v-inbox' && document.getElementById(S._inboxReturn)){ show(S._inboxReturn); return; }
     if(appRole()==='staff') switchTab('myshifts');
     else if(appRole()==='company') switchTab('company');
     else switchTab('home');
     return;
   }
+  if(active==='v-newroster'){
+    /* New roster is reachable from Home, Rosters, and the calendar empty
+       state — go back to where it was opened from. */
+    if(S._newRosterReturn==='v-rosters'){ switchTab('rosters'); return; }
+    if(S._newRosterReturn==='v-cal'){ show('v-cal'); return; }
+    switchTab('home'); return;
+  }
   if(active==='v-anchor'){ show('v-newroster'); return; }
   if(active==='v-cal'){
     var cal=ensureCal();
     if(cal.sub==='week'){ cal.sub='month'; renderCalendar(); return; }
-    if(S.draft && !S.fromSaved){ show('v-anchor'); } else { switchTab('rosters'); }
+    /* Only a freshly GENERATED roster goes back to the anchor step.
+       A saved draft opened from the Rosters list, a continued roster,
+       and a published roster all go back to the Rosters tab — the
+       anchor screen would be stale for those (it belongs to the
+       Generate flow, not to an already-built roster). */
+    if(S.draft && !S.fromSaved && S._calBack==='anchor'){ show('v-anchor'); } else { switchTab('rosters'); }
     return;
   }
   switchTab('home');
