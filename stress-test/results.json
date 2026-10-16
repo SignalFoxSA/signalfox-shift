@@ -1580,6 +1580,10 @@
     {
       "time": "21:30",
       "message": "Persist FAILED (quota) — reload would lose data"
+    },
+    {
+      "time": "21:30",
+      "message": "On Duty render skipped (state exceeds localStorage)"
     }
   ],
   "metrics": [
@@ -1641,7 +1645,7 @@
     "rosters": 3600,
     "staff": 2000
   },
-  "updatedAt": "2026-10-16T21:30:10.552+02:00",
+  "updatedAt": "2026-10-16T21:30:12.650+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
