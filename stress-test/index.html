@@ -53,6 +53,18 @@
   .dot.pulse{animation:pulse 1.4s ease-in-out infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
   .dot.off{background:var(--red);animation:none}
+  .totals{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .total{background:var(--card2);border:1px solid var(--line);border-radius:10px;
+    padding:12px 10px;text-align:center}
+  .total-num{font-size:26px;font-weight:800;color:var(--gold);line-height:1.15;
+    word-break:break-word}
+  .total-lbl{font-size:12px;color:var(--muted);margin-top:4px}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);
+    margin:0 0 8px}
+  .legend span{display:inline-flex;align-items:center;gap:5px}
+  .sw{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
+  .graphwrap{width:100%;overflow:hidden}
+  .graphwrap svg{width:100%;height:auto;display:block}
   a{color:var(--blue)}
 </style>
 </head>
@@ -71,6 +83,27 @@
   </div>
 
   <div class="card">
+    <h2>System totals</h2>
+    <div class="totals">
+      <div class="total"><div class="total-num" id="tot-companies">—</div><div class="total-lbl">Companies</div></div>
+      <div class="total"><div class="total-num" id="tot-staff">—</div><div class="total-lbl">Staff rostered</div></div>
+      <div class="total"><div class="total-num" id="tot-rosters">—</div><div class="total-lbl">Active rosters</div></div>
+      <div class="total"><div class="total-num" id="tot-changes">—</div><div class="total-lbl">Changes</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Movement</h2>
+    <div class="legend">
+      <span><span class="sw" style="background:#FFC13E"></span>Companies</span>
+      <span><span class="sw" style="background:#4DABF7"></span>Staff</span>
+      <span><span class="sw" style="background:#51CF66"></span>Rosters</span>
+      <span><span class="sw" style="background:#FF8787"></span>Changes</span>
+    </div>
+    <div class="graphwrap" id="graphwrap"><p class="empty">No movement yet — the graph draws as the stress test scales up.</p></div>
+  </div>
+
+  <div class="card">
     <h2>The three lines</h2>
     <div class="thr"><span class="lbl">Handles perfectly</span><span class="val" id="thr-perfect">—</span></div>
     <div class="thr"><span class="lbl">Starts to glitch</span><span class="val" id="thr-glitch">—</span></div>
@@ -81,6 +114,11 @@
     <h2>Metrics</h2>
     <p class="empty" id="metrics-empty">No metrics yet.</p>
     <table id="metrics-table" style="display:none"><tbody id="metrics-body"></tbody></table>
+  </div>
+
+  <div class="card">
+    <h2>Devices active</h2>
+    <p class="empty">Not connected — device ping comes later.</p>
   </div>
 
   <div class="card">
@@ -98,6 +136,60 @@
 <script>
 const $ = id => document.getElementById(id);
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+function fmtNum(v){
+  if(v===null || v===undefined || isNaN(Number(v))) return "—";
+  return Number(v).toLocaleString("en-ZA");
+}
+function fmtAxis(v){
+  if(v>=1000000) return (v/1000000).toFixed(1).replace(/\.0$/,"")+"M";
+  if(v>=1000) return (v/1000).toFixed(1).replace(/\.0$/,"")+"k";
+  return String(Math.round(v));
+}
+const SERIES = [
+  {key:"companies", color:"#FFC13E", label:"Companies"},
+  {key:"staff",     color:"#4DABF7", label:"Staff"},
+  {key:"rosters",   color:"#51CF66", label:"Rosters"},
+  {key:"changes",   color:"#FF8787", label:"Changes"}
+];
+function renderTotals(d){
+  const t = d.totals || {};
+  $("tot-companies").textContent = fmtNum(t.companies);
+  $("tot-staff").textContent = fmtNum(t.staff);
+  $("tot-rosters").textContent = fmtNum(t.rosters);
+  $("tot-changes").textContent = fmtNum(t.changes);
+}
+function renderGraph(d){
+  const hist = Array.isArray(d.history) ? d.history : [];
+  const wrap = $("graphwrap");
+  const pts = hist.filter(h => h && SERIES.some(s => typeof h[s.key] === "number"));
+  if(pts.length < 2){
+    wrap.innerHTML = "<p class='empty'>No movement yet — the graph draws as the stress test scales up.</p>";
+    return;
+  }
+  const W = 600, H = 240, L = 44, R = 10, T = 10, B = 26;
+  const maxV = Math.max(1, ...pts.flatMap(h => SERIES.map(s => h[s.key]||0)));
+  const x = i => L + (pts.length<=1 ? 0 : i/(pts.length-1)) * (W-L-R);
+  const y = v => T + (1 - v/maxV) * (H-T-B);
+  let svg = '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Movement graph: companies, staff, rosters and changes over time">';
+  for(let g=0; g<=2; g++){
+    const gv = maxV*g/2, gy = y(gv);
+    svg += '<line x1="'+L+'" y1="'+gy+'" x2="'+(W-R)+'" y2="'+gy+'" stroke="#2c2c2c" stroke-width="1"/>';
+    svg += '<text x="'+(L-6)+'" y="'+(gy+4)+'" font-size="11" fill="#a8a29e" text-anchor="end">'+esc(fmtAxis(gv))+'</text>';
+  }
+  const first = pts[0].time || "", last = pts[pts.length-1].time || "";
+  const mid = pts.length>2 ? (pts[Math.floor(pts.length/2)].time || "") : "";
+  svg += '<text x="'+L+'" y="'+(H-6)+'" font-size="11" fill="#a8a29e">'+esc(first)+'</text>';
+  if(mid) svg += '<text x="'+(W/2)+'" y="'+(H-6)+'" font-size="11" fill="#a8a29e" text-anchor="middle">'+esc(mid)+'</text>';
+  svg += '<text x="'+(W-R)+'" y="'+(H-6)+'" font-size="11" fill="#a8a29e" text-anchor="end">'+esc(last)+'</text>';
+  for(const s of SERIES){
+    svg += '<polyline points="'+pts.map((h,i)=>x(i).toFixed(1)+","+y(h[s.key]||0).toFixed(1)).join(" ")+'" fill="none" stroke="'+s.color+'" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+    const li = pts.length-1, lv = pts[li][s.key]||0;
+    svg += '<circle cx="'+x(li).toFixed(1)+'" cy="'+y(lv).toFixed(1)+'" r="4" fill="'+s.color+'"/>';
+  }
+  svg += '</svg>';
+  wrap.innerHTML = svg;
+}
 
 function render(d){
   const status = d.status || "waiting";
@@ -122,6 +214,9 @@ function render(d){
   $("metrics-table").style.display = metrics.length ? "table" : "none";
   $("metrics-body").innerHTML = metrics.map(m =>
     "<tr><td>"+esc(m.label)+"</td><td>"+esc(m.value)+"</td></tr>").join("");
+
+  renderTotals(d);
+  renderGraph(d);
 
   const log = Array.isArray(d.log) ? d.log : [];
   $("log").innerHTML = log.map(l =>
