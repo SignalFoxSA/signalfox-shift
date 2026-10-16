@@ -58,12 +58,17 @@
     position:sticky; top:0; z-index:20; background:var(--bg);
     display:flex; align-items:center; gap:10px; padding:14px 0 10px;
   }
-  header .back{
-    width:40px;height:40px;border-radius:12px;border:1px solid var(--line);
-    background:var(--card); color:var(--text); font-size:18px; cursor:pointer;
-    display:none; align-items:center; justify-content:center;
+  /* Small, subtle back arrow: one per sub-view, top-left just under the header.
+     Icon-only, no background/border, muted colour — quiet, not bold. */
+  #backRow{display:none;}
+  #backRow.show{display:block;}
+  #backBtn, .backmini{
+    background:none; border:none; padding:2px 4px; margin:0;
+    color:var(--muted); font-size:21px; font-weight:400; line-height:1;
+    cursor:pointer; width:28px; height:28px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:inherit;
   }
-  header .back.show{display:flex;}
   header .brand{font-weight:800; font-size:18px; letter-spacing:.2px;}
   header .brand small{display:block; font-weight:500; font-size:11px; color:var(--muted); letter-spacing:1.5px; text-transform:uppercase;}
   .view{display:none;}
@@ -366,7 +371,7 @@
   .srow{flex-wrap:wrap;}
   .staffsub{flex-basis:100%; font-size:12px; color:var(--muted); margin:-2px 0 6px;}
   @media print{
-    header .back, .tabs, .btn, .hero-edit, .hero-reset, #sheetWrap, #toast, .crewfilter{display:none !important;}
+    header .back, #backRow, .tabs, .btn, .hero-edit, .hero-reset, #sheetWrap, #toast, .crewfilter{display:none !important;}
     body{background:#fff;}
     #app{max-width:100%; padding-bottom:0;}
     .view{display:none !important;}
@@ -428,8 +433,7 @@
     background:var(--accent); color:#141414; border:none; border-radius:999px;
     font-weight:800; font-size:14px; padding:10px 18px; cursor:pointer;}
   /* week detail */
-  .wkback{display:flex; align-items:center; gap:10px; margin:6px 0 10px;}
-  .wkback button{background:none; border:none; color:var(--accent); font-size:15px; font-weight:800; cursor:pointer; padding:8px 4px;}
+  .wkback{display:none;}
   .weeknav{display:flex; align-items:center; justify-content:space-between; margin:2px 0 12px;}
   .weeknav .mnav{width:52px; height:52px;}
   .weeklabel{font-size:16px; font-weight:800; text-align:center;}
@@ -537,10 +541,10 @@
 <div id="app">
     <div id="cloudNote"></div>
   <header>
-    <button class="back" id="backBtn" onclick="goBack()">&#8592;</button>
     <div class="brandfox"></div>
     <div class="brand">SignalFox Shift<small>A Signal Fox app</small></div>
   </header>
+  <div id="backRow"><button id="backBtn" onclick="goBack()" aria-label="Back">&#8592;</button></div>
   <!-- LOGIN -->
   <div class="view" id="v-login">
     <div class="login-wrap">
@@ -802,7 +806,6 @@
       <div class="ancprev" id="ancPreview"></div>
     </div>
     <button class="btn" onclick="generateMonthRoster()">Generate roster</button>
-    <button class="btn ghost" onclick="show('v-newroster')">Back</button>
   </div>
 
   <!-- CALENDAR -->
@@ -826,7 +829,6 @@
     <button class="btn" id="saveBtn" onclick="saveRoster()">Save roster</button>
     <button class="btn ghost" onclick="openExportSheet()">&#8681; Export roster</button>
     <button class="btn ghost" onclick="openCrewSheet()">&#9998;&#65039; Edit crews</button>
-    <button class="btn ghost" onclick="goBack()">Back</button>
   </div>
 
   <!-- STAFF PROFILE TAB -->
@@ -977,7 +979,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1890';
+var BUILD='20261015-1895';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2441,7 +2443,7 @@ function renderCalWeek(ctx){
   var hol=holMapFor(mon.getFullYear()), hol2=holMapFor(addDays(mon,6).getFullYear());
   var wrap=document.getElementById('calWeekWrap');
   var WD=['SUN','MON','TUE','WED','THU','FRI','SAT'];
-  var html='<div class="wkback"><button class="wkbackbtn">&#8592; Back to month</button></div>';
+  var html=''; /* week view: the single small global back arrow returns to month */
   html+='<div class="weeknav"><button class="mnav wprev" aria-label="Previous week">&#8249;</button>'+
     '<div class="weeklabel">'+fmtShort(mon)+' \u2013 '+fmtShort(addDays(mon,6))+'</div>'+
     '<button class="mnav wnext" aria-label="Next week">&#8250;</button></div>';
@@ -2479,7 +2481,6 @@ function renderCalWeek(ctx){
     }
   }
   wrap.innerHTML=html;
-  var bb=wrap.querySelector('.wkbackbtn'); if(bb) bb.onclick=function(){ calBackToMonth(); };
   var pv=wrap.querySelector('.wprev'); if(pv) pv.onclick=function(){ calWeekNav(-1); };
   var nx=wrap.querySelector('.wnext'); if(nx) nx.onclick=function(){ calWeekNav(1); };
   var sh=wrap.querySelectorAll('.wshift');
@@ -3999,7 +4000,7 @@ function renderCompany(){
   var c=companyEnsure(); if(!c) return;
   var el=document.getElementById('companyContent'); if(!el) return;
   var heroEl=document.getElementById('companyHero');
-  if(c.drill){ if(heroEl) heroEl.innerHTML=''; el.innerHTML=companyDrillHtml(c.drill); return; }
+  if(c.drill){ if(heroEl) heroEl.innerHTML=''; el.innerHTML=companyDrillHtml(c.drill); syncBackRow(); return; }
   var tab=c.tab||'dash';
   if(tab==='rules'){ tab='dash'; c.tab='dash'; companyPersist(); } /* Company Rules now live in Settings */
   var h='';
@@ -4018,6 +4019,7 @@ function renderCompany(){
       if(lg){ lg.style.backgroundImage='url("'+c.logo+'")'; lg.style.backgroundSize='cover'; lg.style.backgroundPosition='50% 50%'; }
     }
   }
+  syncBackRow();
 }
 function companySetTab(t){
   if(t==='rules'){ switchTab('settings'); var card=document.getElementById('coRulesCard'); if(card) card.scrollIntoView(); return; }
@@ -4032,9 +4034,7 @@ function companyClearDrill(){
   var c=companyEnsure(); if(!c) return;
   c.drill=null; companyPersist(); renderCompany();
 }
-function companyBackBtn(){
-  return '<div class="btnrow"><button class="btn ghost" onclick="companyClearDrill()">&#8592; Back</button></div>';
-}
+/* Company drill-downs use the single small global back arrow (#backRow / goBack) — no in-view Back button. */
 function rosterCoversDate(R, dateISO){
   if(!R) return false;
   if(R.kind==='month'){
@@ -4258,7 +4258,7 @@ function companyPersonDrillHtml(name){
   h+='<h3>Company rule check</h3>';
   if(!viols.length) h+='<p class="fine">No company-wide rule violations.</p>';
   else h+='<div class="card" style="padding:10px;border:2px solid #CC0000;color:#CC0000;">'+viols.map(function(v){ return '<div>'+escapeHtml(v)+'</div>'; }).join('')+'</div>';
-  return companyBackBtn()+h;
+  return h;
 }
 /* every open slot across the company, grouped per (base, roster, date, shift, crew) */
 function companyOpenShifts(){
@@ -4738,7 +4738,7 @@ function companyDrillHtml(drill){
       if(wp.id!==S.company.activeId) h+='<div class="btnrow"><button class="btn" onclick="companySwitchWorkplace(\''+wp.id+'\'); switchTab(\'rosters\');">Open this base</button></div>';
     }
   } else if(drill.type==='person'){ return companyPersonDrillHtml(drill.name); }
-  return companyBackBtn()+h;
+  return h;
 }
 
 /* ---------- Employee export: WYSIWYG — exports the current view ---------- */
@@ -5141,6 +5141,7 @@ function baseSwapPickShift(rosterId, shiftIdA, personA, dateA, personB){
   }
   var panel=document.getElementById('baseCoverPanel');
   var h='<div class="card" style="border:2px solid var(--accent);">'
+    +'<button class="backmini" onclick="baseSwap(\''+rosterId+'\',\''+shiftIdA+'\',\''+escapeHtml(personA).replace(/'/g,"\\'")+'\')" aria-label="Back">&#8592;</button>'
     +'<h3>Swap with '+escapeHtml(personB)+'</h3>'
     +'<p class="sub">Which of their shifts?</p>';
   if(!shifts.length){
@@ -5155,7 +5156,7 @@ function baseSwapPickShift(rosterId, shiftIdA, personA, dateA, personB){
         +'<button class="pick">Swap</button></div>';
     });
   }
-  h+='<div class="btnrow"><button class="btn ghost" onclick="baseSwap(\''+rosterId+'\',\''+shiftIdA+'\',\''+escapeHtml(personA).replace(/'/g,"\\'")+'\')">← Back</button></div></div>';
+  h+='</div>';
   panel.innerHTML=h;
   panel.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
@@ -5711,10 +5712,19 @@ var TAB_VIEWS={home:'v-home', rosters:'v-rosters', onduty:'v-base', staff:'v-sta
   myshifts:'v-myshifts', openshifts:'v-marketplace', profile:'v-profile', company:'v-company',
   codash:'v-company', costats:'v-company', cobases:'v-company', copeople:'v-company', coopen:'v-company'};
 var BACK_IDS=['v-newroster','v-anchor','v-cal','v-base','v-rotbuilder','v-ladder','v-shiftreq','v-rules','v-legal'];
+/* One small subtle back arrow (#backRow, just under the header) for every
+   sub-view — plus Company drill-downs, which share the v-company view. */
+function syncBackRow(id){
+  var cur=id;
+  if(!cur){ var av=document.querySelector('.view.active'); cur=av&&av.id; }
+  var showBack = BACK_IDS.indexOf(cur)>=0 || (cur==='v-company' && S.company && S.company.drill);
+  var row=document.getElementById('backRow');
+  if(row) row.classList.toggle('show', !!showBack);
+}
 function show(id){
   document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
   document.getElementById(id).classList.add('active');
-  document.getElementById('backBtn').classList.toggle('show', BACK_IDS.indexOf(id)>=0);
+  syncBackRow(id);
   document.querySelectorAll('.tabs button').forEach(function(b){
     var t=b.getAttribute('data-tab');
     b.classList.toggle('sel', !!(t && TAB_VIEWS[t]===id));
@@ -5837,6 +5847,7 @@ function switchTab(name){
 function goBack(){
   var av=document.querySelector('.view.active');
   var active=av&&av.id;
+  if(active==='v-company' && S.company && S.company.drill){ companyClearDrill(); return; }
   if(active==='v-rotbuilder'){ openBaseSetup(); return; }
   if(active==='v-ladder'){ switchTab('staff'); return; }
   if(active==='v-shiftreq'){ switchTab('staff'); return; }
