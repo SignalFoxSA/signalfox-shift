@@ -374,7 +374,7 @@
     padding:12px 14px; margin:12px 0;}
   .pubalert b{font-size:15px;}
   .pubalert .pline{font-size:14px; margin-top:4px;}
-  /* removal-reason prompt (day-sheet edit on a LIVE roster) */
+  /* removal-reason prompt (day-sheet edit, live AND draft rosters) */
   #removalReasonWrap{position:fixed; inset:0; z-index:70; display:none;}
   #removalReasonWrap.open{display:block;}
   #removalReasonBg{position:absolute; inset:0; background:rgba(0,0,0,.6);}
@@ -1073,7 +1073,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1915';
+var BUILD='20261015-1920';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2813,7 +2813,7 @@ function allStaffNames(){
 function openDayEdit(){
   dayCtx.edit=true;
   dayCtx.removedNames=[]; /* people removed in this edit — never offered as replacements */
-  dayCtx.removalReasons=[]; /* live-removal reasons, logged to Leave on Save */
+  dayCtx.removalReasons=[]; /* removal reasons, logged to Leave on Save */
   /* snapshot current members per shift for editing */
   dayCtx.editData=daySheetShifts().map(function(ps){
     return {sl:ps.sl, idx:ps.list[0]?ps.list[0].ci:-1,
@@ -3004,13 +3004,10 @@ function dayEditRemove(si, mi){
     dayCtx.editData[si].members.splice(mi,1);
     renderDayEdit(); return;
   }
-  /* LIVE roster: capture WHY before removing (logged to Leave on Save).
-     Drafts: no prompt — a draft is not live, nothing to log. */
-  if(S.fromSaved){
-    openRemovalReason(si, mi, nm);
-    return;
-  }
-  dayEditApplyRemoval(si, mi, null);
+  /* Capture WHY before removing (logged to Leave on Save) — live AND draft
+     rosters alike: a draft's leave entries publish with the draft. */
+  openRemovalReason(si, mi, nm);
+  return;
 }
 /* Apply a removal: the slot stays — it becomes an OPEN placeholder, so the
    block keeps its size and the vacancy shows as red "Open" everywhere. */
@@ -3028,7 +3025,7 @@ function dayEditApplyRemoval(si, mi, reason){
   }
   renderDayEdit();
 }
-/* Removal-reason prompt (LIVE rosters only). Cancel = removal cancelled. */
+/* Removal-reason prompt (live AND draft rosters). Cancel = removal cancelled. */
 var removalReasonCtx=null; /* {si, mi, name, type} pending a reason choice */
 function openRemovalReason(si, mi, nm){
   removalReasonCtx={si:si, mi:mi, name:nm, type:'Sick leave'};
@@ -3140,9 +3137,10 @@ function saveDayEdit(){
       }
     }
   });
-  /* Removal reasons (LIVE rosters only): each removal that survived this edit
-     becomes a leaveLog entry, so it shows in the Leave list + exports. */
-  if(S.fromSaved && dayCtx.removalReasons && dayCtx.removalReasons.length){
+  /* Removal reasons (live AND draft rosters): each removal that survived this
+     edit becomes a leaveLog entry, so it shows in the Leave list + exports.
+     On a draft the entry lives on the draft's roster and publishes with it. */
+  if(dayCtx.removalReasons && dayCtx.removalReasons.length){
     if(!R.leaveLog) R.leaveLog=[];
     dayCtx.removalReasons.forEach(function(rr){
       var ed=null;
