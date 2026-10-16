@@ -5299,7 +5299,7 @@
     "rosters": 120,
     "changes": 1700
   },
-  "updatedAt": "2026-10-16T21:50:11.027919+02:00",
+  "updatedAt": "2026-10-16T21:50:21.952842+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
@@ -5508,24 +5508,6 @@
       "message": "Company Stats compute took 64,669ms at 4,000 staff \u2014 near-freeze (break threshold >10s) (measured AFTER the wipe, over 1,920 rosters, not the full 9,600)",
       "detail": "Stage 5 Stats measured after the company wipe, over the wiped 1-workplace company = 1,920 rosters (not the full 9,600). 1,920 rosters \u2192 64.7s. True Stats time at 9,600 rosters would be far higher. Detail: ok ms=64664 total=12400.",
       "fix": "Stats recomputes over every roster on every view \u2014 cache per-workplace aggregates, compute incrementally, or paginate the Stats view."
-    },
-    {
-      "time": "21:46",
-      "message": "Export Excel NOT MEASURED \u2014 XLSX library did not load from CDN in the test browser (test-environment CDN failure, not an app export failure)",
-      "detail": "Func re-run: Export Excel measure returned \"err:XLSX is not defined ReferenceError: XLSX is not defined at expBuildWorkbook\". The app loads SheetJS from cdnjs on page load (shift-v2.html line 615); the library was not defined in the test browser, so XLSX.write was never reached. Exports were NOT measured \u2014 no conclusion about export speed/memory at this scale.",
-      "fix": "Re-run exports with CDN reachable (verify XLSX + html2canvas defined in page before measuring). The app export code itself is unchanged and was pixel-verified in the 1986 export test (104/104)."
-    },
-    {
-      "time": "21:46",
-      "message": "Export PNG NOT MEASURED \u2014 html2canvas library did not load from CDN in the test browser (test-environment CDN failure, not an app export failure)",
-      "detail": "Func re-run: Export PNG measure returned \"png-err:html2canvas is not defined\". The app loads html2canvas from cdnjs on page load (shift-v2.html line 616); it was not defined in the test browser, so expGenerateImage was never reached. PNG export was NOT measured.",
-      "fix": "Re-run exports with CDN reachable (verify html2canvas defined in page before measuring)."
-    },
-    {
-      "time": "21:46",
-      "message": "Export PDF NOT MEASURED \u2014 html2canvas library did not load from CDN in the test browser (test-environment CDN failure, not an app export failure)",
-      "detail": "Func re-run: Export PDF measure returned \"pdf-err:html2canvas is not defined\". The app loads html2canvas from cdnjs on page load (shift-v2.html line 616); it was not defined in the test browser, so expGeneratePDF was never reached. PDF export was NOT measured.",
-      "fix": "Re-run exports with CDN reachable (verify html2canvas defined in page before measuring)."
     },
     {
       "time": "21:49",
