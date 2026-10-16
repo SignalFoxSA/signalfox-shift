@@ -388,6 +388,32 @@
   #removalReasonBox .rr-opt.sel{border-color:var(--accent);}
   #removalReasonBox input[type=text]{width:100%; padding:10px; border:1px solid var(--line);
     border-radius:8px; background:var(--card2); color:var(--text); margin-top:4px;}
+  /* new-draft chooser (Rosters -> Drafts -> New draft) */
+  #newDraftWrap{position:fixed; inset:0; z-index:70; display:none;}
+  #newDraftWrap.open{display:block;}
+  #newDraftBg{position:absolute; inset:0; background:rgba(0,0,0,.6);}
+  #newDraftBox{position:absolute; left:0; right:0; bottom:0; max-width:480px; margin:0 auto;
+    background:var(--card); border-radius:20px 20px 0 0; padding:18px 18px 24px;
+    border-top:1px solid var(--line); max-height:88vh; overflow-y:auto;}
+  #newDraftBox h3{margin:6px 0 2px; font-size:18px;}
+  #newDraftBox .nd-opt{display:flex; align-items:center; justify-content:space-between;
+    background:var(--card2); border:1px solid var(--line); border-radius:10px;
+    padding:12px; margin:8px 0; cursor:pointer; font-weight:700; font-size:15px;}
+  #newDraftBox select, #newDraftBox input[type=month]{width:100%; padding:10px; border:1px solid var(--line);
+    border-radius:8px; background:var(--card2); color:var(--text); margin-bottom:8px;}
+  #newDraftBox input{color-scheme:dark;}
+  body.light #newDraftBox input{color-scheme:light;}
+  /* long-term leave section (draft view only, below the calendar) */
+  #draftLeaveSection{margin:14px 0;}
+  .draftleave-card{background:var(--card); border:1px solid var(--line);
+    border-radius:var(--radius); padding:12px 14px;}
+  .draftleave-head{display:flex; align-items:center; justify-content:space-between;
+    cursor:pointer; font-weight:800; font-size:15px;}
+  .draftleave-card select, .draftleave-card input[type=date], .draftleave-card input[type=text]{
+    width:100%; padding:10px; border:1px solid var(--line); border-radius:8px;
+    background:var(--card2); color:var(--text); margin-bottom:8px;}
+  .draftleave-card input{color-scheme:dark;}
+  body.light .draftleave-card input{color-scheme:light;}
   .countchip{font-size:12px; font-weight:700; color:var(--muted); background:var(--card2);
     border:1px solid var(--line); border-radius:20px; padding:3px 10px; margin-left:6px; vertical-align:middle;}
   .srow{flex-wrap:wrap;}
@@ -632,6 +658,7 @@
       <h3>Drafts</h3>
       <p class="sub">Rosters not yet live &mdash; build them here, publish when ready.</p>
     </div>
+    <button class="btn" id="newDraftBtn" onclick="openNewDraft()">+ New draft</button>
     <div id="draftList"></div>
   </div>
 
@@ -875,6 +902,7 @@
     </div>
     <button class="btn ghost" id="exportBtn" onclick="openExportSheet()">&#8681; Export roster</button>
     <button class="btn ghost" onclick="openCrewSheet()">&#9998;&#65039; Edit crews</button>
+    <div id="draftLeaveSection" style="display:none"></div>
   </div>
 
   <!-- STAFF PROFILE TAB -->
@@ -979,6 +1007,10 @@
     </div>
   </div>
 </div>
+<div id="newDraftWrap">
+  <div id="newDraftBg" onclick="closeNewDraft()"></div>
+  <div id="newDraftBox"></div>
+</div>
 <div id="sheetWrap">
   <div id="sheetBg" onclick="closeSheet()"></div>
   <div id="sheet">
@@ -1041,7 +1073,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1910';
+var BUILD='20261015-1915';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -2140,6 +2172,7 @@ function renderCalendar(){
   if(saveBtnEl) saveBtnEl.style.display='none'; /* draft view uses Publish / Save draft / Delete draft instead */
   var draftBtnsEl=document.getElementById('draftBtns');
   if(draftBtnsEl) draftBtnsEl.style.display=isDraftView?'block':'none';
+  ensureDraftLeaveSection(isDraftView); /* draft-only long-term leave, below the calendar */
   var exportBtnEl=document.getElementById('exportBtn');
   if(exportBtnEl) exportBtnEl.style.display=isDraftView?'none':'block'; /* drafts are not exported */
   var offerTog=document.getElementById('draftOfferToggle');
@@ -2805,6 +2838,8 @@ function dayEditPickerNames(ed){
   names.forEach(function(nm){
     if(removed.indexOf(nm)>=0) return; /* removed in this edit — never offered */
     if(ed.members.indexOf(nm)>=0){ out.push(nm); return; } /* already on this shift */
+    /* on leave in this (draft) roster on this date — never offered */
+    if(!S.fromSaved && isOnLeaveInRoster(dayCtx.R, nm, dayCtx.dateISO)) return;
     var list=(hypo.memberOverrides[dayCtx.dateISO]||{})[ed.sl.id]||[];
     var wasIn=list.indexOf(nm)>=0;
     if(!wasIn) list.push(nm);
@@ -3422,6 +3457,10 @@ function openDraft(id){
   S.cal={vehicleId:vid, y:R.year, m:R.month, mode:'month', sub:'month', weekISO:null};
   S.draft=JSON.parse(JSON.stringify(R));
   S.fromSaved=false; S.draftId=d.id; S.unitId=null; S.unitName=d.name;
+  /* fresh Long-term leave section for this draft (collapsed by default) */
+  draftLeaveOpen=false;
+  var _dlSec=document.getElementById('draftLeaveSection');
+  if(_dlSec){ _dlSec.innerHTML=''; delete _dlSec.dataset.built; }
   renderCalendar();
   show('v-cal');
 }
@@ -3476,6 +3515,280 @@ function toggleDraftOfferById(id, checked){
   persistDrafts();
   renderDrafts();
   toast(checked?'Open shifts offered for booking':'Open shifts no longer offered');
+}
+/* ---------- New draft: from scratch OR copy from a previous roster ----------
+   Additive entry point on the Rosters tab (Drafts section). The existing
+   Generate flow (new roster -> anchor -> transient draft -> auto-save) is
+   untouched. Both options below create a PERSISTED draft in S.drafts and
+   open it in the calendar for editing. */
+function closeNewDraft(){
+  var w=document.getElementById('newDraftWrap'); if(w) w.classList.remove('open');
+}
+function openNewDraft(){
+  var box=document.getElementById('newDraftBox'); if(!box) return;
+  box.innerHTML=
+    '<h3>New draft</h3><p class="sub" style="margin:0 0 8px;">Start a roster draft \u2014 from scratch, or by copying an existing roster.</p>'+
+    '<div class="nd-opt" id="newDraftFromScratch" onclick="newDraftScratchForm()">From scratch <span>&#8594;</span></div>'+
+    '<p class="fine" style="margin:0 0 8px;text-align:left;">Pick a team + month \u2014 pre-filled from the team\u2019s current rotation.</p>'+
+    '<div class="nd-opt" id="newDraftCopyFrom" onclick="newDraftCopyForm()">Copy from\u2026 <span>&#8594;</span></div>'+
+    '<p class="fine" style="margin:0 0 8px;text-align:left;">Copy a previous roster into a new month \u2014 rotation, crews and pattern carry over; dated changes do not.</p>'+
+    '<div class="btnrow"><button class="btn ghost" onclick="closeNewDraft()">Cancel</button></div>';
+  document.getElementById('newDraftWrap').classList.add('open');
+}
+function newDraftTeamOpts(){
+  return (S.base.vehicles||[]).map(function(v){
+    return '<option value="'+escapeHtml(v.id)+'">'+escapeHtml((v.name||'Team')+' \u00b7 '+((ROTATIONS[v.rotation]||{}).name||v.rotation))+'</option>';
+  }).join('');
+}
+function newDraftMonthDefault(teamSelId, monthInpId){
+  var sel=document.getElementById(teamSelId); if(!sel) return;
+  var dm=defaultRosterMonth(sel.value);
+  var inp=document.getElementById(monthInpId);
+  if(inp) inp.value=dm.y+'-'+String(dm.m+1).padStart(2,'0');
+}
+function newDraftScratchForm(){
+  var box=document.getElementById('newDraftBox'); if(!box) return;
+  box.innerHTML=
+    '<h3>New draft \u2014 from scratch</h3>'+
+    '<label class="f">Team</label><select id="ndScratchTeam" onchange="newDraftMonthDefault(\'ndScratchTeam\',\'ndScratchMonth\')">'+newDraftTeamOpts()+'</select>'+
+    '<label class="f">Month</label><input type="month" id="ndScratchMonth">'+
+    '<p class="fine" style="text-align:left;">Pre-filled from the team\u2019s current rotation \u2014 the same pattern the Generate flow uses.</p>'+
+    '<div class="btnrow"><button class="btn ghost" onclick="openNewDraft()">Back</button>'+
+    '<button class="btn" id="ndScratchCreate" onclick="newDraftCreateScratch()">Create draft</button></div>';
+  newDraftMonthDefault('ndScratchTeam','ndScratchMonth');
+}
+function newDraftCopyForm(){
+  loadSaved(); loadDrafts();
+  var box=document.getElementById('newDraftBox'); if(!box) return;
+  var opts='';
+  (S.rosters||[]).forEach(function(u){
+    var R=u.roster; if(!R) return;
+    opts+='<option value="live:'+escapeHtml(u.id)+'">'+escapeHtml((R.name||u.name||'Roster')+' \u00b7 Live')+'</option>';
+  });
+  (S.drafts||[]).forEach(function(d){
+    opts+='<option value="draft:'+escapeHtml(d.id)+'">'+escapeHtml((d.name||'Draft')+' \u00b7 Draft')+'</option>';
+  });
+  box.innerHTML=
+    '<h3>New draft \u2014 copy from\u2026</h3>'+
+    '<label class="f">Copy from</label><select id="ndCopySource">'+opts+'</select>'+
+    (opts?'':'<p class="fine" style="text-align:left;">No rosters yet \u2014 build one first.</p>')+
+    '<label class="f">Target team</label><select id="ndCopyTeam" onchange="newDraftMonthDefault(\'ndCopyTeam\',\'ndCopyMonth\')">'+newDraftTeamOpts()+'</select>'+
+    '<label class="f">Target month</label><input type="month" id="ndCopyMonth">'+
+    '<p class="fine" style="text-align:left;">Rotation, anchor, crews and shifts carry over; day changes and leave do not.</p>'+
+    '<div class="btnrow"><button class="btn ghost" onclick="openNewDraft()">Back</button>'+
+    '<button class="btn" id="ndCopyCreate" onclick="newDraftCreateCopy()"'+(opts?'':' disabled')+'>Create draft</button></div>';
+  newDraftMonthDefault('ndCopyTeam','ndCopyMonth');
+}
+/* The persisted draft for a team+month, if one exists. */
+function findDraftFor(teamId, y, m){
+  loadDrafts();
+  return (S.drafts||[]).find(function(d){ return d.teamId===teamId && d.year===y && d.month===m; })||null;
+}
+/* Anchor for a fresh Generate-style roster, without the anchor screen:
+   the same suggestion the anchor step uses (previous roster's end), or the
+   first matching position when there is no previous roster. */
+function buildAnchorFor(teamId, y, m){
+  var v=vehicleById(teamId); if(!v) return null;
+  var rotKey=v.rotation, rot=ROTATIONS[rotKey]||ROTATIONS['224'];
+  var sug=suggestAnchorAbs(v.id, rotKey, y, m);
+  if(rot.weekAnchored){
+    var wd=weekdayMon0(y,m,1), weekLong, abs;
+    if(sug!=null){ abs=sug; weekLong=(sug%rot.cycle)<7; }
+    else { weekLong=true; abs=wd; }
+    return {vehicleId:v.id, rotKey:rotKey, year:y, month:m, weekAnchored:true,
+      weekLong:weekLong, abs:abs, suggested:(sug!=null), conflict:false};
+  }
+  var allSlots=rotSlots(rotKey);
+  if(!allSlots.length){ toast('Add shifts first (Settings \u2013 Display \u2013 Shifts)'); return null; }
+  var slots=rotSlots(rotKey, v.shiftIds);
+  var picks={}, anySuggested=sug!=null;
+  slots.forEach(function(sl){
+    var c=crewOnSlot(rotKey, sl.id, anySuggested?sug:0);
+    picks[sl.id]=(c==null?0:c);
+  });
+  var ms=anchorMatches(rotKey, picks);
+  var abs2=anySuggested?sug:(ms.length?ms[0]:0);
+  if(abs2<0) abs2=0;
+  return {vehicleId:v.id, rotKey:rotKey, year:y, month:m,
+    slots:slots.map(function(s){ return {id:s.id, name:s.name}; }),
+    picks:picks, abs:abs2, blockOpts:ms, blockDay:0, suggested:anySuggested, conflict:false};
+}
+function newDraftCreateScratch(){
+  var teamId=(document.getElementById('ndScratchTeam')||{}).value||'';
+  var mv=(document.getElementById('ndScratchMonth')||{}).value||'';
+  if(!teamId){ toast('Pick a team'); return; }
+  if(!mv||mv.length<7){ toast('Pick a month'); return; }
+  var y=parseInt(mv.slice(0,4),10), m=parseInt(mv.slice(5,7),10)-1;
+  var ex=findDraftFor(teamId, y, m);
+  if(ex && !confirm('A draft already exists for '+vehicleName(teamId)+' '+MN[m]+' '+y+'. Replace it?')) return;
+  closeNewDraft();
+  var anchor=buildAnchorFor(teamId, y, m);
+  if(!anchor) return;
+  S.anchor=anchor;
+  generateMonthRoster(); /* existing Generate flow — transient draft in S.draft */
+  if(!S.draft) return; /* rules confirm cancelled — user stays on the anchor step */
+  /* Confirmed replacement: drop the old persisted draft, then persist this
+     one fresh (fresh id + createdAt, offerOpenShifts=false). */
+  if(ex){ loadDrafts(); S.drafts=S.drafts.filter(function(d){ return d.id!==ex.id; }); persistDrafts(); }
+  S.draftId=null;
+  var fresh=autoSaveDraft();
+  if(!fresh) return;
+  renderDrafts();
+  openDraft(fresh.id);
+}
+function newDraftCreateCopy(){
+  var srcVal=(document.getElementById('ndCopySource')||{}).value||'';
+  var teamId=(document.getElementById('ndCopyTeam')||{}).value||'';
+  var mv=(document.getElementById('ndCopyMonth')||{}).value||'';
+  if(!srcVal){ toast('Pick a roster to copy from'); return; }
+  if(!teamId){ toast('Pick a team'); return; }
+  if(!mv||mv.length<7){ toast('Pick a month'); return; }
+  var y=parseInt(mv.slice(0,4),10), m=parseInt(mv.slice(5,7),10)-1;
+  var ex=findDraftFor(teamId, y, m);
+  if(ex && !confirm('A draft already exists for '+vehicleName(teamId)+' '+MN[m]+' '+y+'. Replace it?')) return;
+  loadSaved(); loadDrafts();
+  var srcR=null;
+  if(srcVal.indexOf('live:')===0){
+    var u=(S.rosters||[]).find(function(x){ return x.id===srcVal.slice(5); });
+    if(u) srcR=u.roster;
+  }else if(srcVal.indexOf('draft:')===0){
+    var dd=(S.drafts||[]).find(function(x){ return x.id===srcVal.slice(6); });
+    if(dd) srcR=dd.roster;
+  }
+  if(!srcR||!Array.isArray(srcR.crews)){ toast('That roster no longer exists.'); return; }
+  /* Deep-copy the source BEFORE deleting anything — the source may itself
+     be the draft being replaced. */
+  var R=JSON.parse(JSON.stringify(srcR));
+  closeNewDraft();
+  /* Confirmed replacement: drop the old persisted draft for the target. */
+  if(ex){
+    S.drafts=S.drafts.filter(function(d){ return d.id!==ex.id; });
+    /* the replaced draft was open — drop its working copy so the coming
+       auto-save in openDraft() cannot resurrect it over the new copy */
+    if(S.draftId===ex.id){ S.draftId=null; S.draft=null; }
+    persistDrafts();
+  }
+  var dim=daysInMonth(y,m);
+  var srcStart=srcR.startISO?parseISO(srcR.startISO):new Date(srcR.year, srcR.month, 1);
+  var adv=dayDiff(srcStart, new Date(y, m, 1));
+  R.id='r'+Date.now()+Math.floor(Math.random()*1000);
+  R.kind='month';
+  R.vehicleId=teamId;
+  R.year=y; R.month=m;
+  R.name=(vehicleName(teamId)||'Team')+' \u00b7 '+MN[m]+' '+y;
+  R.startISO=y+'-'+String(m+1).padStart(2,'0')+'-01';
+  R.days=dim;
+  /* anchor advanced by the days between the two months' 1sts, so the
+     pattern genuinely continues instead of restarting */
+  R.anchorAbs=(srcR.anchorAbs||0)+adv;
+  /* date-specific data is tied to the old month — never carried over */
+  R.overrides={};
+  R.memberOverrides={};
+  R.leaveLog=[];
+  var entry={id:'d'+Date.now()+Math.floor(Math.random()*1000), teamId:teamId,
+    year:y, month:m, name:vehicleName(teamId)||'Team', roster:R, createdAt:Date.now(), offerOpenShifts:false};
+  S.drafts.unshift(entry);
+  persistDrafts();
+  renderDrafts();
+  openDraft(entry.id);
+  toast('Draft copied');
+}
+/* ---------- Draft long-term leave (DRAFT view only) ----------
+   Collapsible section below the calendar in the draft view. Apply removes
+   the person from their shifts in the range (OPEN_MARK, red Open, slot
+   keeps its size) and writes one leaveLog entry per affected date, so the
+   entries flow through collectLeaveEntries into the Leave list + exports.
+   The draft stays a draft — the leave goes live only when published.
+   Live rosters already have long-term leave via On Duty; nothing is added
+   for them here. */
+var draftLeaveOpen=false; /* collapsed by default */
+function ensureDraftLeaveSection(isDraftView){
+  var sec=document.getElementById('draftLeaveSection'); if(!sec) return;
+  if(!isDraftView){ sec.style.display='none'; return; }
+  sec.style.display='block';
+  if(!sec.dataset.built) renderDraftLeaveSection();
+}
+function toggleDraftLeaveSection(){
+  draftLeaveOpen=!draftLeaveOpen;
+  renderDraftLeaveSection();
+}
+function renderDraftLeaveSection(){
+  var sec=document.getElementById('draftLeaveSection'); if(!sec) return;
+  var R=S.draft;
+  if(!R || S.fromSaved){ sec.innerHTML=''; sec.dataset.built=''; return; }
+  var y=R.year, m=R.month;
+  var min=y+'-'+String(m+1).padStart(2,'0')+'-01';
+  var max=y+'-'+String(m+1).padStart(2,'0')+'-'+String(daysInMonth(y,m)).padStart(2,'0');
+  var names=allStaffNames().filter(function(nm){ return nm && nm!==OPEN_MARK; });
+  var head='<div class="draftleave-card"><div class="draftleave-head" onclick="toggleDraftLeaveSection()"><span>Long-term leave</span><span>'+(draftLeaveOpen?'\u25be':'\u25b8')+'</span></div>';
+  if(!draftLeaveOpen){ sec.innerHTML=head+'</div>'; sec.dataset.built='1'; return; }
+  sec.innerHTML=head+
+    '<p class="sub" style="margin:6px 0 10px;">Remove someone from this draft for a date range. Their shifts become open.</p>'+
+    '<label class="f">Person</label><select id="dlPerson"><option value="">\u2014 Pick a person \u2014</option>'+
+      names.map(function(n){ return '<option value="'+escapeHtml(n)+'">'+escapeHtml(n)+'</option>'; }).join('')+'</select>'+
+    '<label class="f">Reason</label><select id="dlReason"><option value="">\u2014 Pick a reason \u2014</option>'+
+      ['Sick leave','Annual leave','Other'].map(function(t){ return '<option>'+escapeHtml(t)+'</option>'; }).join('')+'</select>'+
+    '<label class="f">Note (optional)</label><input type="text" id="dlNote" maxlength="120" placeholder="e.g. Doctor\u2019s note, holiday\u2026">'+
+    '<label class="f">From</label><input type="date" id="dlFrom" min="'+min+'" max="'+max+'" value="'+min+'">'+
+    '<label class="f">To</label><input type="date" id="dlTo" min="'+min+'" max="'+max+'" value="'+min+'">'+
+    '<div class="btnrow"><button class="btn" id="dlApply" onclick="applyDraftLongLeave()">Add leave</button></div></div>';
+  sec.dataset.built='1';
+}
+function applyDraftLongLeave(){
+  var R=S.draft;
+  if(!R || S.fromSaved){ toast('Open a draft first'); return; }
+  var person=(document.getElementById('dlPerson')||{}).value||'';
+  var reason=(document.getElementById('dlReason')||{}).value||'';
+  var note=((document.getElementById('dlNote')||{}).value||'').trim();
+  var from=(document.getElementById('dlFrom')||{}).value||'';
+  var to=(document.getElementById('dlTo')||{}).value||'';
+  if(!person){ toast('Pick a person'); return; }
+  if(!reason){ toast('Pick a reason'); return; }
+  if(!from||!to){ toast('Pick From and To dates'); return; }
+  if(from>to){ toast('From date must be on or before To date'); return; }
+  var min=R.year+'-'+String(R.month+1).padStart(2,'0')+'-01';
+  var max=R.year+'-'+String(R.month+1).padStart(2,'0')+'-'+String(daysInMonth(R.year,R.month)).padStart(2,'0');
+  if(from<min||from>max||to<min||to>max){ toast('Leave dates must be inside '+MN[R.month]+' '+R.year); return; }
+  if(!R.memberOverrides) R.memberOverrides={};
+  if(!R.leaveLog) R.leaveLog=[];
+  var affected=0;
+  var d=parseISO(from), end=parseISO(to);
+  while(d<=end){
+    var dateISO=toISO(d);
+    var info=calRosterDay(R, R.year, R.month, d.getDate());
+    if(info){
+      calSlotCrews(R, info.dayIdx).forEach(function(ps){
+        if(!ps.list.length) return;
+        var mems=effShiftMembers(R, dateISO, ps.sl.id, ps.list[0].c);
+        var idx=mems.indexOf(person);
+        if(idx>=0){
+          var dup=R.leaveLog.some(function(lg){ return lg&&lg.date===dateISO&&lg.shift===ps.sl.id&&lg.person===person&&lg.type===reason; });
+          mems[idx]=OPEN_MARK;
+          if(!R.memberOverrides[dateISO]) R.memberOverrides[dateISO]={};
+          R.memberOverrides[dateISO][ps.sl.id]=mems;
+          if(!dup) R.leaveLog.push({date:dateISO, shift:ps.sl.id, person:person, type:reason, cover:'OPEN', note:note||'', ts:Date.now()});
+          affected++;
+        }
+      });
+    }
+    d.setDate(d.getDate()+1);
+  }
+  if(!affected){ toast(person+' is not rostered on any day in that range.'); return; }
+  autoSaveDraft();
+  renderCalendar();
+  toast(person+' on '+reason+' from '+from+' to '+to+' \u2014 '+affected+' shift'+(affected>1?'s':'')+' opened.');
+}
+/* Is this person on leave/sick in this roster on this date? (leaveLog,
+   excluding swaps/covers.) Keeps people on leave out of the draft's
+   pickers for those dates. */
+function isOnLeaveInRoster(R, person, dateISO){
+  if(!R||!R.leaveLog||!person||!dateISO) return false;
+  return R.leaveLog.some(function(lg){ return lg&&lg.person===person&&lg.date===dateISO&&lg.type!=='Swap'&&lg.type!=='Cover'; });
+}
+function draftLeaveBlocks(draftId, person, dateISO){
+  loadDrafts();
+  var d=(S.drafts||[]).find(function(x){ return x.id===draftId; });
+  return !!(d&&d.roster&&isOnLeaveInRoster(d.roster, person, dateISO));
 }
 /* Open shifts of drafts whose offer toggle is ON — the ONE way a draft
    appears outside the draft itself (Staff marketplace, labelled DRAFT). */
@@ -3548,6 +3861,8 @@ function mkApproveDraft(a){
   var d=(S.drafts||[]).find(function(x){ return x.id===a.rosterId; });
   if(!d||!d.roster){ toast('That draft no longer exists.'); return; }
   var R=d.roster;
+  /* on leave in this draft on this date — cannot fill a shift while on leave */
+  if(isOnLeaveInRoster(R, a.applicant, a.dateISO)){ toast(a.applicant+' is on leave on '+a.dateISO+'.'); return; }
   if(!R.memberOverrides) R.memberOverrides={};
   if(!R.memberOverrides[a.dateISO]) R.memberOverrides[a.dateISO]={};
   var prospectMems=(R.memberOverrides[a.dateISO][a.shiftId]||[]).slice();
@@ -4047,6 +4362,8 @@ function renderMarketplace(){
       if(msPerson&&s.needQid&&!(cross?mkCanCoverAcross(msPerson, s.needQid, s.borrowingBase):qualCanCover(staffQualIdByName(msPerson), s.needQid))) return;
       /* RULES: shifts that would break a rule for you are not offered at all */
       if(msPerson&&(cross?rulesWouldBreakForShiftCompany(s.workplaceId, s.rosterId, s.dateISO, s.shiftId, msPerson):rulesWouldBreakForShift(s.rosterId, s.dateISO, s.shiftId, msPerson, !!s.isDraft))) return;
+      /* on leave in this draft on this date — the shift is not offered to you */
+      if(msPerson&&s.isDraft&&draftLeaveBlocks(s.rosterId, msPerson, s.dateISO)) return;
       shown++;
       var already=(S.shiftApps||[]).some(function(a){
         return a.rosterId===s.rosterId&&a.dateISO===s.dateISO&&a.shiftId===s.shiftId
@@ -4121,6 +4438,8 @@ function mkApply(i){
     toast('You are already rostered on that date.');
     return;
   }
+  /* on leave in this draft on this date — cannot apply */
+  if(s.isDraft&&draftLeaveBlocks(s.rosterId, msPerson, s.dateISO)){ toast('You are on leave on that date.'); return; }
   /* only offer shifts this person can cover (Qualification Ladder) */
   if(s.needQid&&!(crossA?mkCanCoverAcross(msPerson, s.needQid, s.borrowingBase):qualCanCover(staffQualIdByName(msPerson), s.needQid))){
     toast('Your qualification cannot cover this shift.');
