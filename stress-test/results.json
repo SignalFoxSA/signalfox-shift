@@ -1576,6 +1576,10 @@
     {
       "time": "21:29",
       "message": "Build complete — staff 2000, rosters 3600, changes 98090"
+    },
+    {
+      "time": "21:30",
+      "message": "Persist FAILED (quota) — reload would lose data"
     }
   ],
   "metrics": [
@@ -1629,7 +1633,7 @@
     "rosters": 3600,
     "staff": 2000
   },
-  "updatedAt": "2026-10-16T21:30:02.362+02:00",
+  "updatedAt": "2026-10-16T21:30:04.787+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
