@@ -713,6 +713,11 @@
       <select id="setHolidays"></select>
       <p class="fine">Marks public holidays on the calendar. Fetched once per year when you're online.</p>
     </div>
+    <div class="card" id="coRulesCard" style="display:none;">
+      <h3>Company rules</h3>
+      <p class="sub">The company floor — every workplace follows these. Where a workplace is stricter, the stricter rule applies. Leave a rule unset to leave it to each workplace.</p>
+      <div id="coRulesList"></div>
+    </div>
     <div class="card">
       <h3>Data</h3>
       <p class="sub">Your rosters sync to your account, and stay on this device too.</p>
@@ -831,7 +836,7 @@
   <!-- COMPANY VIEW (placeholder) -->
   <div class="view" id="v-company">
     <div class="card">
-      <h3>Company</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><h3 style="margin:0;">Company</h3><button class="btn ghost" style="width:auto;flex:none;margin:0;padding:8px 14px;" onclick="switchTab('settings')" aria-label="Settings">&#9881;&#65038; Settings</button></div>
       <p class="sub">All your workplaces, in one place.</p>
       <div id="companyContent"></div>
     </div>
@@ -966,7 +971,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1870';
+var BUILD='20261015-1875';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -3835,7 +3840,9 @@ function companyRulesSet(key, raw, kind){
     else if(raw==='all') r[key]='all';
     else r[key]=parseInt(raw, 10);
   }
-  companyPersist(); renderCompany();
+  companyPersist();
+  /* the form lives in Settings — re-render Settings if it is showing */
+  if(document.getElementById('v-settings') && document.getElementById('v-settings').classList.contains('active')) renderSettings();
 }
 
 function renderCompany(){
@@ -3843,21 +3850,20 @@ function renderCompany(){
   var el=document.getElementById('companyContent'); if(!el) return;
   if(c.drill){ el.innerHTML=companyDrillHtml(c.drill); return; }
   var tab=c.tab||'dash';
-  var tabs=[['dash','Dashboard'],['bases','Bases'],['people','People'],['open','Open'],['rules','Rules'],['stats','Stats']];
-  var h='<div class="seg" style="margin-bottom:12px;">'+tabs.map(function(t){
-    return '<button class="'+(tab===t[0]?'on':'')+'" onclick="companySetTab(\''+t[0]+'\')">'+t[1]+'</button>';
-  }).join('')+'</div>';
+  if(tab==='rules'){ tab='dash'; c.tab='dash'; companyPersist(); } /* Company Rules now live in Settings */
+  var h='';
   if(tab==='dash') h+=companyDashHtml();
   else if(tab==='bases') h+=companyBasesHtml();
   else if(tab==='people') h+=companyPeopleHtml();
   else if(tab==='open') h+=companyOpenHtml();
-  else if(tab==='rules') h+=companyRulesHtml();
   else if(tab==='stats') h+=companyStatsHtml();
+  else h+=companyDashHtml();
   el.innerHTML=h;
 }
 function companySetTab(t){
-  var c=companyEnsure(); if(!c) return;
-  c.tab=t; c.drill=null; companyPersist(); renderCompany();
+  if(t==='rules'){ switchTab('settings'); var card=document.getElementById('coRulesCard'); if(card) card.scrollIntoView(); return; }
+  var map={dash:'codash', stats:'costats', bases:'cobases', people:'copeople', open:'coopen'};
+  switchTab(map[t]||'codash');
 }
 function companySetDrill(drill){
   var c=companyEnsure(); if(!c) return;
@@ -3970,7 +3976,7 @@ function companyDashHtml(){
       var bst=companyTodayStats(tISO, wp.id);
       return '<div class="avail" onclick="companySetDrill({type:\'base\', id:\''+wp.id+'\'})"><span><span class="nm">'+escapeHtml(wp.name||'Workplace')+(isActive?' \u00b7 active':'')+'</span> <span class="meta">'+teamN+' team'+(teamN===1?'':'s')+' \u00b7 '+staffN+' staff \u00b7 '+bst.teams+' on \u00b7 '+bst.full+' staffed \u00b7 '+bst.open+' open \u00b7 '+bst.sick.length+' sick \u00b7 '+bst.leave.length+' leave</span></span><span class="meta">View</span></div>';
     }).join('')
-    +'<div class="btnrow"><button class="btn" onclick="companySetTab(\'bases\')">Manage bases</button></div>';
+    +'<div class="btnrow"><button class="btn" onclick="companySetTab(\'bases\')">Manage bases</button><button class="btn ghost" onclick="companySetTab(\'rules\')">Company rules</button></div>';
   return h;
 }
 function companyBasesHtml(){
@@ -4186,7 +4192,9 @@ function companyOpenShiftGo(idx){
   switchTab('rosters');
   openDaySheet(o.dateISO);
 }
-function companyRulesHtml(){
+/* Company Rules form (the 9 rules + stricter-wins floor). Lives in Settings
+   under "Company rules" when role = Company — NOT a Company tab. */
+function companyRulesFormHtml(){
   var r=(S.company&&S.company.rules)||{};
   var defs=[
     {k:'restBetween', label:'Rest between shifts', type:'hours', opts:[['','None'],['12','12 hours'],['24','24 hours'],['36','36 hours'],['48','48 hours']]},
@@ -4199,8 +4207,7 @@ function companyRulesHtml(){
     {k:'workHolidays', label:'Work public holidays', type:'yesno'},
     {k:'weekendsOff', label:'Weekends off per month', type:'weekends', opts:[['','None'],['1','1'],['2','2'],['3','3'],['all','All']]},
   ];
-  var h='<h3 style="margin-top:4px;">Company rules</h3>'
-    +'<p class="sub">The company floor — every workplace follows these. Where a workplace is stricter, the stricter rule applies. Leave a rule unset to leave it to each workplace.</p>';
+  var h='';
   defs.forEach(function(d){
     var cur=r[d.k];
     var sel='<select onchange="companyRulesSet(\''+d.k+'\', this.value, \''+(d.type==='yesno'?'yesno':'num')+'\')">';
@@ -4216,6 +4223,12 @@ function companyRulesHtml(){
     h+='<div class="card" style="padding:10px;"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;"><b>'+d.label+'</b>'+sel+'</div></div>';
   });
   return h;
+}
+function renderCompanyRulesInSettings(){
+  var card=document.getElementById('coRulesCard'); if(!card) return;
+  if(appRole()!=='company'){ card.style.display='none'; return; }
+  card.style.display='';
+  var list=document.getElementById('coRulesList'); if(list) list.innerHTML=companyRulesFormHtml();
 }
 /* ================= COMPANY STATISTICS =================
    Company-wide numbers for one month, computed from the actual rosters.
@@ -4343,6 +4356,57 @@ function companyStatsMonthsPresent(){
   });
   return Object.keys(seen).sort().reverse().slice(0,6);
 }
+/* ---------- Company Stats charts (inline SVG, no library — app must stay
+   self-contained + offline). Labels use currentColor so they follow the
+   Dark/Light theme; data colours are the app's signal colours. ---------- */
+function coShortLabel(lab){
+  var m={'Max consecutive shifts':'Consecutive','Rest between shifts':'Rest','Back-to-back shifts':'Back-to-back','Max continuous hours':'Continuous','Rest after nights':'After nights','Max hours per month':'Hours / month','Max overtime shifts per month':'Overtime','Work public holidays':'Holidays','Weekends off per month':'Weekends'};
+  return m[lab]||String(lab).slice(0,10);
+}
+function coDonut(filled, open){
+  var total=filled+open;
+  if(total<=0) return '<div class="fine">No shifts in this month.</div>';
+  var pct=Math.round(100*filled/total);
+  var C=2*Math.PI*34, off=C*(1-filled/total);
+  return '<svg class="co-chart" viewBox="0 0 120 120" style="width:150px;height:150px;display:block;margin:6px auto;" role="img" aria-label="Filled '+pct+' percent">'
+    +'<circle cx="60" cy="60" r="34" fill="none" stroke="#CC0000" stroke-width="18"/>'
+    +'<circle class="co-donut-filled" cx="60" cy="60" r="34" fill="none" stroke="#FFC13E" stroke-width="18" stroke-dasharray="'+C.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'" transform="rotate(-90 60 60)"/>'
+    +'<text x="60" y="58" text-anchor="middle" style="fill:var(--text);font-size:19px;font-weight:800;">'+pct+'%</text>'
+    +'<text x="60" y="78" text-anchor="middle" style="fill:var(--muted);font-size:10px;">filled</text></svg>'
+    +'<div class="fine" style="text-align:center;">'+filled+' filled &middot; '+open+' open</div>';
+}
+function coBarChart(series, maxH){
+  /* single-series vertical bars: [{label, value, color}] */
+  maxH=maxH||90;
+  var max=0; series.forEach(function(s){ if(s.value>max) max=s.value; });
+  if(!series.length) return '';
+  var w=320, gap=8, bw=Math.min(44,(w-(series.length+1)*gap)/series.length), h=maxH+34;
+  var bars=series.map(function(s,i){
+    var bh=max>0?Math.round(maxH*s.value/max):0;
+    var x=gap+i*(bw+gap);
+    return '<rect class="co-bar" data-value="'+s.value+'" x="'+x+'" y="'+(maxH-bh)+'" width="'+bw+'" height="'+bh+'" fill="'+s.color+'" rx="3"><title>'+escapeHtml(s.label)+': '+s.value+'</title></rect>'
+      +'<text x="'+(x+bw/2)+'" y="'+(maxH+13)+'" text-anchor="middle" style="fill:var(--muted);font-size:9px;">'+escapeHtml(coShortLabel(s.label))+'</text>'
+      +'<text x="'+(x+bw/2)+'" y="'+(maxH-bh-4)+'" text-anchor="middle" style="fill:var(--text);font-size:10px;font-weight:700;">'+s.value+'</text>';
+  }).join('');
+  return '<svg class="co-chart" viewBox="0 0 '+w+' '+h+'" style="width:100%;height:auto;display:block;" role="img">'+bars+'</svg>';
+}
+function coGroupedChart(rows, cols, maxH){
+  /* grouped bars: rows [{label, short?, key...}], cols [{key,label,color}] */
+  maxH=maxH||90;
+  var max=0; rows.forEach(function(r){ cols.forEach(function(c){ if((r[c.key]||0)>max) max=r[c.key]||0; }); });
+  var w=320, h=maxH+34, n=Math.max(1,rows.length), groupW=(w-16)/n, bw=Math.min(16,(groupW-8)/cols.length);
+  var bars='';
+  rows.forEach(function(r,i){
+    cols.forEach(function(c,j){
+      var v=r[c.key]||0, bh=max>0?Math.round(maxH*v/max):0;
+      var x=8+i*groupW+2+j*(bw+2);
+      bars+='<rect class="co-bar" data-value="'+v+'" x="'+x+'" y="'+(maxH-bh)+'" width="'+bw+'" height="'+bh+'" fill="'+c.color+'" rx="2"><title>'+escapeHtml(r.label)+' '+c.label+': '+v+'</title></rect>';
+    });
+    bars+='<text x="'+(8+i*groupW+groupW/2)+'" y="'+(maxH+13)+'" text-anchor="middle" style="fill:var(--muted);font-size:9px;">'+escapeHtml(r.short||coShortLabel(r.label))+'</text>';
+  });
+  var legend=cols.map(function(c){ return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;"><span style="width:10px;height:10px;background:'+c.color+';border-radius:2px;display:inline-block;"></span>'+c.label+'</span>'; }).join('');
+  return '<div class="fine" style="margin-bottom:4px;">'+legend+'</div><svg class="co-chart" viewBox="0 0 '+w+' '+h+'" style="width:100%;height:auto;display:block;" role="img">'+bars+'</svg>';
+}
 function companyStatsHtml(){
   var parts=companyStatsYmGet().split('-');
   var y=+parts[0], m=+parts[1]-1;
@@ -4373,18 +4437,23 @@ function companyStatsHtml(){
     +'<div class="avail"><span><span class="nm">Leave days</span> <span class="meta">'+st.leaveDays+'</span></span></div>'
     +'<div class="avail"><span><span class="nm">Overtime shifts</span> <span class="meta">'+st.overtime+' \u00b7 '+st.crossBaseOT+' cross-base</span></span></div>'
     +'<div class="avail" onclick="companySetDrill({type:\'statsViol\'})"><span><span class="nm">Rule violations</span> <span class="meta">'+violTotal+'</span></span><span class="meta">View</span></div>'
-    +'</div>';
+    +'</div>'
+    +'<h3 style="margin-top:14px;">Filled vs open</h3><div class="card" style="padding:10px;">'+coDonut(st.filled, st.open)+'</div>';
   if(st.violations.length){
     h+='<h3 style="margin-top:14px;">Violations by rule</h3>'
       +st.violations.map(function(v){
         return '<div class="avail"><span><span class="nm">'+escapeHtml(v.label)+'</span> <span class="meta">'+v.count+'</span></span></div>';
       }).join('');
+    h+='<h3 style="margin-top:14px;">Violations chart</h3><div class="card" style="padding:10px;">'+coBarChart(st.violations.map(function(v){ return {label:v.label, value:v.count, color:'#CC0000'}; }))+ '</div>';
   }
   h+='<h3 style="margin-top:14px;">Per base</h3>';
   st.perBase.forEach(function(b){
     h+='<div class="card" style="padding:10px;"><b>'+escapeHtml(b.name)+'</b>'
       +'<div class="fine" style="margin-top:4px;">'+b.total+' shifts \u00b7 '+b.filled+' filled \u00b7 '+b.open+' open \u00b7 '+b.sick+' sick days \u00b7 '+b.leave+' leave days \u00b7 '+b.ot+' overtime</div></div>';
   });
+  if(st.perBase.length){
+    h+='<h3 style="margin-top:14px;">Filled vs open per base</h3><div class="card" style="padding:10px;">'+coGroupedChart(st.perBase.map(function(b){ return {label:b.name, short:b.name.slice(0,10), filled:b.filled, open:b.open}; }), [{key:'filled',label:'Filled',color:'#FFC13E'},{key:'open',label:'Open',color:'#CC0000'}])+'</div>';
+  }
   if(st.perQual.length){
     h+='<h3 style="margin-top:14px;">Per qualification</h3>'
       +st.perQual.map(function(q){
@@ -4396,6 +4465,13 @@ function companyStatsHtml(){
   if(months.length<=1){
     h+='<p class="fine">Only one month of rosters so far — trends appear as you add months.</p>';
   }else{
+    var trendRows=months.slice().reverse().map(function(ym2){
+      var mp=ym2.split('-');
+      if(ym2===st.ym) return {label:st.label, short:MNS[m]+' '+String(y).slice(2), sick:st.sickDays, leave:st.leaveDays, ot:st.overtime};
+      var t2=companyMonthStats(+mp[0], +mp[1]-1, false);
+      return {label:t2.label, short:MNS[+mp[1]-1]+' '+ym2.slice(2), sick:t2.sickDays, leave:t2.leaveDays, ot:t2.overtime};
+    });
+    h+='<h3 style="margin-top:10px;">Trend</h3><div class="card" style="padding:10px;">'+coGroupedChart(trendRows, [{key:'sick',label:'Sick',color:'#4DABF7'},{key:'leave',label:'Leave',color:'#51CF66'},{key:'ot',label:'Overtime',color:'#FFC13E'}])+'</div>';
     months.forEach(function(ym2){
       if(ym2===st.ym) return;
       var mp=ym2.split('-');
@@ -5474,7 +5550,8 @@ function enterApp(){
 
 /* ---------- navigation ---------- */
 var TAB_VIEWS={home:'v-home', rosters:'v-rosters', onduty:'v-base', staff:'v-staff', settings:'v-settings',
-  myshifts:'v-myshifts', openshifts:'v-marketplace', profile:'v-profile', company:'v-company'};
+  myshifts:'v-myshifts', openshifts:'v-marketplace', profile:'v-profile', company:'v-company',
+  codash:'v-company', costats:'v-company', cobases:'v-company', copeople:'v-company', coopen:'v-company'};
 var BACK_IDS=['v-newroster','v-anchor','v-cal','v-base','v-rotbuilder','v-ladder','v-shiftreq','v-rules','v-legal'];
 function show(id){
   document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
@@ -5551,8 +5628,11 @@ function renderTabs(){
     ];
   }else if(r==='company'){
     tabs=[
-      {id:'company', icon:'\uD83C\uDFE2', label:'Company'},
-      {id:'settings', icon:'\u2699\uFE0F', label:'Settings'}
+      {id:'codash', icon:'\uD83D\uDCC5', label:'Dashboard'},
+      {id:'costats', icon:'\uD83D\uDCC8', label:'Stats'},
+      {id:'cobases', icon:'\uD83C\uDFE2', label:'Bases'},
+      {id:'copeople', icon:'\uD83D\uDC65', label:'People'},
+      {id:'coopen', icon:'\uD83D\uDCB0', label:'Open'}
     ];
   }else{
     tabs=[
@@ -5568,6 +5648,7 @@ function renderTabs(){
   }).join('');
 }
 function switchTab(name){
+  if(name==='company') name='codash'; /* Company role lands on the Dashboard bottom tab */
   if(name==='home') renderHome();
   if(name==='onduty'){ S.baseDateISO=toISO(new Date()); renderBase(); }
   if(name==='rosters') renderAllRosters();
@@ -5579,10 +5660,19 @@ function switchTab(name){
   }
   if(name==='openshifts'){ renderMarketplace(); }
   if(name==='profile'){ renderStaffProfile(); }
-  if(name==='company'){ renderCompany(); }
+  if(name==='codash'||name==='costats'||name==='cobases'||name==='copeople'||name==='coopen'){
+    var sec={codash:'dash', costats:'stats', cobases:'bases', copeople:'people', coopen:'open'}[name];
+    var _c=companyEnsure(); if(_c){ _c.tab=sec; _c.drill=null; companyPersist(); }
+    renderCompany();
+  }
   show(TAB_VIEWS[name]);
   document.querySelectorAll('nav.tabs button').forEach(function(b){
     b.classList.toggle('active', b.getAttribute('data-tab')===name);
+  });
+  /* company sections share one view — only the active company tab highlights */
+  document.querySelectorAll('nav.tabs button').forEach(function(b){
+    var t=b.getAttribute('data-tab');
+    if(t && t.indexOf('co')===0) b.classList.toggle('sel', t===name);
   });
 }
 function goBack(){
@@ -7086,6 +7176,7 @@ function renderSettings(){
   }).join('');
   hs.value=st.holidays||'';
   hs.onchange=function(){ st.holidays=this.value; persistBase(); renderCalendar(); };
+  renderCompanyRulesInSettings();
 }
 /* workplace shift manager: name + hours per shift, as many as the day needs.
    (Blocks use the crew's color — shifts don't need colors.) */
