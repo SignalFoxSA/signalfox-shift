@@ -155,6 +155,10 @@
     {
       "label": "Calendar render",
       "value": "609ms"
+    },
+    {
+      "label": "Rosters list render",
+      "value": "419ms"
     }
   ],
   "progress": {
@@ -174,5 +178,5 @@
     "rosters": 120,
     "staff": 200
   },
-  "updatedAt": "2026-10-16T21:18:39.240+02:00"
+  "updatedAt": "2026-10-16T21:18:41.343+02:00"
 }
