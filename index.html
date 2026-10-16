@@ -1086,7 +1086,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1960';
+var BUILD='20261015-1970';
 /* LEAVE_TYPES — the ONE shared list of leave types (single source of truth).
    Used by EVERY leave-reason picker: the day-sheet removal prompt, the draft
    Long-term leave section, and both On Duty leave flows (baseLeave +
@@ -3359,6 +3359,14 @@ function openRoster(id){
   loadSaved();
   var u=S.rosters.find(function(x){ return x.id===id; });
   if(!u) return;
+  /* STALE-DRAFT FIX: an in-memory draft working copy must never shadow the
+     live roster — resolveCalRoster() prefers an in-memory draft for the
+     same team+month. Auto-save it first (navigating away never loses a
+     draft), then clear it so the live roster is what the calendar shows.
+     This covers BOTH entry paths: Rosters-tab tap and Inbox-notification
+     tap (inboxTap → openRoster). openDraft() still sets S.draft. */
+  autoSaveDraft();
+  S.draft=null; S.draftId=null; S.fromSaved=false;
   var R=u.roster;
   /* stamp the team link on legacy rosters so the switcher can find them */
   if(!R.vehicleId){
@@ -4020,6 +4028,9 @@ function dayDiff(a,b){ return Math.round((b.getTime()-a.getTime())/86400000); }
 function fmtLong(d){ return d.toLocaleDateString('en-ZA',{weekday:'long', day:'numeric', month:'long'}); }
 /* ---------- My Shifts (employee view) ---------- */
 var msPerson=null, msScope='me', msView='cal', msYear=null, msMonth=null;
+/* My Shifts DRAFT mode: msDraftId=null → Live roster; set → viewing that
+   offered draft (see "My Shifts: DRAFT mode" below). */
+var msDraftId=null, msDraftConfirm=null;
 function msPickPerson(){
   var names=allStaffNames();
   if(!names.length){ toast('No staff members yet'); return; }
@@ -4042,6 +4053,7 @@ function msPickPerson(){
 }
 function openMyShifts(personName){
   msPerson=personName; msScope='me'; msView='cal';
+  msDraftId=null; msDraftConfirm=null;
   var now=new Date(); msYear=now.getFullYear(); msMonth=now.getMonth();
   msSyncSeg();
   msRender();
@@ -4057,6 +4069,8 @@ function msSyncSeg(){
 function msSetScope(s){ msScope=s; msSyncSeg(); msRender(); }
 function msSetView(v){ msView=v; msSyncSeg(); msRender(); }
 function msShiftNav(d){
+  /* navigating months exits Draft mode (the draft belongs to one month) */
+  msDraftId=null; msDraftConfirm=null;
   msMonth+=d;
   if(msMonth<0){ msMonth=11; msYear--; }
   if(msMonth>11){ msMonth=0; msYear++; }
@@ -4156,6 +4170,24 @@ function msHeroRender(){
 function msRender(){
   msHeroRender();
   if(!msPerson) return;
+  /* Draft mode validation: draft published / deleted / Offer OFF → Live */
+  if(msDraftId){
+    loadDrafts();
+    var _dd=(S.drafts||[]).find(function(x){ return x.id===msDraftId; });
+    if(!_dd||!_dd.offerOpenShifts){ msDraftId=null; msDraftConfirm=null; }
+  }
+  var scopeSeg=document.getElementById('msScopeSeg');
+  if(msDraftId){
+    /* Draft mode: title shows the draft, Me/Base scope does not apply
+       (calendar shows the whole draft roster; list is per-person) */
+    var _d=(S.drafts||[]).find(function(x){ return x.id===msDraftId; });
+    document.getElementById('msTitle').textContent=(_d&&_d.name? _d.name : 'Draft')+' — DRAFT';
+    document.getElementById('msSub').textContent='Draft roster for '+MN[msMonth]+' '+msYear+' — not final yet.';
+    if(scopeSeg) scopeSeg.style.display='none';
+    if(msView==='cal') msRenderDraftCal(); else msRenderDraftList();
+    return;
+  }
+  if(scopeSeg) scopeSeg.style.display='';
   document.getElementById('msTitle').textContent=msScope==='me'?msPerson+"'s Shifts":'Base Roster';
   document.getElementById('msSub').textContent=msScope==='me'?'Your roster for '+MN[msMonth]+' '+msYear+'.':'Whole base roster for '+MN[msMonth]+' '+msYear+'.';
   if(msView==='cal') msRenderCal(); else msRenderList();
@@ -4165,7 +4197,7 @@ function msRenderCal(){
   var data=msMonthData(msYear,msMonth);
   var myData=msScope==='me'?data.filter(function(s){ return s.members.indexOf(msPerson)>=0; }):data;
   /* nav — matches manager calendar nav */
-  var h='<div class="sixnav"><button class="mnav" onclick="msShiftNav(-1)" aria-label="Previous month">&#8249;</button>'
+  var h=msDraftBannerHtml()+'<div class="sixnav"><button class="mnav" onclick="msShiftNav(-1)" aria-label="Previous month">&#8249;</button>'
     +'<b>'+MN[msMonth]+' '+msYear+'</b>'
     +'<button class="mnav" onclick="msShiftNav(1)" aria-label="Next month">&#8250;</button></div>';
   /* day-of-week header — same as manager */
@@ -4203,19 +4235,23 @@ function msRenderCal(){
   var trail=(lead+dim)%7;
   if(trail) for(var t=trail;t<7;t++) h+='<div class="cell out"></div>';
   h+='</div>';
-  /* Leave list at the bottom of the roster — aggregated across rosters for this month */
+  /* Needs filling list at the bottom — same card as the manager roster
+     view, aggregated across this month's rosters. Me scope = only this
+     person's OPEN slots (their own still-OPEN leave entries); Whole
+     workplace = all OPEN slots. Rows tappable → read-only day detail
+     (staff cannot edit). Fixed entries leave the list completely. */
   (function(){
-    var leaveAll=[], seen={};
+    var allRows=[];
     (S.rosters||[]).forEach(function(u){
       var RR=u.roster;
       if(!RR||RR.kind!=='month'||RR.year!==msYear||RR.month!==msMonth) return;
-      collectLeaveEntries(RR,msYear,msMonth, msScope==='me'?msPerson:null).forEach(function(e){
-        var k=e.date+'|'+e.person;
-        if(!seen[k]){ seen[k]=1; leaveAll.push(e); }
-      });
+      needsFillingRows(RR, msYear, msMonth, {
+        personFilter: msScope==='me'?msPerson:null,
+        teamName: u.name
+      }).forEach(function(r){ allRows.push(r); });
     });
-    leaveAll.sort(function(a,b){ return a.date<b.date?-1:a.date>b.date?1:0; });
-    h+=rosterLeaveHtml(leaveAll);
+    allRows.sort(function(a,b){ return a.dateISO<b.dateISO?-1:a.dateISO>b.dateISO?1:0; });
+    h+=needsFillingCardHtml(allRows, {clickFn:'msNeedsFillingTap', showTeam:true});
   })();
   if(!myData.length) h+='<p class="fine" style="margin-top:8px;text-align:center;">No shifts this month.</p>';
   h+='<div id="msDayDetail" style="margin-top:10px;"></div>';
@@ -4247,7 +4283,7 @@ function msRenderList(){
   var data=msMonthData(msYear,msMonth);
   if(msScope==='me') data=data.filter(function(s){ return s.members.indexOf(msPerson)>=0; });
   data.sort(function(a,b){ return a.dt-b.dt||a.shift.localeCompare(b.shift); });
-  var h='<div class="btnrow" style="align-items:center;justify-content:space-between;margin-bottom:8px;">'
+  var h=msDraftBannerHtml()+'<div class="btnrow" style="align-items:center;justify-content:space-between;margin-bottom:8px;">'
     +'<button class="btn ghost" onclick="msShiftNav(-1)">‹ Prev</button>'
     +'<b>'+MN[msMonth]+' '+msYear+'</b>'
     +'<button class="btn ghost" onclick="msShiftNav(1)">Next ›</button></div>';
@@ -4594,6 +4630,283 @@ function mkApply(i){
   persistBase();
   toast('Applied — the manager will review it.');
   renderMarketplace();
+}
+/* ---------- My Shifts: DRAFT mode (Offer-gated, apply from roster) ----------
+   Staff view → My Shifts tab. When the viewed month has a draft with Offer
+   ON, the live view shows a "Draft available" banner (one row per offered
+   draft: "[Team] [Month] — DRAFT — View draft roster"). Tapping a row
+   switches My Shifts into DRAFT mode for that draft (team + month), with
+   a prominent DRAFT banner. "← Back to Live roster" switches back to the
+   live roster. Month nav / re-entering My Shifts exits Draft mode.
+   In Draft mode the existing Calendar/List seg toggles:
+   - Calendar: the whole draft roster on a calendar (names + quals, as in
+     Whole workplace), read-only. OPEN shift bands are TAPPABLE → "Apply
+     for this shift?" confirm; filled bands are NOT tappable.
+   - List: ONLY the open shifts in this draft available to THIS staff
+     member (same filters as the marketplace), each with Apply.
+   Applying (Calendar or List) = the SAME rules checks as marketplace
+   Apply (mkApply), same order, same messages → the SAME application
+   record + the existing manager "wants [Shift]" notification. No Needs
+   filling list, no applications list, no edit controls in Draft mode.
+   Once the draft is published, Draft mode is gone (the live roster takes
+   over — msRender auto-exits Draft mode when the draft is missing or
+   Offer is OFF) and the marketplace draft entries disappear (existing
+   publish behaviour). */
+function msDraftOfferedForMonth(){
+  loadDrafts();
+  return (S.drafts||[]).filter(function(d){
+    return d.offerOpenShifts && d.year===msYear && d.month===msMonth
+      && draftBelongsTo(d, activeWorkplaceId());
+  });
+}
+/* "Draft available" banner for the LIVE My Shifts view (cal + list):
+   one tappable row per offered draft for the viewed month. '' when none
+   (Offer OFF → staff cannot see the draft). */
+function msDraftBannerHtml(){
+  if(msDraftId) return '';
+  var offered=msDraftOfferedForMonth();
+  if(!offered.length) return '';
+  var h='<div class="card" id="msDraftBanner" style="border-left:3px solid var(--accent);margin-bottom:10px;">'
+    +'<div style="font-weight:800;">Draft available</div>'
+    +'<p class="sub" style="margin:2px 0 6px;">A draft roster is available to view for this month.</p>';
+  offered.forEach(function(d){
+    h+='<div class="avail" style="cursor:pointer;" onclick="msShowDraft(\''+escapeHtml(d.id)+'\')">'
+      +'<span><span class="nm">'+escapeHtml(d.name||'Team')+' &middot; '+escapeHtml(MN[d.month]+' '+d.year)+'</span> '
+      +'<span class="meta"><span class="draftbadge">DRAFT</span> View draft roster</span></span>'
+      +'<span class="meta">&rarr;</span></div>';
+  });
+  return h+'</div>';
+}
+function msShowDraft(id){
+  loadDrafts();
+  var d=(S.drafts||[]).find(function(x){ return x.id===id; });
+  if(!d||!d.offerOpenShifts){ toast('That draft is not available.'); return; }
+  msDraftId=id; msDraftConfirm=null;
+  msYear=d.year; msMonth=d.month;
+  msSyncSeg(); msRender();
+}
+function msShowLive(){
+  msDraftId=null; msDraftConfirm=null;
+  msSyncSeg(); msRender();
+}
+/* Resolve one slot's display facts inside a draft (shift + crew + needed
+   qual from the still-OPEN leave entry, like mkFindOpenDraft). */
+function msDraftSlotInfo(draftId, dateISO, shiftId){
+  loadDrafts();
+  var d=(S.drafts||[]).find(function(x){ return x.id===draftId; });
+  if(!d||!d.roster) return null;
+  var R=d.roster;
+  var parts=String(dateISO||'').split('-');
+  if(parts.length!==3) return null;
+  var info=calRosterDay(R, +parts[0], +parts[1]-1, +parts[2]);
+  if(!info) return null;
+  var slot=null;
+  calSlotCrews(R, info.dayIdx).forEach(function(ps){
+    if(ps.sl.id===shiftId&&ps.list.length) slot=ps;
+  });
+  if(!slot) return null;
+  var needQid='';
+  (R.leaveLog||[]).forEach(function(lg){
+    if(!needQid&&lg.date===dateISO&&lg.shift===shiftId&&lg.cover==='OPEN'&&lg.type!=='Swap') needQid=staffQualIdByName(lg.person);
+  });
+  return {draft:d, R:R, slot:slot, shift:slot.sl.name||shiftIdLabel(shiftId),
+    crew:(slot.list[0].c.name||''), color:(slot.list[0].c.color||'#999'),
+    needQid:needQid, dateLabel:fmtDayTitle(dateISO)};
+}
+/* "Apply for this shift?" confirm card (inline, above the calendar/list).
+   Shown after tapping an OPEN band (calendar) or Apply (list). */
+function msDraftConfirmHtml(){
+  var cf=msDraftConfirm;
+  if(!cf) return '';
+  var info=msDraftSlotInfo(cf.draftId, cf.dateISO, cf.shiftId);
+  if(!info) return '';
+  var already=(S.shiftApps||[]).some(function(a){
+    return a.rosterId===cf.draftId&&a.dateISO===cf.dateISO&&a.shiftId===cf.shiftId
+      &&a.applicant===msPerson&&a.status==='pending';
+  });
+  var h='<div class="card" id="msDraftConfirm" style="border-left:3px solid var(--accent);margin-top:10px;">'
+    +'<div style="font-weight:800;">Apply for this shift?</div>'
+    +'<div style="font-size:13px;color:var(--muted);margin-top:2px;">'+escapeHtml(info.dateLabel)+' &middot; '+escapeHtml(info.shift)+' &middot; Crew '+escapeHtml(info.crew)+'</div>'
+    +(already
+      ?'<p class="fine" style="margin:8px 0 0;">Applied — waiting for approval</p>'
+        +'<div class="btnrow" style="margin-top:8px;"><button class="btn ghost" onclick="msDraftConfirmClear()">Close</button></div>'
+      :'<div class="btnrow" style="margin-top:8px;"><button class="btn" onclick="msDraftApply()">Apply</button>'
+        +'<button class="btn ghost" onclick="msDraftConfirmClear()">Cancel</button></div>')
+    +'</div>';
+  return h;
+}
+function msDraftSlotTap(draftId, dateISO, shiftId){
+  msDraftId=draftId;
+  msDraftConfirm={draftId:draftId, dateISO:dateISO, shiftId:shiftId};
+  msRender();
+  setTimeout(function(){
+    var c=document.getElementById('msDraftConfirm');
+    if(c) c.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }, 50);
+}
+function msDraftConfirmClear(){
+  msDraftConfirm=null;
+  msRender();
+}
+/* Apply from the draft roster (Calendar or List) — the SAME rules checks
+   as marketplace Apply (mkApply), same order, same messages — then the
+   SAME application record + the existing manager "wants [Shift]"
+   notification. */
+function msDraftApply(){
+  var cf=msDraftConfirm;
+  if(!cf||!msPerson) return;
+  var info=msDraftSlotInfo(cf.draftId, cf.dateISO, cf.shiftId);
+  if(!info){ toast('That shift is no longer available.'); return; }
+  /* RULES: re-check — staff cannot override */
+  if(rulesWouldBreakForShift(cf.draftId, cf.dateISO, cf.shiftId, msPerson, true)){
+    toast('This shift would break a rule for you, so you can\'t apply for it.');
+    return;
+  }
+  /* block double-rostering and 24-hour stretches */
+  if(mkHasConflict(msPerson, cf.dateISO)||mkHasConflictDraft(msPerson, cf.dateISO)){
+    toast('You are already rostered on that date.');
+    return;
+  }
+  /* on leave in this draft on this date — cannot apply */
+  if(draftLeaveBlocks(cf.draftId, msPerson, cf.dateISO)){ toast('You are on leave on that date.'); return; }
+  /* only offer shifts this person can cover (Qualification Ladder) */
+  if(info.needQid&&!qualCanCover(staffQualIdByName(msPerson), info.needQid)){
+    toast('Your qualification cannot cover this shift.');
+    return;
+  }
+  loadShiftApps();
+  if(!S.shiftApps) S.shiftApps=[];
+  var already=(S.shiftApps||[]).some(function(a){
+    return a.rosterId===cf.draftId&&a.dateISO===cf.dateISO&&a.shiftId===cf.shiftId
+      &&a.applicant===msPerson&&a.status==='pending';
+  });
+  if(already){ toast('You have already applied for this shift.'); msDraftConfirm=null; msRender(); return; }
+  /* slot must STILL be open (someone else may have filled it since render) */
+  if(!mkSlotStillOpen(info.R, cf.dateISO, cf.shiftId)){ toast('That shift is no longer open.'); return; }
+  var newApp={
+    id:'app'+Date.now(),
+    rosterId:cf.draftId, dateISO:cf.dateISO, shiftId:cf.shiftId,
+    shift:info.shift, crew:info.crew, team:info.draft.name,
+    applicant:msPerson, status:'pending', ts:Date.now(), isDraft:true,
+    workplaceId:(S.company&&S.company.activeId)||null,
+    workplaceName:''
+  };
+  S.shiftApps.push(newApp);
+  persistShiftApps();
+  /* Inbox: the manager gets a notification for every application */
+  addNotification({forRole:'manager', forPerson:'manager', type:'application',
+    title:msPerson+' wants '+info.shift,
+    body:msPerson+' applied for '+info.shift+' on '+cf.dateISO+' — '+info.draft.name+' (Draft)',
+    rosterId:cf.draftId, applicationId:newApp.id, isDraft:true});
+  persistBase();
+  msDraftConfirm=null;
+  toast('Applied — the manager will review it.');
+  msRender();
+}
+/* Draft-mode Calendar view: the WHOLE draft roster (names + quals) on a
+   calendar, read-only. OPEN shift bands are TAPPABLE → apply confirm;
+   filled bands are NOT tappable. No Needs filling / applications lists. */
+function msRenderDraftCal(){
+  var wrap=document.getElementById('msContent');
+  loadDrafts();
+  var d=(S.drafts||[]).find(function(x){ return x.id===msDraftId; });
+  if(!d){ msShowLive(); return; }
+  var R=d.roster, y=d.year, m=d.month;
+  var nOpen=countOpenSlots(R, y, m);
+  var h='<div class="draftbanner" style="display:block;">DRAFT &mdash; Not published yet</div>'
+    +'<div class="btnrow" style="margin-bottom:8px;"><button class="btn ghost" onclick="msShowLive()">&larr; Back to Live roster</button></div>'
+    +msDraftConfirmHtml()
+    +'<div class="draftopencount">'+(nOpen>0?'<span style="color:#CC0000;">'+nOpen+' open shift'+(nOpen>1?'s':'')+' to fill</span>':'<span class="ok">All shifts filled</span>')+'</div>';
+  /* month nav — same as the live view (navigating months exits Draft mode) */
+  h+='<div class="sixnav"><button class="mnav" onclick="msShiftNav(-1)" aria-label="Previous month">&#8249;</button>'
+    +'<b>'+MN[m]+' '+y+'</b>'
+    +'<button class="mnav" onclick="msShiftNav(1)" aria-label="Next month">&#8250;</button></div>';
+  h+='<div class="dow">'+['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(function(x){return '<span>'+x+'</span>';}).join('')+'</div>';
+  h+='<div class="grid">';
+  var first=new Date(y,m,1);
+  var lead=(first.getDay()+6)%7;
+  for(var i=0;i<lead;i++) h+='<div class="cell out"></div>';
+  var dim=daysInMonth(y,m);
+  for(var dd=1; dd<=dim; dd++){
+    var cInfo=calRosterDay(R,y,m,dd);
+    if(!cInfo){ h+='<div class="cell out"><div class="dnum">'+dd+'</div></div>'; continue; }
+    var dateISO=isoDate(cInfo.date);
+    var blocksHtml='', dayHasOpen=false;
+    calSlotCrews(R,cInfo.dayIdx).forEach(function(ps){
+      if(!ps.list.length) return;
+      var crews=ps.list.map(function(x){ return escapeHtml(x.c.name); }).join(' / ');
+      var memHtml=[], hasOpen=false;
+      ps.list.forEach(function(x){
+        var orig=x.c.members||[];
+        effShiftMembers(R, dateISO, ps.sl.id, x.c).forEach(function(nm){
+          if(nm===OPEN_MARK) hasOpen=true;
+          var mh=rosterMemberHtml(nm, orig);
+          if(memHtml.indexOf(mh)<0) memHtml.push(mh);
+        });
+      });
+      if(hasOpen) dayHasOpen=true;
+      var memLine=memHtml.length?'<span class="bm">'+memHtml.map(function(mh){ return '<span class="bmn">'+mh+'</span>'; }).join('')+'</span>':'';
+      var band=(ps.list[0]&&ps.list[0].c.color)||'#888888';
+      /* OPEN bands tappable → apply confirm; filled bands NOT tappable */
+      var bandAttrs=hasOpen
+        ?' onclick="msDraftSlotTap(\''+escapeHtml(d.id)+'\',\''+escapeHtml(dateISO)+'\',\''+escapeHtml(ps.sl.id)+'\')" style="background:'+band+';color:'+textOnBand(band)+';box-shadow:inset 0 0 0 2px #CC0000;cursor:pointer;"'
+        :' style="background:'+band+';color:'+textOnBand(band)+'"';
+      blocksHtml+='<span class="band"'+bandAttrs+'>'
+        +'<span class="bs">'+escapeHtml(shiftBandShort(ps.sl.name))+'</span>'
+        +'<span class="bc">'+crews+'</span>'+memLine+'</span>';
+    });
+    var ed=R.crews.some(function(c,ci){ return R.overrides[cInfo.dayIdx+':'+ci]; });
+    var med=R.memberOverrides&&cInfo.date&&R.memberOverrides[isoDate(cInfo.date)];
+    var cellCls=dayHasOpen?' open':((ed||med)?' changed':'');
+    h+='<div class="cell'+(isToday(cInfo.date)?' today':'')+cellCls+'"><div class="dnum">'+dd+'</div>'+blocksHtml+'</div>';
+  }
+  var trail=(lead+dim)%7;
+  if(trail) for(var t=trail;t<7;t++) h+='<div class="cell out"></div>';
+  h+='</div>';
+  wrap.innerHTML=h;
+}
+/* Open shifts in this draft available to THIS staff member — the same
+   filters as the marketplace (canCover, not rostered that day, no rule
+   violation, not on leave, not already applied). */
+function msDraftAvailableSlots(d){
+  if(!d||!msPerson) return [];
+  var out=[];
+  try{ out=mkFindOpenDraft().filter(function(s){ return s.rosterId===d.id; }); }catch(e){ return []; }
+  return out.filter(function(s){
+    if(mkHasConflict(msPerson, s.dateISO)||mkHasConflictDraft(msPerson, s.dateISO)) return false;
+    if(s.needQid&&!qualCanCover(staffQualIdByName(msPerson), s.needQid)) return false;
+    if(rulesWouldBreakForShift(s.rosterId, s.dateISO, s.shiftId, msPerson, true)) return false;
+    if(draftLeaveBlocks(s.rosterId, msPerson, s.dateISO)) return false;
+    if((S.shiftApps||[]).some(function(a){
+      return a.rosterId===s.rosterId&&a.dateISO===s.dateISO&&a.shiftId===s.shiftId
+        &&a.applicant===msPerson&&a.status==='pending';
+    })) return false;
+    return true;
+  });
+}
+/* Draft-mode List view: ONLY the shifts available to this staff member,
+   same information as the calendar but as a list. Each row has Apply. */
+function msRenderDraftList(){
+  var wrap=document.getElementById('msContent');
+  loadDrafts();
+  var d=(S.drafts||[]).find(function(x){ return x.id===msDraftId; });
+  if(!d){ msShowLive(); return; }
+  var y=d.year, m=d.month;
+  var h='<div class="draftbanner" style="display:block;">DRAFT &mdash; Not published yet</div>'
+    +'<div class="btnrow" style="margin-bottom:8px;"><button class="btn ghost" onclick="msShowLive()">&larr; Back to Live roster</button></div>'
+    +msDraftConfirmHtml()
+    +'<p class="sub">Shifts available to you in this draft — tap Apply to request one.</p>';
+  var slots=msDraftAvailableSlots(d);
+  if(!slots.length) h+='<p class="fine">No open shifts you can apply for in this draft right now.</p>';
+  slots.forEach(function(s){
+    h+='<div class="dshift" style="border-left:5px solid '+s.color+'">'
+      +'<div class="dh"><span class="t">'+s.dt.toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'})+'</span>'
+      +'<span class="c">'+escapeHtml(s.team)+'</span></div>'
+      +'<div style="font-weight:700;margin:4px 0;">'+escapeHtml(s.shift)+'</div>'
+      +'<div style="color:var(--muted);font-size:13px;">Crew '+escapeHtml(s.crew)+'</div>'
+      +'<div class="btnrow" style="margin-top:6px;"><button class="btn" onclick="msDraftSlotTap(\''+escapeHtml(d.id)+'\',\''+escapeHtml(s.dateISO)+'\',\''+escapeHtml(s.shiftId)+'\')">Apply</button></div></div>';
+  });
+  wrap.innerHTML=h;
 }
 /* manager: approve / decline a shift application */
 /* approve a cross-base application: write the once-off override into the
@@ -6008,7 +6321,7 @@ function companyStatsHtml(){
 /* ---------- Company READ-ONLY draft view ----------
    Company → Bases → base → draft. The ACTIVE base's drafts come from live
    S.drafts; other bases' from their snapshot (synced on every switch).
-   Calendar + DRAFT banner + open-shift count + Leave list. NO edit
+   Calendar + DRAFT banner + open-shift count + Needs filling list. NO edit
    controls: no Publish/Save/Delete, no Offer toggle, no long-term leave,
    no day tap, no applications. Back returns to the base drill-down. */
 function companyDraftsFor(wp){
@@ -6026,31 +6339,17 @@ function companyDraftMemberQual(wp, nm){
   var qn=((wp.base&&wp.base.quals)||[]).find(function(q){ return q.id===qid; });
   return qn&&qn.name?nm+' ('+qn.name+')':nm;
 }
-function companyDraftLeaveHtml(wp, R, y, m){
-  var entries=[];
-  (R.leaveLog||[]).forEach(function(lg){
-    if(!lg||lg.type==='Swap'||lg.type==='Cover'||lg.person===OPEN_MARK) return;
-    var parts=String(lg.date||'').split('-');
-    if(parts.length!==3) return;
-    if(+parts[0]!==y||+parts[1]-1!==m) return;
-    var isOpen=lg.cover==='OPEN'||!lg.cover;
-    entries.push({date:lg.date, d:+parts[2],
-      dateLabel:expWeekdayShort(y,m,+parts[2])+' '+ +parts[2]+' '+MNS[m],
-      person:lg.person, personQual:companyDraftMemberQual(wp, lg.person),
-      type:lg.type||'Leave', isOpen:isOpen,
-      cover:lg.cover, note:lg.note||'',
-      coverQual:(lg.cover&&lg.cover!=='OPEN')?companyDraftMemberQual(wp, lg.cover):null});
+/* Company read-only draft view: the SAME card-styled "Needs filling (N)"
+   list as the manager roster view — ALL OPEN slots in this draft, OPEN-only
+   (fixed/replaced entries leave completely). Rows are NOT tappable:
+   Company view is view-only, no day-sheet edit. Uses the workplace's own
+   base for shift/qual resolution (calSlotCrewsFor / companyDraftMemberQual). */
+function companyDraftNeedsFillingHtml(wp, R, y, m){
+  var rows=needsFillingRows(R, y, m, {
+    slotCrewsFn:function(R2, dayIdx){ return calSlotCrewsFor(wp.base, R2, dayIdx); },
+    qualFn:function(nm){ return companyDraftMemberQual(wp, nm); }
   });
-  entries.sort(function(a,b){ return a.date<b.date?-1:a.date>b.date?1:0; });
-  if(!entries.length) return '';
-  var h='<div style="margin-top:16px;"><div style="font-size:15px;font-weight:800;margin-bottom:6px;">Leave</div>';
-  entries.forEach(function(lv){
-    var col=lv.isOpen?'#CC0000':'#B8860B';
-    h+='<div style="font-size:14px;color:'+col+';margin-bottom:2px;">'
-      +escapeHtml(lv.dateLabel+' — '+lv.personQual+', '+lv.type+', '+(lv.isOpen?'OPEN':'replaced by '+lv.coverQual))
-      +(lv.note?' ('+escapeHtml(lv.note)+')':'')+'</div>';
-  });
-  return h+'</div>';
+  return needsFillingCardHtml(rows, {tappable:false});
 }
 function companyDraftReadOnlyHtml(drill){
   var wp=companyWorkplaceById(drill.workplaceId);
@@ -6102,7 +6401,7 @@ function companyDraftReadOnlyHtml(drill){
   }
   for(var t=lead+dim;t<weeks*7;t++) h+='<div class="cell out"></div>';
   h+='</div>';
-  h+=companyDraftLeaveHtml(wp, R, y, m);
+  h+=companyDraftNeedsFillingHtml(wp, R, y, m);
   return h;
 }
 function companyDrillHtml(drill){
@@ -7248,6 +7547,7 @@ function confirmStaffRole(){
   /* init staff view */
   var now=new Date(); msYear=now.getFullYear(); msMonth=now.getMonth();
   msScope='me'; msView='cal'; msSyncSeg();
+  msDraftId=null; msDraftConfirm=null;
   switchTab('myshifts');
   toast('Staff view — '+msPerson);
 }
@@ -8542,18 +8842,25 @@ function syncLeaveLogFills(R){
     });
   });
 }
-/* "Needs filling" list for the roster view (draft + live): ALL OPEN slots
-   in THIS roster (team + month), computed by scanning effective members —
-   NOT just leaveLog entries. One row per OPEN slot: date, shift, crew,
-   plus (when a still-OPEN leaveLog entry matches date+shift) the leave
-   person + type, and OPEN in red. Rows are tappable → day sheet for that
-   date, so the manager can fill the slot from there. A filled slot
-   disappears from this list on next render — no "replaced by" rows here;
-   the record lives in the calendar + exports. Empty string when nothing
-   is open, so the section hides entirely. Exports are untouched: they
-   still use collectLeaveEntries (full Leave section, incl. replaced). */
-function rosterNeedsFillingHtml(R,y,m){
-  if(!R) return '';
+/* "Needs filling" rows for a roster (draft + live): ALL OPEN slots in THIS
+   roster (team + month), computed by scanning effective members — NOT just
+   leaveLog entries. One row per OPEN slot: date, shift, crew, plus (when a
+   still-OPEN leaveLog entry matches date+shift) the leave person + type.
+   opts: slotCrewsFn(R, dayIdx) [default calSlotCrews — Company passes a
+   calSlotCrewsFor wrapper for its own base], qualFn(person) [default
+   dispMemberQual — Company passes companyDraftMemberQual], personFilter
+   [only rows whose OPEN leave entry is for this person — My Shifts "Me"
+   scope; rows with no leave entry are excluded under a filter], teamName
+   [stamped on each row for aggregated views]. A filled slot disappears
+   from the rows on next render — no "replaced by" rows here; the record
+   lives in the calendar + exports. Exports are untouched: they still use
+   collectLeaveEntries (full Leave section, incl. replaced). */
+function needsFillingRows(R,y,m,opts){
+  opts=opts||{};
+  var slotCrewsFn=opts.slotCrewsFn||calSlotCrews;
+  var qualFn=opts.qualFn||dispMemberQual;
+  var personFilter=opts.personFilter||null;
+  if(!R) return [];
   var dim=daysInMonth(y,m);
   /* still-OPEN leave entries, pooled per date|shift — one per OPEN slot */
   var leavePool={};
@@ -8563,6 +8870,7 @@ function rosterNeedsFillingHtml(R,y,m){
     if(parts.length!==3) return;
     if(+parts[0]!==y||+parts[1]-1!==m) return;
     if(!(lg.cover==='OPEN'||!lg.cover)) return;
+    if(personFilter&&lg.person!==personFilter) return;
     var k=lg.date+'|'+lg.shift;
     (leavePool[k]=leavePool[k]||[]).push(lg);
   });
@@ -8571,7 +8879,7 @@ function rosterNeedsFillingHtml(R,y,m){
     var info=calRosterDay(R,y,m,d);
     if(!info) continue;
     var dateISO=isoDate(info.date);
-    calSlotCrews(R,info.dayIdx).forEach(function(ps){
+    slotCrewsFn(R,info.dayIdx).forEach(function(ps){
       if(!ps.list.length) return;
       /* memberOverrides are per date+shift (not per crew): one override
          list covers the whole shift; otherwise each crew's own members. */
@@ -8588,39 +8896,57 @@ function rosterNeedsFillingHtml(R,y,m){
           var lg=null;
           var pool=leavePool[dateISO+'|'+ps.sl.id];
           if(pool&&pool.length) lg=pool.shift();
+          /* under a person filter, only that person's OPEN slots count */
+          if(personFilter&&(!lg||lg.person!==personFilter)) return;
           rows.push({dateISO:dateISO, dateLabel:fmtDayTitle(dateISO),
-            shift:ps.sl.name, crew:g.crewLabel,
-            leave:lg?dispMemberQual(lg.person)+' — '+(lg.type||'Leave'):null,
+            shift:ps.sl.name, crew:g.crewLabel, team:opts.teamName||null,
+            leave:lg?qualFn(lg.person)+' — '+(lg.type||'Leave'):null,
+            leavePerson:lg?lg.person:null,
             slotLabel:openCount>1?' · slot '+slotNo+' of '+openCount:''});
         });
       });
     });
   }
-  if(!rows.length) return '';
+  return rows;
+}
+/* Card-styled "Needs filling (N)" list from needsFillingRows() rows.
+   opts: tappable [default true — rows get onclick], clickFn [default
+   'openDaySheet' — My Shifts passes 'msNeedsFillingTap'], showTeam
+   [include the row's team in the line — aggregated views]. Empty string
+   when nothing is open, so the section hides entirely. */
+function needsFillingCardHtml(rows, opts){
+  opts=opts||{};
+  if(!rows||!rows.length) return '';
+  var tappable=opts.tappable!==false;
+  var clickFn=opts.clickFn||'openDaySheet';
   var h='<div class="card" id="needsFillingCard" style="border-left:3px solid #CC0000;margin-bottom:10px;padding:10px 12px;">'
     +'<div style="font-size:13px;font-weight:700;margin-bottom:6px;">Needs filling ('+rows.length+')</div>';
   rows.forEach(function(r){
-    h+='<div class="needfill-row" data-date="'+escapeHtml(r.dateISO)+'" onclick="openDaySheet(\''+escapeHtml(r.dateISO)+'\')" style="cursor:pointer;font-size:13px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--line);">'
-      +'<div><b>'+escapeHtml(r.dateLabel)+'</b> · '+escapeHtml(r.shift)+' · Crew '+escapeHtml(r.crew)+'</div>'
+    var teamBit=(opts.showTeam&&r.team)?' · '+escapeHtml(r.team):'';
+    h+='<div class="needfill-row" data-date="'+escapeHtml(r.dateISO)+'"'
+      +(tappable?' onclick="'+clickFn+'(\''+escapeHtml(r.dateISO)+'\')" style="cursor:pointer;':' style="')
+      +'font-size:13px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--line);">'
+      +'<div><b>'+escapeHtml(r.dateLabel)+'</b> · '+escapeHtml(r.shift)+teamBit+' · Crew '+escapeHtml(r.crew)+'</div>'
       +'<div style="margin-top:2px;">'+(r.leave?escapeHtml(r.leave)+' · ':'')
       +'<span style="color:#CC0000;font-weight:800;">OPEN'+escapeHtml(r.slotLabel)+'</span></div>'
       +'</div>';
   });
   return h+'</div>';
 }
-/* Leave list HTML — now used by the My Shifts month view only (same
-   content as the export Leave section). The roster view uses the
-   "Needs filling" list above instead. */
-function rosterLeaveHtml(entries){
-  if(!entries||!entries.length) return '';
-  var h='<div style="margin-top:16px;"><div style="font-size:15px;font-weight:800;margin-bottom:6px;">Leave</div>';
-  entries.forEach(function(lv){
-    var col=lv.isOpen?'#CC0000':'#B8860B';
-    h+='<div style="font-size:14px;color:'+col+';margin-bottom:2px;">'
-      +escapeHtml(lv.dateLabel+' — '+lv.personQual+', '+lv.type+', '+(lv.isOpen?'OPEN':'replaced by '+lv.coverQual))
-      +(lv.note?' ('+escapeHtml(lv.note)+')':'')+'</div>';
-  });
-  return h+'</div>';
+/* "Needs filling" list for the roster view (draft + live): rows are
+   tappable → day sheet for that date, so the manager can fill the slot
+   from there. */
+function rosterNeedsFillingHtml(R,y,m,opts){
+  return needsFillingCardHtml(needsFillingRows(R,y,m,opts), opts);
+}
+/* Tap a Needs filling row in My Shifts → re-render (the row's month) and
+   open the read-only day detail for that date (staff cannot edit). */
+function msNeedsFillingTap(dateISO){
+  var parts=String(dateISO||'').split('-');
+  if(parts.length!==3) return;
+  msYear=+parts[0]; msMonth=+parts[1]-1;
+  msRender();
+  msDayTap(+parts[2]);
 }
 function isoDate(d){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
