@@ -203,13 +203,16 @@ function fmtKB(v){
   if(v>=1024) return (v/1024).toFixed(1).replace(/\.0$/,"")+" MB";
   return Math.round(v)+" KB";
 }
-/* Line chart: x = staff count, y = one metric in ms. */
+/* Line chart: x = staff count, y = one metric in ms.
+   One point still draws (dot + label) — never "Waiting for data…" when data exists. */
 function perfChart(pts, yKey, color, aria){
   const data = pts.filter(p => p && typeof p.staff==="number" && typeof p[yKey]==="number");
-  if(data.length < 2) return null;
+  if(!data.length) return null;
   data.sort((a,b)=>a.staff-b.staff);
   const W=600,H=150,L=56,R=10,T=8,B=24;
-  const maxX=Math.max(1,...data.map(p=>p.staff)), maxY=Math.max(1,...data.map(p=>p[yKey]));
+  // Single point: pad the scales so the dot sits inside the chart, not in a corner.
+  const maxX = data.length===1 ? Math.max(1, data[0].staff*1.5) : Math.max(1,...data.map(p=>p.staff));
+  const maxY = data.length===1 ? Math.max(1, data[0][yKey]*1.5) : Math.max(1,...data.map(p=>p[yKey]));
   const x=v=>L+(v/maxX)*(W-L-R);
   const y=v=>T+(1-v/maxY)*(H-T-B);
   let svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(aria)+'">';
@@ -223,20 +226,27 @@ function perfChart(pts, yKey, color, aria){
   svg+='<text x="'+L+'" y="'+(H-6)+'" font-size="11" fill="#a8a29e">'+esc(fmtAxis(first))+' staff</text>';
   if(mid!==null) svg+='<text x="'+(W/2)+'" y="'+(H-6)+'" font-size="11" fill="#a8a29e" text-anchor="middle">'+esc(fmtAxis(mid))+'</text>';
   svg+='<text x="'+(W-R)+'" y="'+(H-6)+'" font-size="11" fill="#a8a29e" text-anchor="end">'+esc(fmtAxis(last))+' staff</text>';
-  svg+='<polyline points="'+data.map(p=>x(p.staff).toFixed(1)+","+y(p[yKey]).toFixed(1)).join(" ")+'" fill="none" stroke="'+color+'" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
-  const li=data.length-1;
-  svg+='<circle cx="'+x(data[li].staff).toFixed(1)+'" cy="'+y(data[li][yKey]).toFixed(1)+'" r="4" fill="'+color+'"/>';
+  if(data.length===1){
+    const p = data[0];
+    svg+='<circle cx="'+x(p.staff).toFixed(1)+'" cy="'+y(p[yKey]).toFixed(1)+'" r="5" fill="'+color+'"/>';
+    svg+='<text x="'+x(p.staff).toFixed(1)+'" y="'+(y(p[yKey])-10).toFixed(1)+'" font-size="12" fill="'+color+'" text-anchor="middle">'+esc(fmtMs(p[yKey]))+' at '+esc(fmtAxis(p.staff))+' staff</text>';
+  } else {
+    svg+='<polyline points="'+data.map(p=>x(p.staff).toFixed(1)+","+y(p[yKey]).toFixed(1)).join(" ")+'" fill="none" stroke="'+color+'" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+    const li=data.length-1;
+    svg+='<circle cx="'+x(data[li].staff).toFixed(1)+'" cy="'+y(data[li][yKey]).toFixed(1)+'" r="4" fill="'+color+'"/>';
+  }
   svg+='</svg>';
   return svg;
 }
 
-/* Line chart: localStorage usage (KB) over time. */
+/* Line chart: localStorage usage (KB) over time.
+   One point still draws (dot + label) — never "Waiting for data…" when data exists. */
 function storageChart(pts){
   const data = pts.filter(p => p && typeof p.kb==="number");
-  if(data.length < 2) return null;
+  if(!data.length) return null;
   const W=600,H=150,L=56,R=10,T=8,B=24;
-  const maxY=Math.max(1,...data.map(p=>p.kb));
-  const x=i=>L+(i/(data.length-1))*(W-L-R);
+  const maxY = data.length===1 ? Math.max(1, data[0].kb*1.5) : Math.max(1,...data.map(p=>p.kb));
+  const x=i=> data.length===1 ? (L+W-R)/2 : L+(i/(data.length-1))*(W-L-R);
   const y=v=>T+(1-v/maxY)*(H-T-B);
   let svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="localStorage usage over time">';
   for(let g=0;g<=2;g++){
@@ -249,9 +259,15 @@ function storageChart(pts){
   svg+='<text x="'+L+'" y="'+(H-6)+'" font-size="11" fill="#a8a29e">'+esc(first)+'</text>';
   if(mid) svg+='<text x="'+(W/2)+'" y="'+(H-6)+'" font-size="11" fill="#a8a29e" text-anchor="middle">'+esc(mid)+'</text>';
   svg+='<text x="'+(W-R)+'" y="'+(H-6)+'" font-size="11" fill="#a8a29e" text-anchor="end">'+esc(last)+'</text>';
-  svg+='<polyline points="'+data.map((p,i)=>x(i).toFixed(1)+","+y(p.kb).toFixed(1)).join(" ")+'" fill="none" stroke="#FFC13E" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
-  const li=data.length-1;
-  svg+='<circle cx="'+x(li).toFixed(1)+'" cy="'+y(data[li].kb).toFixed(1)+'" r="4" fill="#FFC13E"/>';
+  if(data.length===1){
+    const p = data[0];
+    svg+='<circle cx="'+x(0).toFixed(1)+'" cy="'+y(p.kb).toFixed(1)+'" r="5" fill="#FFC13E"/>';
+    svg+='<text x="'+x(0).toFixed(1)+'" y="'+(y(p.kb)-10).toFixed(1)+'" font-size="12" fill="#FFC13E" text-anchor="middle">'+esc(fmtKB(p.kb))+'</text>';
+  } else {
+    svg+='<polyline points="'+data.map((p,i)=>x(i).toFixed(1)+","+y(p.kb).toFixed(1)).join(" ")+'" fill="none" stroke="#FFC13E" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+    const li=data.length-1;
+    svg+='<circle cx="'+x(li).toFixed(1)+'" cy="'+y(data[li].kb).toFixed(1)+'" r="4" fill="#FFC13E"/>';
+  }
   svg+='</svg>';
   return svg;
 }
@@ -300,6 +316,14 @@ function renderProblems(d){
     (p.detail ? "<div class='prob-detail'>"+esc(p.detail)+"</div>" : "")+
     "<div class='prob-fix'><b>Fix:</b> "+esc((p.fix && String(p.fix).trim()) ? p.fix : "No fix suggested yet.")+"</div></div>").join("");
 }
+function fmtMetricValue(v){
+  const s = String(v ?? "");
+  if(/^-?\d+(\.\d+)?$/.test(s.trim())){
+    const n = Number(s);
+    if(Number.isFinite(n)) return n.toLocaleString("en-ZA");
+  }
+  return s;
+}
 function render(d){
   const status = d.status || "waiting";
   const banner = $("banner");
@@ -324,7 +348,7 @@ function render(d){
   $("metrics-empty").style.display = metrics.length ? "none" : "block";
   $("metrics-table").style.display = metrics.length ? "table" : "none";
   $("metrics-body").innerHTML = metrics.map(m =>
-    "<tr><td>"+esc(m.label)+"</td><td>"+esc(m.value)+"</td></tr>").join("");
+    "<tr><td>"+esc(m.label)+"</td><td>"+esc(fmtMetricValue(m.value))+"</td></tr>").join("");
 
   renderTotals(d);
   renderPerf(d);

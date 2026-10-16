@@ -99,7 +99,12 @@ live).
   graphs are performance vs size and storage. The dashboard ignores any
   `breakdown` / `history` data in `results.json` (do NOT error, do NOT
   show it). You may stop writing them.
-- Do NOT invent numbers — only write what the test actually measured.
+- The dashboard shows everything `results.json` has — never
+  "Waiting for data…" / "No metrics yet." for data that exists.
+  Perf/storage charts draw a single dot + label when there is exactly
+  1 point (a line needs 2+). Purely-numeric Metrics values are
+  formatted with en-ZA thousands separators (e.g. 1340 → "1 340");
+  other values (e.g. "1.2s") are shown as-is.
 - Keep the schema above exactly (same keys, same types).
 - Do NOT touch the app (`index.html`, `sw.js`, BUILD) or the private repo.
   Only `stress-test/` in the public repo.
