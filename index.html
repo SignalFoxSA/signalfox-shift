@@ -879,6 +879,7 @@
       <p class="fine" style="margin:4px 0 0;">When on, this draft&apos;s open shifts appear in Open Shifts (labelled DRAFT) so staff can book them before the roster goes live.</p>
       <div id="draftOpenCount" class="draftopencount"></div>
     </div>
+    <div id="draftLeaveSection" style="display:none"></div>
     <div class="vswitch" id="calVehicles"></div>
     <div class="monthnav">
       <button class="mnav" id="calPrevM" onclick="calMonthNav(-1)" aria-label="Previous month">&#8249;</button>
@@ -902,7 +903,6 @@
     </div>
     <button class="btn ghost" id="exportBtn" onclick="openExportSheet()">&#8681; Export roster</button>
     <button class="btn ghost" onclick="openCrewSheet()">&#9998;&#65039; Edit crews</button>
-    <div id="draftLeaveSection" style="display:none"></div>
   </div>
 
   <!-- STAFF PROFILE TAB -->
@@ -1071,7 +1071,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1925';
+var BUILD='20261015-1930';
 /* LEAVE_TYPES — the ONE shared list of leave types (single source of truth).
    Used by EVERY leave-reason picker: the day-sheet removal prompt, the draft
    Long-term leave section, and both On Duty leave flows (baseLeave +
