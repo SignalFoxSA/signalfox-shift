@@ -214,6 +214,10 @@
     {
       "time": "21:20",
       "message": "Reloaded — load 2320ms"
+    },
+    {
+      "time": "21:21",
+      "message": "Stage 2 done — countsOk=false"
     }
   ],
   "metrics": [
@@ -299,5 +303,5 @@
     "rosters": 600,
     "staff": 500
   },
-  "updatedAt": "2026-10-16T21:21:18.004+02:00"
+  "updatedAt": "2026-10-16T21:21:20.362+02:00"
 }
