@@ -603,6 +603,11 @@
     </div>
     <button class="btn" onclick="toNewRoster()">+ New roster</button>
     <div id="allRosterList"></div>
+    <div class="card">
+      <h3>Drafts</h3>
+      <p class="sub">Rosters not yet live &mdash; build them here, publish when ready.</p>
+    </div>
+    <div id="draftList"></div>
   </div>
 
   <!-- STAFF -->
@@ -827,7 +832,16 @@
     <div id="calWeekWrap" style="display:none"></div>
     <div id="calSixWrap" style="display:none"></div>
     <button class="btn" id="saveBtn" onclick="saveRoster()">Save roster</button>
-    <button class="btn ghost" onclick="openExportSheet()">&#8681; Export roster</button>
+    <div id="draftBtns" style="display:none">
+      <button class="btn" id="publishBtn" onclick="publishDraft()">Publish</button>
+      <button class="btn" id="saveDraftBtn" onclick="saveDraft()">Save draft</button>
+      <button class="btn ghost" id="deleteDraftBtn" onclick="deleteDraft()">Delete draft</button>
+      <label style="display:flex;gap:8px;align-items:center;margin:10px 0 2px;font-size:14px;font-weight:700;cursor:pointer;">
+        <input type="checkbox" id="draftOfferToggle" onchange="toggleDraftOffer(this.checked)" style="width:18px;height:18px;accent-color:var(--accent);"> Offer open shifts for booking
+      </label>
+      <p class="fine" style="margin:0 0 4px;">When on, this draft&apos;s open shifts appear in Open Shifts (labelled DRAFT) so staff can book them before the roster goes live.</p>
+    </div>
+    <button class="btn ghost" id="exportBtn" onclick="openExportSheet()">&#8681; Export roster</button>
     <button class="btn ghost" onclick="openCrewSheet()">&#9998;&#65039; Edit crews</button>
   </div>
 
@@ -979,7 +993,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1895';
+var BUILD='20261015-1905';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -1393,6 +1407,8 @@ function renderCustomList(){
 var S = {
   draft:null,       // roster being built / viewed
   rosters:[],       // saved roster snapshots: [{id, name, roster}]
+  drafts:[],        // persisted draft rosters: [{id, teamId, year, month, name, roster, createdAt, offerOpenShifts}]
+  draftId:null,     // id of the persisted draft currently being viewed (null = transient / live)
   base:null,
   cal:null,         // calendar view context: {vehicleId, y, m, mode:'month'|'agenda', sub:'month'|'week', weekISO}
   anchor:null,      // new-roster anchor step state
@@ -1976,6 +1992,7 @@ function generateMonthRoster(){
   var crews=anchorCrews();
   var dim=daysInMonth(A.year, A.month);
   var iso=A.year+'-'+String(A.month+1).padStart(2,'0')+'-01';
+  autoSaveDraft();
   S.unitName=v.name||'Team'; S.unitId=null;
   S.draft={ id:'r'+Date.now(), kind:'month', vehicleId:v.id,
     name:(v.name||'Team')+' \u00b7 '+MN[A.month]+' '+A.year,
@@ -2059,6 +2076,7 @@ function renderCalendar(){
   }else if(!ctx){
     wM.style.display=''; renderCalEmpty();
   }else{
+    if(S.draft && !S.fromSaved && (ctx.saved || ctx.R!==S.draft)) autoSaveDraft();
     S.draft=ctx.saved?JSON.parse(JSON.stringify(ctx.R)):ctx.R;
     S.fromSaved=ctx.saved; S.unitId=ctx.unitId||null; S.unitName=ctx.unitName;
     if(cal.sub==='week'){ wW.style.display=''; renderCalWeek(ctx); }
@@ -2067,7 +2085,18 @@ function renderCalendar(){
   }
   var b=document.getElementById('draftBadge');
   if(b) b.style.display=(ctx&&!ctx.saved)?'inline-block':'none';
-  document.getElementById('saveBtn').style.display=(ctx&&!ctx.saved)?'block':'none';
+  var isDraftView=!!(ctx&&!ctx.saved);
+  var saveBtnEl=document.getElementById('saveBtn');
+  if(saveBtnEl) saveBtnEl.style.display='none'; /* draft view uses Publish / Save draft / Delete draft instead */
+  var draftBtnsEl=document.getElementById('draftBtns');
+  if(draftBtnsEl) draftBtnsEl.style.display=isDraftView?'block':'none';
+  var exportBtnEl=document.getElementById('exportBtn');
+  if(exportBtnEl) exportBtnEl.style.display=isDraftView?'none':'block'; /* drafts are not exported */
+  var offerTog=document.getElementById('draftOfferToggle');
+  if(offerTog && isDraftView){
+    var _de=draftEntryForCurrent();
+    offerTog.checked=!!(_de&&_de.offerOpenShifts);
+  }
 }
 function renderCalChrome(ctx){
   var cal=ensureCal();
@@ -2366,6 +2395,7 @@ function continueRoster(){
   var v=vehicleById(cal.vehicleId)||{};
   var rot=ROTATIONS[R0.rotation]||ROTATIONS['224'];
   var iso=y+'-'+String(m+1).padStart(2,'0')+'-01';
+  autoSaveDraft();
   S.draft={ id:'r'+Date.now(), kind:'month', vehicleId:cal.vehicleId,
     name:(v.name||src.u.name||'Team')+' \u00b7 '+MN[m]+' '+y,
     year:y, month:m, anchorAbs:(R0.anchorAbs||0)+days, startISO:iso, days:dim,
@@ -3032,6 +3062,7 @@ function saveCrewEdit(){
 
 /* ---------- save / load (units) ---------- */
 function loadSaved(){
+  loadDrafts();
   try{ S.rosters=JSON.parse(localStorage.getItem('sfshift_units')||'[]'); }catch(e){ S.rosters=[]; }
   S._rostersLoaded=true; companyLoad();
   if(!Array.isArray(S.rosters)) S.rosters=[];
@@ -3059,12 +3090,14 @@ function loadSaved(){
 }
 function persist(){
   try{ localStorage.setItem('sfshift_units', JSON.stringify(S.rosters)); }catch(e){}
+  if(S._draftsLoaded){ try{ localStorage.setItem('sfshift_drafts', JSON.stringify(S.drafts||[])); }catch(e){} }
   if(S.company) companyPersist();
   queueCloudSave();
 }
 /* write the open roster back into its saved unit */
 function syncUnit(){
-  if(!S.fromSaved || !S.unitId) return;
+  if(!S.fromSaved){ if(S.draft) autoSaveDraft(); return; }
+  if(!S.unitId) return;
   loadSaved();
   var ix=S.rosters.findIndex(function(x){ return x.id===S.unitId; });
   if(ix>=0){ S.rosters[ix].roster=S.draft; S.rosters[ix].name=S.unitName; persist(); renderRosters(); }
@@ -3104,6 +3137,283 @@ function openRoster(id){
 function deleteRoster(id){
   S.rosters=S.rosters.filter(function(x){ return x.id!==id; });
   persist(); renderRosters(); toast('Deleted');
+}
+
+/* ---------- Draft Mode: persisted, manageable roster drafts ----------
+   A draft is a roster that is NOT live. It lives in S.drafts (localStorage
+   'sfshift_drafts' + cloud sync via collectState), is listed on the Rosters
+   tab, opens in the calendar with the DRAFT badge, and is published into
+   S.rosters when ready. The ONE exception to "drafts are not live": a
+   draft with offerOpenShifts ON shows its open shifts in the Staff
+   marketplace (labelled DRAFT) for booking before it goes live. */
+function loadDrafts(){
+  try{ S.drafts=JSON.parse(localStorage.getItem('sfshift_drafts')||'[]'); }catch(e){ S.drafts=[]; }
+  S._draftsLoaded=true;
+  if(!Array.isArray(S.drafts)) S.drafts=[];
+  var before=S.drafts.length;
+  S.drafts=S.drafts.filter(function(d){ return d && d.roster && Array.isArray(d.roster.crews); });
+  S.drafts.forEach(function(d){
+    if(!d.roster.memberOverrides) d.roster.memberOverrides={};
+    if(typeof d.offerOpenShifts!=='boolean') d.offerOpenShifts=false;
+    if(!d.createdAt) d.createdAt=Date.now();
+  });
+  if(S.drafts.length!==before) persistDrafts();
+}
+function persistDrafts(){
+  try{ localStorage.setItem('sfshift_drafts', JSON.stringify(S.drafts||[])); }catch(e){}
+  S._draftsLoaded=true;
+  queueCloudSave();
+}
+/* Upsert the working copy (S.draft) into S.drafts. Dedupe by team+month:
+   the same team+month never gets a second draft entry — it is updated.
+   Preserves the existing offerOpenShifts flag. No-op for live rosters. */
+function autoSaveDraft(){
+  if(!S.draft || S.fromSaved) return null;
+  loadDrafts();
+  var R=S.draft, ex=null;
+  if(S.draftId) ex=(S.drafts||[]).find(function(x){ return x.id===S.draftId; });
+  if(!ex) ex=(S.drafts||[]).find(function(x){ return x.teamId===R.vehicleId && x.year===R.year && x.month===R.month; });
+  if(ex){
+    ex.roster=JSON.parse(JSON.stringify(R));
+    ex.name=S.unitName||R.name||ex.name;
+    ex.teamId=R.vehicleId||ex.teamId; ex.year=R.year; ex.month=R.month;
+    if(typeof ex.offerOpenShifts!=='boolean') ex.offerOpenShifts=false;
+    S.draftId=ex.id;
+  }else{
+    ex={id:'d'+Date.now()+Math.floor(Math.random()*1000), teamId:R.vehicleId||null,
+      year:R.year, month:R.month, name:S.unitName||R.name||'Draft',
+      roster:JSON.parse(JSON.stringify(R)), createdAt:Date.now(), offerOpenShifts:false};
+    S.drafts.unshift(ex);
+    S.draftId=ex.id;
+  }
+  persistDrafts();
+  return ex;
+}
+/* The persisted entry for the draft currently being viewed (if any). */
+function draftEntryForCurrent(){
+  if(S.draftId) return (S.drafts||[]).find(function(x){ return x.id===S.draftId; })||null;
+  if(S.draft) return (S.drafts||[]).find(function(x){ return x.teamId===S.draft.vehicleId && x.year===S.draft.year && x.month===S.draft.month; })||null;
+  return null;
+}
+function saveDraft(){
+  if(!S.draft || S.fromSaved){ toast('Nothing to save as a draft'); return; }
+  autoSaveDraft();
+  renderDrafts();
+  toast('Draft saved');
+}
+function publishDraft(){
+  if(!S.draft || S.fromSaved){ toast('Nothing to publish'); return; }
+  var ex=autoSaveDraft();
+  if(!ex) return;
+  var R=S.draft;
+  var teamName=vehicleName(R.vehicleId)||S.unitName||R.name||'Team';
+  var monthLabel=MN[R.month]+' '+R.year;
+  loadSaved();
+  var ix=S.rosters.findIndex(function(u){
+    var RR=u.roster;
+    return RR && RR.vehicleId===R.vehicleId && RR.year===R.year && RR.month===R.month;
+  });
+  var liveId;
+  if(ix>=0){
+    if(!confirm('A live roster already exists for '+teamName+' '+monthLabel+'. Replace it with this draft?')) return;
+    liveId=S.rosters[ix].id;
+    S.rosters[ix]={id:liveId, name:S.unitName||R.name, roster:JSON.parse(JSON.stringify(R))};
+  }else{
+    liveId='u'+Date.now();
+    S.rosters.unshift({id:liveId, name:S.unitName||R.name, roster:JSON.parse(JSON.stringify(R))});
+  }
+  /* pending applications on the draft carry over to the live roster */
+  (S.shiftApps||[]).forEach(function(a){
+    if(a.rosterId===ex.id && a.isDraft && a.status==='pending'){ a.rosterId=liveId; a.isDraft=false; }
+  });
+  S.drafts=S.drafts.filter(function(d){ return d.id!==ex.id; });
+  S.draftId=null;
+  persistDrafts(); persist();
+  S.unitId=liveId; S.unitName=S.unitName||R.name; S.fromSaved=true;
+  renderRosters(); renderDrafts();
+  toast('Roster published');
+  renderCalendar();
+}
+function deleteDraft(){
+  if(!S.draft || S.fromSaved){ toast('No draft open'); return; }
+  var ex=draftEntryForCurrent();
+  if(!ex){ S.draft=null; S.draftId=null; S.fromSaved=false; switchTab('rosters'); return; }
+  if(!confirm('Delete this draft? It will not go live.')) return;
+  deleteDraftById(ex.id, true);
+}
+function deleteDraftById(id, skipConfirm){
+  if(!skipConfirm && !confirm('Delete this draft? It will not go live.')) return;
+  loadDrafts();
+  S.drafts=S.drafts.filter(function(d){ return d.id!==id; });
+  /* pending applications on a deleted draft can no longer be filled */
+  (S.shiftApps||[]).forEach(function(a){ if(a.rosterId===id && a.isDraft && a.status==='pending') a.status='declined'; });
+  persistDrafts();
+  if(S.draftId===id){ S.draft=null; S.draftId=null; S.fromSaved=false; }
+  renderDrafts();
+  toast('Draft deleted');
+  var av=document.querySelector('.view.active');
+  if(av && av.id==='v-cal') switchTab('rosters');
+}
+function openDraft(id){
+  autoSaveDraft();
+  loadDrafts();
+  var d=(S.drafts||[]).find(function(x){ return x.id===id; });
+  if(!d) return;
+  var R=d.roster;
+  var vid=R.vehicleId||((S.base.vehicles||[])[0]||{}).id||null;
+  S.cal={vehicleId:vid, y:R.year, m:R.month, mode:'month', sub:'month', weekISO:null};
+  S.draft=JSON.parse(JSON.stringify(R));
+  S.fromSaved=false; S.draftId=d.id; S.unitId=null; S.unitName=d.name;
+  renderCalendar();
+  show('v-cal');
+}
+function renderDrafts(){
+  var el=document.getElementById('draftList'); if(!el) return;
+  loadDrafts();
+  el.innerHTML='';
+  if(!S.drafts.length){
+    el.innerHTML='<p class="fine">No drafts yet \u2014 build a roster and save it as a draft.</p>';
+    return;
+  }
+  S.drafts.forEach(function(d){
+    var R=d.roster;
+    var staff=(R.crews||[]).reduce(function(a,c){ return a+(((c.members||[]).length)); },0);
+    var team=vehicleName(d.teamId)||d.name||'Team';
+    var created=new Date(d.createdAt||Date.now()).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'});
+    var row=document.createElement('div'); row.className='rosteritem';
+    row.innerHTML='<div class="ri"><b>'+escapeHtml(d.name||team)+'</b><span>'+
+      escapeHtml(team)+' \u00b7 '+escapeHtml(MN[d.month]+' '+d.year)+' \u00b7 '+staff+' staff \u00b7 Created '+escapeHtml(created)+
+      (d.offerOpenShifts?' \u00b7 <b>Offered</b>':'')+'</span></div>';
+    row.onclick=(function(id){ return function(){ openDraft(id); }; })(d.id);
+    var lab=document.createElement('label');
+    lab.title='Offer open shifts for booking';
+    lab.style.cssText='display:flex;gap:4px;align-items:center;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap;';
+    var cb=document.createElement('input');
+    cb.type='checkbox'; cb.checked=!!d.offerOpenShifts; cb.style.cssText='width:16px;height:16px;accent-color:var(--accent);';
+    cb.onclick=function(e){ e.stopPropagation(); };
+    cb.onchange=(function(id){ return function(){ toggleDraftOfferById(id, this.checked); }; })(d.id);
+    var ltxt=document.createElement('span'); ltxt.textContent='Offer open shifts';
+    lab.appendChild(cb); lab.appendChild(ltxt); row.appendChild(lab);
+    var del=document.createElement('button'); del.className='del'; del.textContent='\uD83D\uDDD1';
+    del.onclick=(function(id){ return function(e){ e.stopPropagation(); deleteDraftById(id); }; })(d.id);
+    row.appendChild(del);
+    el.appendChild(row);
+  });
+}
+/* Draft-view toggle: "Offer open shifts for booking". */
+function toggleDraftOffer(checked){
+  if(!S.draft || S.fromSaved) return;
+  var ex=autoSaveDraft();
+  if(!ex) return;
+  ex.offerOpenShifts=!!checked;
+  persistDrafts();
+  renderDrafts();
+}
+/* Drafts-list toggle for one draft. */
+function toggleDraftOfferById(id, checked){
+  loadDrafts();
+  var d=(S.drafts||[]).find(function(x){ return x.id===id; });
+  if(!d) return;
+  d.offerOpenShifts=!!checked;
+  persistDrafts();
+  renderDrafts();
+  toast(checked?'Open shifts offered for booking':'Open shifts no longer offered');
+}
+/* Open shifts of drafts whose offer toggle is ON — the ONE way a draft
+   appears outside the draft itself (Staff marketplace, labelled DRAFT). */
+function mkFindOpenDraft(){
+  var out=[];
+  loadDrafts();
+  (S.drafts||[]).forEach(function(d){
+    if(!d.offerOpenShifts) return;
+    var R=d.roster;
+    if(!R||R.kind!=='month'||!R.memberOverrides) return;
+    Object.keys(R.memberOverrides).forEach(function(dateISO){
+      var per=R.memberOverrides[dateISO];
+      if(!per) return;
+      Object.keys(per).forEach(function(shiftId){
+        var mems=per[shiftId];
+        if(!Array.isArray(mems)||mems.indexOf(OPEN_MARK)<0) return;
+        var dt=parseISO(dateISO);
+        var di=dayDiff(parseISO(R.startISO),dt);
+        var slotInfo=null, crewName='', crewColor='#999';
+        try{
+          calSlotCrews(R,di).forEach(function(ps){
+            if(ps.sl.id===shiftId&&ps.list.length){
+              slotInfo=ps.sl;
+              crewName=ps.list[0].c.name||'';
+              crewColor=ps.list[0].c.color||'#999';
+            }
+          });
+        }catch(e){}
+        var needQid='';
+        (R.leaveLog||[]).forEach(function(lg){
+          if(!needQid&&lg.date===dateISO&&lg.shift===shiftId&&lg.cover==='OPEN'&&lg.type!=='Swap') needQid=staffQualIdByName(lg.person);
+        });
+        out.push({
+          rosterId:d.id, dateISO:dateISO, dt:dt,
+          shiftId:shiftId, shift:slotInfo?(slotInfo.name||shiftIdLabel(shiftId)):shiftIdLabel(shiftId),
+          crew:crewName, color:crewColor, team:d.name, needQid:needQid, isDraft:true
+        });
+      });
+    });
+  });
+  var today=new Date(); today.setHours(0,0,0,0);
+  return out.filter(function(s){ return s.dt>=today; }).sort(function(a,b){ return a.dt-b.dt; });
+}
+/* already rostered (in a draft) on a date — blocks double-booking / 24h stretches on draft marketplace shifts */
+function mkHasConflictDraft(personName, dateISO){
+  loadDrafts();
+  var parts=dateISO.split('-');
+  for(var di2=0; di2<(S.drafts||[]).length; di2++){
+    var R=S.drafts[di2].roster;
+    if(!R||R.kind!=='month') continue;
+    if(R.year!==parseInt(parts[0],10)||R.month!==parseInt(parts[1],10)-1) continue;
+    var d=parseInt(parts[2],10);
+    var info=calRosterDay(R,R.year,R.month,d);
+    if(!info) continue;
+    var found=false;
+    calSlotCrews(R,info.dayIdx).forEach(function(ps){
+      ps.list.forEach(function(x){
+        if(effShiftMembers(R,dateISO,ps.sl.id,x.c).indexOf(personName)>=0) found=true;
+      });
+    });
+    if(found) return true;
+  }
+  return false;
+}
+/* manager: approve a marketplace application on a DRAFT — the fill is
+   written into the DRAFT's roster (as an override, like a normal
+   approval). The draft stays a draft. Same rules checks as live. */
+function mkApproveDraft(a){
+  loadDrafts();
+  var d=(S.drafts||[]).find(function(x){ return x.id===a.rosterId; });
+  if(!d||!d.roster){ toast('That draft no longer exists.'); return; }
+  var R=d.roster;
+  if(!R.memberOverrides) R.memberOverrides={};
+  if(!R.memberOverrides[a.dateISO]) R.memberOverrides[a.dateISO]={};
+  var prospectMems=(R.memberOverrides[a.dateISO][a.shiftId]||[]).slice();
+  var pIdx=prospectMems.indexOf(OPEN_MARK);
+  if(pIdx>=0) prospectMems[pIdx]=a.applicant;
+  else if(prospectMems.indexOf(a.applicant)<0) prospectMems.push(a.applicant);
+  var hypoA2=rulesCopyRoster(R);
+  if(hypoA2){
+    rulesSetOverride(hypoA2, a.dateISO, a.shiftId, prospectMems);
+    var av2=rulesCheckPerson(hypoA2, a.applicant);
+    if(av2.length && !rulesConfirmViolations(av2, 'Approve: '+a.applicant)) return;
+  }
+  var mems=R.memberOverrides[a.dateISO][a.shiftId]||[];
+  var idx=mems.indexOf(OPEN_MARK);
+  if(idx>=0) mems[idx]=a.applicant;
+  else if(mems.indexOf(a.applicant)<0) mems.push(a.applicant);
+  R.memberOverrides[a.dateISO][a.shiftId]=mems;
+  syncLeaveLogFills(R);
+  a.status='approved';
+  persistDrafts();
+  persistBase();
+  if(S.draftId===d.id && S.draft && !S.fromSaved) S.draft=JSON.parse(JSON.stringify(R));
+  toast(a.applicant+' approved for '+a.shift+' (draft).');
+  renderBase();
 }
 
 
@@ -3532,10 +3842,18 @@ function mkFindOpen(){
 }
 /* would adding this person to this open shift break a rule for them?
    Used by the marketplace filter (hide) and mkApply (re-check). */
-function rulesWouldBreakForShift(rosterId, dateISO, shiftId, personName){
-  var u=(S.rosters||[]).find(function(x){ return x.id===rosterId; });
-  if(!u||!u.roster) return false;
-  var R=u.roster;
+function rulesWouldBreakForShift(rosterId, dateISO, shiftId, personName, isDraft){
+  var R=null;
+  if(isDraft){
+    loadDrafts();
+    var dd=(S.drafts||[]).find(function(x){ return x.id===rosterId; });
+    if(!dd||!dd.roster) return false;
+    R=dd.roster;
+  }else{
+    var u=(S.rosters||[]).find(function(x){ return x.id===rosterId; });
+    if(!u||!u.roster) return false;
+    R=u.roster;
+  }
   var y=parseInt(dateISO.slice(0,4),10), m=parseInt(dateISO.slice(5,7),10)-1, d=parseInt(dateISO.slice(8,10),10);
   var info=calRosterDay(R, y, m, d);
   if(!info||info.dayIdx<0) return false;
@@ -3555,6 +3873,7 @@ function rulesWouldBreakForShift(rosterId, dateISO, shiftId, personName){
 function renderMarketplace(){
   var open=mkFindOpen();
   try{ open=open.concat(mkFindOpenOtherBases()); }catch(e){}
+  try{ open=open.concat(mkFindOpenDraft()); }catch(e){}
   var wrap=document.getElementById('mkList');
   if(!open.length){
     wrap.innerHTML='<p class="fine">No open shifts right now. Check back later.</p>';
@@ -3564,12 +3883,12 @@ function renderMarketplace(){
     open.forEach(function(s,i){
       var cross=(s.workplaceId&&S.company&&s.workplaceId!==S.company.activeId);
       /* hide shifts that would double-book or create 24h stretches */
-      if(msPerson&&(cross?mkHasConflictCompany(msPerson, s.dateISO):mkHasConflict(msPerson, s.dateISO))) return;
+      if(msPerson&&(cross?mkHasConflictCompany(msPerson, s.dateISO):(mkHasConflict(msPerson, s.dateISO)||(s.isDraft&&mkHasConflictDraft(msPerson, s.dateISO))))) return;
       /* only offer shifts this person can cover (Qualification Ladder;
          cross-base: borrowing base's Ladder, matched by qual name) */
       if(msPerson&&s.needQid&&!(cross?mkCanCoverAcross(msPerson, s.needQid, s.borrowingBase):qualCanCover(staffQualIdByName(msPerson), s.needQid))) return;
       /* RULES: shifts that would break a rule for you are not offered at all */
-      if(msPerson&&(cross?rulesWouldBreakForShiftCompany(s.workplaceId, s.rosterId, s.dateISO, s.shiftId, msPerson):rulesWouldBreakForShift(s.rosterId, s.dateISO, s.shiftId, msPerson))) return;
+      if(msPerson&&(cross?rulesWouldBreakForShiftCompany(s.workplaceId, s.rosterId, s.dateISO, s.shiftId, msPerson):rulesWouldBreakForShift(s.rosterId, s.dateISO, s.shiftId, msPerson, !!s.isDraft))) return;
       shown++;
       var already=(S.shiftApps||[]).some(function(a){
         return a.rosterId===s.rosterId&&a.dateISO===s.dateISO&&a.shiftId===s.shiftId
@@ -3578,7 +3897,7 @@ function renderMarketplace(){
       h+='<div class="dshift" style="border-left:5px solid '+s.color+'">'
         +'<div class="dh"><span class="t">'+s.dt.toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'})+'</span>'
         +'<span class="c">'+escapeHtml(s.team)+'</span></div>'
-        +'<div style="font-weight:700;margin:4px 0;">'+escapeHtml(s.shift)+'</div>'
+        +'<div style="font-weight:700;margin:4px 0;">'+(s.isDraft?'<span class="draftbadge">DRAFT</span> ':'')+escapeHtml(s.shift)+'</div>'
         +'<div style="color:var(--muted);font-size:13px;">Crew '+escapeHtml(s.crew)+(s.workplaceId&&S.company&&s.workplaceId!==S.company.activeId?' \u00b7 '+escapeHtml(s.workplaceName||'Other base'):'')+'</div>'
         +'<div class="btnrow" style="margin-top:6px;">'
         +(already
@@ -3602,7 +3921,7 @@ function renderMarketplace(){
       h2+='<div class="dshift"><div class="dh"><span class="t">'
         +new Date(a.ts).toLocaleDateString('en-ZA',{day:'numeric',month:'short'})+' — '+escapeHtml(a.shift)
         +'</span><span class="c">'+st+'</span></div>'
-        +'<div style="color:var(--muted);font-size:13px;">'+escapeHtml(a.dateISO)+' · Crew '+escapeHtml(a.crew)+'</div></div>';
+        +'<div style="color:var(--muted);font-size:13px;">'+escapeHtml(a.dateISO)+' · Crew '+escapeHtml(a.crew)+(a.isDraft?' · DRAFT':'')+'</div></div>';
     });
     mh.innerHTML=h2;
   }
@@ -3635,12 +3954,12 @@ function mkApply(i){
   if(!s||!msPerson) return;
   var crossA=(s.workplaceId&&S.company&&s.workplaceId!==S.company.activeId);
   /* RULES: re-check (rules may have changed since the list rendered) — staff cannot override */
-  if(crossA?rulesWouldBreakForShiftCompany(s.workplaceId, s.rosterId, s.dateISO, s.shiftId, msPerson):rulesWouldBreakForShift(s.rosterId, s.dateISO, s.shiftId, msPerson)){
+  if(crossA?rulesWouldBreakForShiftCompany(s.workplaceId, s.rosterId, s.dateISO, s.shiftId, msPerson):rulesWouldBreakForShift(s.rosterId, s.dateISO, s.shiftId, msPerson, !!s.isDraft)){
     toast('This shift would break a rule for you, so you can\'t apply for it.');
     return;
   }
   /* block double-rostering and 24-hour stretches */
-  if(crossA?mkHasConflictCompany(msPerson, s.dateISO):mkHasConflict(msPerson, s.dateISO)){
+  if(crossA?mkHasConflictCompany(msPerson, s.dateISO):(mkHasConflict(msPerson, s.dateISO)||(s.isDraft&&mkHasConflictDraft(msPerson, s.dateISO)))){
     toast('You are already rostered on that date.');
     return;
   }
@@ -3654,7 +3973,7 @@ function mkApply(i){
     id:'app'+Date.now(),
     rosterId:s.rosterId, dateISO:s.dateISO, shiftId:s.shiftId,
     shift:s.shift, crew:s.crew, team:s.team,
-    applicant:msPerson, status:'pending', ts:Date.now(),
+    applicant:msPerson, status:'pending', ts:Date.now(), isDraft:!!s.isDraft,
     workplaceId:s.workplaceId||(S.company&&S.company.activeId)||null,
     workplaceName:s.workplaceName||''
   });
@@ -3709,6 +4028,7 @@ function mkApproveCrossBase(a){
 function mkApprove(appId){
   var a=(S.shiftApps||[]).find(function(x){ return x.id===appId; });
   if(!a) return;
+  if(a.isDraft){ mkApproveDraft(a); return; }
   if(a.workplaceId && S.company && a.workplaceId!==S.company.activeId){
     if(!mkApproveCrossBase(a)) return;
     a.status='approved';
@@ -4899,7 +5219,7 @@ function renderBase(){
     pendApps.forEach(function(a){
       appHtml+='<div style="font-size:13px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--line);">'
         +'<b>'+escapeHtml(a.applicant)+'</b> wants <b>'+escapeHtml(a.shift)+'</b>'
-        +'<div style="color:var(--muted);font-size:12px;">'+escapeHtml(a.dateISO)+' \u00b7 Crew '+escapeHtml(a.crew)+' \u00b7 '+escapeHtml(a.team)+(a.workplaceId&&S.company&&a.workplaceId!==S.company.activeId?' · at '+escapeHtml(a.workplaceName||'another base'):'')+'</div>'
+        +'<div style="color:var(--muted);font-size:12px;">'+escapeHtml(a.dateISO)+' \u00b7 Crew '+escapeHtml(a.crew)+' \u00b7 '+escapeHtml(a.team)+(a.isDraft?' \u00b7 DRAFT':'')+(a.workplaceId&&S.company&&a.workplaceId!==S.company.activeId?' · at '+escapeHtml(a.workplaceName||'another base'):'')+'</div>'
         +'<div class="btnrow" style="margin-top:4px;">'
         +'<button class="btn" style="padding:6px 12px;font-size:13px;" onclick="mkApprove(\''+a.id+'\')">Approve</button>'
         +'<button class="btn ghost" style="padding:6px 12px;font-size:13px;" onclick="mkDecline(\''+a.id+'\')">Decline</button>'
@@ -5633,12 +5953,12 @@ function logout(){
 function profileName(){ try{ return localStorage.getItem('sfshift_profile_name')||''; }catch(e){ return ''; } }
 function localMtime(){ try{ return parseInt(localStorage.getItem('sfshift_mtime')||'0',10)||0; }catch(e){ return 0; } }
 function hasContent(st){
-  return !!(st && ((st.base && st.base.vehicles && st.base.vehicles.length) || (st.rosters && st.rosters.length)));
+  return !!(st && ((st.base && st.base.vehicles && st.base.vehicles.length) || (st.rosters && st.rosters.length) || (st.drafts && st.drafts.length)));
 }
 function collectState(){
   var customs={};
   try{ Object.keys(S.ROTATIONS).forEach(function(k){ if(S.ROTATIONS[k] && S.ROTATIONS[k].custom) customs[k]=S.ROTATIONS[k]; }); }catch(e){}
-  var st={ v:1, mtime:Date.now(), base:S.base||null, rosters:S.rosters||[], customs:customs, profileName:profileName(), company:S.company||null };
+  var st={ v:1, mtime:Date.now(), base:S.base||null, rosters:S.rosters||[], drafts:S.drafts||[], customs:customs, profileName:profileName(), company:S.company||null };
   try{
     st.heroLogo=localStorage.getItem('sfshift_hero_logo');
   }catch(e){}
@@ -5649,6 +5969,7 @@ function applyState(st){
   try{
     if(st.base) localStorage.setItem('sfshift_base', JSON.stringify(st.base));
     if(st.rosters) localStorage.setItem('sfshift_units', JSON.stringify(st.rosters));
+    if(st.drafts) localStorage.setItem('sfshift_drafts', JSON.stringify(st.drafts));
     if(st.customs) localStorage.setItem('sfshift_custom_rot', JSON.stringify(st.customs));
     if(st.company) localStorage.setItem('sfshift_company', JSON.stringify(st.company));
     if(st.heroLogo) localStorage.setItem('sfshift_hero_logo', st.heroLogo);
@@ -5722,6 +6043,7 @@ function syncBackRow(id){
   if(row) row.classList.toggle('show', !!showBack);
 }
 function show(id){
+  autoSaveDraft(); /* navigating away never loses a draft — it is auto-saved, not live */
   document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
   document.getElementById(id).classList.add('active');
   syncBackRow(id);
@@ -5939,7 +6261,7 @@ function renderRosters(){
   var all=document.getElementById('allRosterList');
   if(all) renderRosterList(all, 0);
 }
-function renderAllRosters(){ renderRosterList(document.getElementById('allRosterList'), 0); }
+function renderAllRosters(){ renderRosterList(document.getElementById('allRosterList'), 0); renderDrafts(); }
 
 /* ---------- workplace setup (teams + crews + custom rotations; rendered into Shift setup) ---------- */
 function openBaseSetup(){ switchTab('staff'); }
@@ -7684,7 +8006,7 @@ function saveSettingsProfile(){
 
 /* ---------- data: export / import / clear ---------- */
 function exportData(){
-  var blob=new Blob([JSON.stringify({base:S.base, rosters:S.rosters})],{type:'application/json'});
+  var blob=new Blob([JSON.stringify({base:S.base, rosters:S.rosters, drafts:S.drafts||[]})],{type:'application/json'});
   var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download='signalfox-shift-backup.json'; document.body.appendChild(a); a.click();
   setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },500);
@@ -7698,6 +8020,7 @@ function importData(file){
       var d=JSON.parse(r.result);
       if(d.base){ S.base=d.base; persistBase(); }
       if(d.rosters){ S.rosters=d.rosters; persist(); }
+      if(d.drafts){ S.drafts=d.drafts; persistDrafts(); }
       migrateShifts(); persistBase();
       renderHome(); renderAllRosters(); renderStaffTab(); renderSettings();
       queueCloudSave();
@@ -7708,7 +8031,7 @@ function importData(file){
 }
 function clearData(){
   if(!confirm('Delete ALL bases, rosters and staff \u2014 on this device and in your cloud account?')) return;
-  ['sfshift_base','sfshift_units','sfshift_rosters','sfshift_hero_logo','sfshift_profile_name','sfshift_mtime','sfshift_custom_rot','sfshift_company'].forEach(function(k){
+  ['sfshift_base','sfshift_units','sfshift_rosters','sfshift_hero_logo','sfshift_profile_name','sfshift_mtime','sfshift_custom_rot','sfshift_company','sfshift_drafts'].forEach(function(k){
     try{ localStorage.removeItem(k); }catch(e){}
   });
   try{
@@ -7720,6 +8043,7 @@ function clearData(){
   Object.keys(ROTATIONS).forEach(function(k){ if(ROTATIONS[k]&&ROTATIONS[k].custom) delete ROTATIONS[k]; });
   if(sb && sbUser){ try{ sb.from('app_state').delete().eq('user_id', sbUser.id).then(function(){}).catch(function(){}); }catch(e){} }
   S.company=null; S._rostersLoaded=false;
+  S.drafts=[]; S.draftId=null; S.draft=null; S.fromSaved=false; S.unitId=null;
   loadBase(); loadSaved();
   renderHome(); renderAllRosters(); renderStaffTab(); renderSettings();
   toast('All data cleared');
@@ -8222,6 +8546,8 @@ function expFitSheet(){
   sh.style.maxHeight=Math.round(window.innerHeight*0.88)+'px';
 }
 function openExportSheet(){
+  var _ctx=null; try{ _ctx=resolveCalRoster(); }catch(e){}
+  if(_ctx && !_ctx.saved){ toast('Drafts can\u2019t be exported \u2014 publish it first.'); return; }
   var E=expData();
   if(!E){ toast('Open a roster first'); return; }
   S.exp=E;
