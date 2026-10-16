@@ -902,6 +902,13 @@
       "staff": 2000,
       "rosters": 3600,
       "changes": 98090
+    },
+    {
+      "time": "21:34",
+      "companies": 0,
+      "staff": 0,
+      "rosters": 0,
+      "changes": 0
     }
   ],
   "log": [
@@ -1592,67 +1599,35 @@
     {
       "time": "21:30",
       "message": "Stage 4 done — countsOk=false"
+    },
+    {
+      "time": "21:34",
+      "message": "Building up — seeding…"
     }
   ],
   "metrics": [
     {
       "label": "Companies",
-      "value": "5"
+      "value": "0"
     },
     {
       "label": "Staff rostered",
-      "value": "2000"
+      "value": "0"
     },
     {
       "label": "Active rosters",
-      "value": "3600"
+      "value": "0"
     },
     {
       "label": "Changes",
-      "value": "98090"
-    },
-    {
-      "label": "Seed time",
-      "value": "n/a"
-    },
-    {
-      "label": "Storage (JSON bytes)",
-      "value": "18563895"
-    },
-    {
-      "label": "Heap used",
-      "value": "33.5 MB"
-    },
-    {
-      "label": "Persist",
-      "value": "FAILED (sfshift_apps:Failed to execute 'setItem' on 'Storage': Setting the value of 'sfshift_apps' exceeded the quota.)"
-    },
-    {
-      "label": "Calendar render",
-      "value": "1369ms"
-    },
-    {
-      "label": "Rosters list render",
-      "value": "483ms"
-    },
-    {
-      "label": "Company Dashboard render",
-      "value": "722ms"
-    },
-    {
-      "label": "Company Stats compute",
-      "value": "ok ms=11573 total=6200"
-    },
-    {
-      "label": "Rules engine",
-      "value": "ok ms=14 violDays=undefined"
+      "value": "0"
     }
   ],
   "progress": {
-    "current": 4,
+    "current": 5,
     "total": 7
   },
-  "stage": "Stage 4 of 7 — 2000 staff, 36 months",
+  "stage": "Stage 5 of 7 — 4000 staff, 48 months",
   "status": "running",
   "thresholds": {
     "break": null,
@@ -1660,12 +1635,12 @@
     "perfect": null
   },
   "totals": {
-    "changes": 98090,
-    "companies": 5,
-    "rosters": 3600,
-    "staff": 2000
+    "changes": 0,
+    "companies": 0,
+    "rosters": 0,
+    "staff": 0
   },
-  "updatedAt": "2026-10-16T21:30:40.651+02:00",
+  "updatedAt": "2026-10-16T21:34:11.164+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
