@@ -707,6 +707,7 @@
       <button class="addperson" id="shiftAddBtn" type="button">+ Add shift</button>
       <button class="btn" style="margin-top:10px;" onclick="openShiftReq()">Shift requirements</button>
     </div>
+    <button class="btn" id="bysOpenBtn" onclick="openBys()">Build your own shift</button>
     <div class="card">
       <h3>Qualifications</h3>
       <p class="sub">The skill levels your industry uses &mdash; BLS, ILS, ALS, or chef, waiter, barista, whatever. Set them up and tick who each one can cover.</p>
@@ -725,6 +726,10 @@
       <div id="staffList"></div>
       <button class="addperson" onclick="staffAdd()">+ Add staff member</button>
     </div>
+  </div>
+
+  <!-- BUILD YOUR OWN SHIFT (own screen — only reachable from the Shift setup "Build your own shift" button) -->
+  <div class="view" id="v-bys">
     <div class="card" id="bysCard">
       <h3>Build your own shift</h3>
       <p class="sub">One place to set up how your shifts work: how many people are on each shift, which rotation you run, and &mdash; if none of the ready-made ones fit &mdash; build your own rotation.</p>
@@ -1164,7 +1169,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1988';
+var BUILD='20261015-1991';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -8875,7 +8880,7 @@ function enterApp(){
 var TAB_VIEWS={home:'v-home', rosters:'v-rosters', onduty:'v-base', staff:'v-staff', settings:'v-settings',
   myshifts:'v-myshifts', openshifts:'v-marketplace', profile:'v-profile', company:'v-company',
   codash:'v-company', costats:'v-company', cobases:'v-company', copeople:'v-company', coopen:'v-company'};
-var BACK_IDS=['v-newroster','v-anchor','v-cal','v-base','v-rotbuilder','v-ladder','v-shiftreq','v-rules','v-legal','v-inbox'];
+var BACK_IDS=['v-newroster','v-anchor','v-cal','v-base','v-rotbuilder','v-ladder','v-shiftreq','v-rules','v-legal','v-inbox','v-bys'];
 /* One small subtle back arrow (#backRow, just under the header) for every
    sub-view — plus Company drill-downs, which share the v-company view. */
 function syncBackRow(id){
@@ -9022,6 +9027,7 @@ function goBack(){
   }
   if(active==='v-rotbuilder'){ openBaseSetup(); return; }
   if(active==='v-ladder'){ switchTab('staff'); return; }
+  if(active==='v-bys'){ switchTab('staff'); return; }
   if(active==='v-shiftreq'){ switchTab('staff'); return; }
   if(active==='v-rules'){ switchTab('staff'); return; }
   if(active==='v-legal'){ switchTab('settings'); return; }
@@ -9148,6 +9154,7 @@ function renderBaseSetup(){
    Same qual always covers itself. Manager has full control — can tick anything. */
 var ladderView='cards';
 function openLadder(){ renderStaffQuals(); show('v-ladder'); }
+function openBys(){ renderBysFlow(); show('v-bys'); }
 function ladderSetView(v){ ladderView=v; renderStaffQuals(); }
 function ladderToggleCover(qi, oj){
   var qs=baseQuals(), q=qs[qi], target=qs[oj];
