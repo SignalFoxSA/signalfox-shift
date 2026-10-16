@@ -127,6 +127,10 @@
     {
       "label": "Changes",
       "value": "1700"
+    },
+    {
+      "label": "Seed time",
+      "value": "n/a"
     }
   ],
   "progress": {
@@ -146,5 +150,5 @@
     "rosters": 120,
     "staff": 200
   },
-  "updatedAt": "2026-10-16T21:18:23.689+02:00"
+  "updatedAt": "2026-10-16T21:18:25.623+02:00"
 }
