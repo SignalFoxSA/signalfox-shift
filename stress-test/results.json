@@ -4706,6 +4706,14 @@
     {
       "time": "21:40",
       "message": "On Duty render skipped (state exceeds localStorage)"
+    },
+    {
+      "time": "21:41",
+      "message": "Inbox render skipped (state exceeds localStorage)"
+    },
+    {
+      "time": "21:41",
+      "message": "Stage 5 done — countsOk=false"
     }
   ],
   "metrics": [
@@ -4756,6 +4764,10 @@
     {
       "label": "Company Stats compute",
       "value": "ok ms=64664 total=12400"
+    },
+    {
+      "label": "Rules engine",
+      "value": "ok ms=5 violDays=undefined"
     }
   ],
   "progress": {
@@ -4775,222 +4787,206 @@
     "rosters": 9600,
     "staff": 4000
   },
-  "updatedAt": "2026-10-16T21:41:35.006+02:00",
+  "updatedAt": "2026-10-16T21:42:25.815+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
         "name": "Workplace 1",
-        "staff": 800
-      },
-      {
-        "name": "Workplace 2",
-        "staff": 800
-      },
-      {
-        "name": "Workplace 3",
-        "staff": 800
-      },
-      {
-        "name": "Workplace 4",
-        "staff": 800
-      },
-      {
-        "name": "Workplace 5",
         "staff": 800
       }
     ],
     "rostersPerMonth": [
       {
         "month": "2026-01",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2026-02",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2026-03",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2026-04",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2026-05",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2026-06",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2026-07",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2026-08",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2026-09",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2026-10",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2026-11",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2026-12",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2027-01",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2027-02",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2027-03",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2027-04",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2027-05",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2027-06",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2027-07",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2027-08",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2027-09",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2027-10",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2027-11",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2027-12",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2028-01",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2028-02",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2028-03",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2028-04",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2028-05",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2028-06",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2028-07",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2028-08",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2028-09",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2028-10",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2028-11",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2028-12",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2029-01",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2029-02",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2029-03",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2029-04",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2029-05",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2029-06",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2029-07",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2029-08",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2029-09",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2029-10",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2029-11",
-        "rosters": 200
+        "rosters": 40
       },
       {
         "month": "2029-12",
-        "rosters": 200
+        "rosters": 40
       }
     ]
   },
@@ -5009,6 +5005,12 @@
       "staff": 2000,
       "loadMs": null,
       "renderMs": 1369,
+      "exportMs": null
+    },
+    {
+      "staff": 4000,
+      "loadMs": null,
+      "renderMs": 2220,
       "exportMs": null
     }
   ],
@@ -5039,6 +5041,13 @@
       "staff": 2000,
       "loadMs": null,
       "renderMs": 1369,
+      "exportMs": null
+    },
+    {
+      "level": "High",
+      "staff": 4000,
+      "loadMs": null,
+      "renderMs": 2220,
       "exportMs": null
     }
   ],
