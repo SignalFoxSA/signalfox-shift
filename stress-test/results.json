@@ -1541,6 +1541,10 @@
     {
       "time": "21:29",
       "message": "Added applications — 800 of 1600"
+    },
+    {
+      "time": "21:29",
+      "message": "Added applications — 1200 of 1600"
     }
   ],
   "metrics": [
@@ -1578,5 +1582,5 @@
     "rosters": 3600,
     "staff": 2000
   },
-  "updatedAt": "2026-10-16T21:29:35.629+02:00"
+  "updatedAt": "2026-10-16T21:29:37.289+02:00"
 }
