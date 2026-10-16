@@ -1072,7 +1072,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1940';
+var BUILD='20261015-1945';
 /* LEAVE_TYPES — the ONE shared list of leave types (single source of truth).
    Used by EVERY leave-reason picker: the day-sheet removal prompt, the draft
    Long-term leave section, and both On Duty leave flows (baseLeave +
@@ -2369,6 +2369,16 @@ function renderCalMonth(ctx){
   }
   for(var t=lead+dim;t<weeks*7;t++) html+='<div class="cell out"></div>';
   grid.innerHTML=html;
+  /* Shift applications for THIS roster (whole month) — below the calendar,
+     above the Leave list; absent entirely when there are none */
+  var appsWrap=document.getElementById('calAppsWrap');
+  if(!appsWrap){
+    appsWrap=document.createElement('div'); appsWrap.id='calAppsWrap';
+    var lvFirst=document.getElementById('calLeaveWrap');
+    if(lvFirst) grid.parentNode.insertBefore(appsWrap, lvFirst);
+    else grid.parentNode.appendChild(appsWrap);
+  }
+  appsWrap.innerHTML=rosterAppsHtml(ctx);
   /* Leave list at the bottom of the roster */
   var lvWrap=document.getElementById('calLeaveWrap');
   if(!lvWrap){
@@ -4635,6 +4645,115 @@ function mkDecline(appId){
   toast('Application declined.');
   renderBase();
 }
+/* manager: UNAPPROVE a shift application (roster-view list only) — undo an
+   approval: the filler comes out of the slot (back to OPEN), the
+   application goes back to pending (so it can be re-approved or declined),
+   and the leave cover returns to OPEN via syncLeaveLogFills. No rules
+   check — removing someone, not adding. */
+function mkUnapprove(appId){
+  loadShiftApps();
+  var a=(S.shiftApps||[]).find(function(x){ return x.id===appId; });
+  if(!a||a.status!=='approved') return;
+  if(!confirm('Remove '+a.applicant+' from '+a.shift+' on '+a.dateISO+'? The shift will be open again.')) return;
+  var R=null, after=null;
+  if(a.isDraft){
+    loadDrafts();
+    var d=(S.drafts||[]).find(function(x){ return x.id===a.rosterId; });
+    if(!d||!d.roster){ toast('That draft no longer exists.'); return; }
+    R=d.roster;
+    after=function(){
+      persistDrafts();
+      if(S.draftId===d.id && S.draft && !S.fromSaved) S.draft=JSON.parse(JSON.stringify(R));
+    };
+  }else if(a.workplaceId && S.company && a.workplaceId!==S.company.activeId){
+    var wp=companyWorkplaceById(a.workplaceId); if(!wp) return;
+    var u2=(wp.rosters||[]).find(function(x){ return x.id===a.rosterId; });
+    if(!u2||!u2.roster){ toast('That roster no longer exists.'); return; }
+    R=u2.roster;
+    after=function(){ companyPersist(); };
+  }else{
+    loadSaved();
+    /* loadSaved re-read S.shiftApps from storage — re-find, the earlier object is stale */
+    a=(S.shiftApps||[]).find(function(x){ return x.id===appId; });
+    if(!a) return;
+    var u=(S.rosters||[]).find(function(x){ return x.id===a.rosterId; });
+    if(!u||!u.roster){ toast('That roster no longer exists.'); return; }
+    R=u.roster;
+    after=function(){ persist(); };
+  }
+  if(!R.memberOverrides) R.memberOverrides={};
+  var mems=R.memberOverrides[a.dateISO]&&R.memberOverrides[a.dateISO][a.shiftId];
+  if(Array.isArray(mems)){
+    var ix=mems.indexOf(a.applicant);
+    if(ix>=0) mems[ix]=OPEN_MARK;
+  }
+  syncLeaveLogFills(R);
+  a.status='pending';
+  persistShiftApps();
+  if(after) after();
+  persistBase();
+  toast(a.applicant+' removed from '+a.shift+' — shift is open again.');
+  renderBase();
+}
+/* "Shift applications" section for the ROSTER view (draft + live): ALL
+   applications for THIS roster (team + month), whole month, grouped by
+   status. Empty string when none — the section stays out of the way.
+   Roster-view only: the On Duty card keeps its own pending-only list. */
+function rosterAppsHtml(ctx){
+  loadShiftApps();
+  var rosterId=null, isDraft=false;
+  if(ctx.saved){ rosterId=ctx.unitId; isDraft=false; }
+  else{
+    var de=draftEntryForCurrent();
+    rosterId=de?de.id:(S.draftId||null);
+    isDraft=true;
+  }
+  if(!rosterId) return '';
+  var apps=(S.shiftApps||[]).filter(function(a){
+    return a && a.rosterId===rosterId && !!a.isDraft===isDraft;
+  });
+  if(!apps.length) return '';
+  apps.sort(function(a,b){
+    if(a.dateISO<b.dateISO) return -1;
+    if(a.dateISO>b.dateISO) return 1;
+    if(a.shift<b.shift) return -1;
+    if(a.shift>b.shift) return 1;
+    return 0;
+  });
+  function row(a, group){
+    var labels=(a.isDraft?' \u00b7 DRAFT':'')+(a.workplaceId&&S.company&&a.workplaceId!==S.company.activeId?' \u00b7 at '+escapeHtml(a.workplaceName||'another base'):'');
+    var btns='';
+    if(group==='pending'){
+      btns='<div class="btnrow" style="margin-top:4px;">'
+        +'<button class="btn" style="padding:6px 12px;font-size:13px;" onclick="rosterAppApprove(\''+escapeHtml(a.id)+'\')">Approve</button>'
+        +'<button class="btn ghost" style="padding:6px 12px;font-size:13px;" onclick="rosterAppDecline(\''+escapeHtml(a.id)+'\')">Decline</button>'
+        +'</div>';
+    }else if(group==='approved'){
+      btns='<div class="btnrow" style="margin-top:4px;">'
+        +'<button class="btn ghost" style="padding:6px 12px;font-size:13px;" onclick="rosterAppUnapprove(\''+escapeHtml(a.id)+'\')">Unapprove</button>'
+        +'</div>';
+    }
+    var style=group==='declined'?'opacity:0.55;':'';
+    return '<div style="font-size:13px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--line);'+style+'">'
+      +'<b>'+escapeHtml(a.applicant)+'</b> wants <b>'+escapeHtml(a.shift)+'</b>'
+      +'<div style="color:var(--muted);font-size:12px;">'+escapeHtml(a.dateISO)+' \u00b7 Crew '+escapeHtml(a.crew)+labels+'</div>'
+      +btns+'</div>';
+  }
+  var h='<div class="card" style="border-left:3px solid #4DABF7;margin-bottom:10px;padding:10px 12px;">'
+    +'<div style="font-size:13px;font-weight:700;margin-bottom:6px;">Shift applications ('+apps.length+')</div>';
+  [['pending','Pending'],['approved','Approved'],['declined','Declined']].forEach(function(g){
+    var list=apps.filter(function(a){ return a.status===g[0]; });
+    if(!list.length) return;
+    h+='<div style="font-size:12px;font-weight:700;color:var(--muted);margin:8px 0 4px;">'+g[1]+' ('+list.length+')</div>';
+    list.forEach(function(a){ h+=row(a, g[0]); });
+  });
+  return h+'</div>';
+}
+/* Roster-view application actions: same behaviour as the On Duty card,
+   then refresh the roster view so the list + calendar update. */
+function rosterAppApprove(appId){ mkApprove(appId); renderCalendar(); }
+function rosterAppDecline(appId){ mkDecline(appId); renderCalendar(); }
+function rosterAppUnapprove(appId){ mkUnapprove(appId); renderCalendar(); }
 /* ---------- Staff profile tab ---------- */
 function renderStaffProfile(){
   var wrap=document.getElementById('profContent');
