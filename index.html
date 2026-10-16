@@ -159,6 +159,7 @@
   .custrow .cn{flex:1; min-width:0; font-weight:700; font-size:14px;}
   .custrow .cm{display:block; font-weight:500; font-size:12px; color:var(--muted);}
   .custrow .rm{background:none; border:none; color:var(--red); font-size:16px; cursor:pointer; padding:6px; flex:none;}
+  .customtag{display:inline-block; margin-left:8px; padding:1px 8px; border-radius:999px; background:#FFC13E; color:#141414; font-size:11px; font-weight:800; vertical-align:middle;}
   /* people view */
   .pview{overflow-x:auto; margin:0 -4px; padding:0 4px;}
   .ptable{border-collapse:collapse;}
@@ -726,11 +727,21 @@
     </div>
     <div class="card">
       <h3>Rotations</h3>
-      <p class="sub">Patterns you designed yourself &mdash; reusable on any team.</p>
-      <div id="bsCustom"></div>
-      <label class="f" style="margin-top:14px;">Rotation Library</label>
-      <p class="sub">Built-in patterns &mdash; pick one in Teams &rarr; Rotation, or load a rotating one into the builder to adapt it.</p>
+      <p class="sub">The Rotation Library &mdash; every rotation you can choose from. Pick one in Teams &rarr; Rotation, or load a rotating one into the builder to adapt it.</p>
       <div id="bsLibrary"></div>
+      <button class="addperson" id="libAddBtn" onclick="libShowAdd(true)">+ Add your own</button>
+      <div id="libAddForm" style="display:none; margin-top:10px; border:1px solid var(--line); border-radius:10px; padding:12px;">
+        <label class="f">Pattern name</label>
+        <input type="text" id="libName" maxlength="30" placeholder="e.g. My 3-on-3-off">
+        <label class="f">Cycle &mdash; one crew&rsquo;s pattern</label>
+        <input type="text" id="libCycle" maxlength="120" placeholder="e.g. D,D,D,O,O,O">
+        <p class="fine" style="margin:-4px 0 8px">Use D = Day, N = Night, X = 24h, O = off. Separate with commas.</p>
+        <label class="f">Shift length</label>
+        <select id="libHours"><option value="12">12-hour shifts</option><option value="24">24-hour shifts</option><option value="8">8-hour shifts</option></select>
+        <p class="fine" id="libAddErr" style="display:none; color:var(--red); font-weight:700;"></p>
+        <button class="btn" onclick="libSaveCustom()">Save pattern</button>
+        <button class="btn ghost" onclick="libShowAdd(false)">Cancel</button>
+      </div>
       <button class="addperson" onclick="openRotBuilder()">+ Design your own rotation</button>
     </div>
   </div>
@@ -865,7 +876,7 @@
       <input type="text" id="rbName" maxlength="30" placeholder="e.g. Mine A Shift">
       <label class="f">Pick a pattern from the Library</label>
       <select id="rbLibrary" onchange="if(this.value){ rbLoadLibrary(this.value); this.value=''; }"></select>
-      <p class="fine">Load a built-in rotating pattern (e.g. Panama, Kelly) into the grid below, then name it and save it as your own.</p>
+      <p class="fine">Load a rotating pattern from the Library (built-in or your own, e.g. Panama, Kelly) into the grid below, then name it and save it as your own.</p>
       <label class="f">Cycle length</label>
       <div class="pills" id="rbCycle"></div>
       <label class="f">Number of crews</label>
@@ -1138,7 +1149,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1986';
+var BUILD='20261015-1987';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -1574,28 +1585,98 @@ function rbSave(){
 }
 function rbDelete(key){
   if(!ROTATIONS[key] || !ROTATIONS[key].custom) return;
+  if(!confirm('Delete "'+ROTATIONS[key].name+'"? Teams using it will switch to another rotation.')) return;
   delete ROTATIONS[key];
   persistCustomRotations();
   S.base.vehicles.forEach(function(v){ if(v.rotation===key) v.rotation=firstRotForCov(v.coverage); });
   persistBase(); renderBsVehicles(); renderCustomList();
   toast('Rotation deleted');
 }
-function renderCustomList(){
-  var wrap=document.getElementById('bsCustom'); if(!wrap) return; wrap.innerHTML='';
-  var keys=Object.keys(ROTATIONS).filter(function(k){ return ROTATIONS[k].custom; });
-  if(!keys.length){ wrap.innerHTML='<p class="fine">None yet.</p>'; renderLibraryList(); return; }
-  keys.forEach(function(k){
-    var r=ROTATIONS[k];
-    var row=document.createElement('div'); row.className='custrow';
-    var nm=document.createElement('div'); nm.className='cn'; nm.textContent=r.name;
-    var meta=document.createElement('span'); meta.className='cm';
-    meta.textContent=r.cycle+'-day cycle · '+r.crews+' crews · '+(r.cov[0]===24?'24h coverage':r.cov[0]+'h coverage');
-    nm.appendChild(meta);
-    var del=document.createElement('button'); del.className='rm'; del.textContent='✕'; del.title='Delete rotation';
-    del.onclick=(function(key){ return function(){ rbDelete(key); }; })(k);
-    row.appendChild(nm); row.appendChild(del); wrap.appendChild(row);
-  });
-  renderLibraryList();
+/* Custom rotations live in the Rotation Library now (one list: built-ins +
+   custom). Kept as an alias so existing callers keep working. */
+function renderCustomList(){ renderLibraryList(); }
+
+/* ---------- Rotation Library: add your own pattern ---------- */
+/* Parse a typed cycle like "D,D,D,O,O,O" into letter tokens.
+   Returns {tokens:[...]} or {error:'...'} — D=Day, N=Night, X=24h, O/0/OFF=off. */
+function libParseCycle(text){
+  var parts=String(text||'').split(/[,\s;]+/).filter(function(x){ return x!==''; });
+  var toks=[];
+  for(var i=0;i<parts.length;i++){
+    var t=parts[i].toUpperCase();
+    if(t==='D'||t==='N'||t==='X') toks.push(t);
+    else if(t==='O'||t==='0'||t==='OFF') toks.push(0);
+    else return {error:'"'+parts[i]+'" is not a shift \u2014 use D, N, X or O.'};
+  }
+  if(!toks.length) return {error:'Type the cycle, e.g. D,D,D,O,O,O.'};
+  if(toks.length>28) return {error:'Cycle is '+toks.length+' days \u2014 keep it to 28 days or fewer.'};
+  if(!toks.some(function(t){ return t!==0; })) return {error:'The cycle needs at least one work day (D, N or X).'};
+  return {tokens:toks};
+}
+/* Stagger crews so every day has cover for every shift in the pattern:
+   try the fewest crews first (1-4), step = round(cycle/crews) like the
+   Rotation Builder. Falls back to 4 crews if no count covers everything. */
+function libDeriveCrews(tokens){
+  var cycle=tokens.length;
+  var work=[]; tokens.forEach(function(t){ if(t!==0 && work.indexOf(t)<0) work.push(t); });
+  for(var crews=1; crews<=4; crews++){
+    var step=Math.max(1, Math.round(cycle/crews));
+    var offs=[]; for(var i=0;i<crews;i++) offs.push((i*step)%cycle);
+    var covered=true;
+    for(var d=0; d<cycle && covered; d++){
+      for(var w=0; w<work.length; w++){
+        var ok=false;
+        for(var c=0; c<crews; c++){
+          var rr=(((d-offs[c])%cycle)+cycle)%cycle;
+          if(tokens[rr]===work[w]){ ok=true; break; }
+        }
+        if(!ok){ covered=false; break; }
+      }
+    }
+    if(covered) return {crews:crews, offsets:offs};
+  }
+  var offs4=[]; var step4=Math.max(1, Math.round(cycle/4));
+  for(var j=0;j<4;j++) offs4.push((j*step4)%cycle);
+  return {crews:4, offsets:offs4};
+}
+function libShowAdd(show){
+  var f=document.getElementById('libAddForm'); if(!f) return;
+  f.style.display=show?'block':'none';
+  var err=document.getElementById('libAddErr'); if(err){ err.style.display='none'; err.textContent=''; }
+  if(show){ var nm=document.getElementById('libName'); if(nm) nm.focus(); }
+}
+function libSaveCustom(){
+  var nameEl=document.getElementById('libName');
+  var cycEl=document.getElementById('libCycle');
+  var hrsEl=document.getElementById('libHours');
+  var err=document.getElementById('libAddErr');
+  function fail(msg){ if(err){ err.textContent=msg; err.style.display='block'; } toast(msg); }
+  var name=nameEl?nameEl.value.trim():'';
+  if(!name){ fail('Give your pattern a name.'); return; }
+  var parsed=libParseCycle(cycEl?cycEl.value:'');
+  if(parsed.error){ fail(parsed.error); return; }
+  var tokens=parsed.tokens;
+  var ss=wpShifts();
+  if(!ss.length){ fail('Add a shift in the Shifts section first.'); return; }
+  var dId=ss[0].id, nId=ss[1]?ss[1].id:dId, xId=dId;
+  for(var i=0;i<ss.length;i++){ if(ss[i].start===ss[i].end){ xId=ss[i].id; break; } }
+  var map={D:dId, N:nId, X:xId};
+  var pattern=tokens.map(function(t){ return t===0?0:map[t]; });
+  var dc=libDeriveCrews(tokens);
+  var hours=hrsEl?parseInt(hrsEl.value,10):12;
+  if([8,12,24].indexOf(hours)<0) hours=12;
+  var key='c'+Date.now();
+  ROTATIONS[key]={
+    name:name, hours:hours, cov:[24,12,8],
+    cycle:tokens.length, crews:dc.crews, pattern:pattern, offsets:dc.offsets,
+    custom:true, note:'Added by you'
+  };
+  persistCustomRotations();
+  if(nameEl) nameEl.value='';
+  if(cycEl) cycEl.value='';
+  libShowAdd(false);
+  renderLibraryList(); renderBsVehicles();
+  toast('Pattern saved');
 }
 
 /* ---------- Rotation Library: browsable catalogue of built-in patterns ---------- */
@@ -1605,7 +1686,10 @@ function libSeqText(r){
   var lab={D:'Day', N:'Night', X:'24h'};
   var runs=[];
   (pat||[]).forEach(function(p){
-    var t=(p===0||p==='OFF') ? 'Off' : (lab[p]||String(p));
+    var t;
+    if(p===0||p==='OFF') t='Off';
+    else if(lab[p]) t=lab[p];
+    else { var sh=wpShift(p); t=sh ? (sh.name||String(p)) : String(p); }
     if(runs.length && runs[runs.length-1].t===t) runs[runs.length-1].n++;
     else runs.push({t:t, n:1});
   });
@@ -1617,9 +1701,13 @@ function libSeqText(r){
 function renderLibraryList(){
   var wrap=document.getElementById('bsLibrary'); if(!wrap) return; wrap.innerHTML='';
   Object.keys(ROTATIONS).forEach(function(k){
-    var r=ROTATIONS[k]; if(!r || r.custom) return;
+    var r=ROTATIONS[k]; if(!r) return;
     var row=document.createElement('div'); row.className='custrow'; row.setAttribute('data-lib-key', k);
     var nm=document.createElement('div'); nm.className='cn'; nm.textContent=r.name;
+    if(r.custom){
+      var tag=document.createElement('span'); tag.className='customtag'; tag.textContent='Custom'; tag.setAttribute('data-custom-tag', k);
+      nm.appendChild(tag);
+    }
     var meta=document.createElement('span'); meta.className='cm';
     meta.textContent=r.cycle+'-day cycle \u00b7 '+r.crews+' crews \u00b7 '+(r.hours||12)+'h shifts \u00b7 '+libSeqText(r);
     nm.appendChild(meta);
@@ -1636,11 +1724,17 @@ function renderLibraryList(){
       f.textContent='Fixed crews \u2014 pick it in Teams \u2192 Rotation';
       row.appendChild(f);
     }
+    if(r.custom){
+      var del=document.createElement('button'); del.className='rm'; del.textContent='\u2715'; del.title='Delete rotation'; del.setAttribute('data-lib-del', k);
+      del.onclick=(function(key){ return function(){ rbDelete(key); }; })(k);
+      row.appendChild(del);
+    }
     wrap.appendChild(row);
   });
 }
-/* fill the Rotation Builder from a built-in rotating pattern (D/N/X tokens
-   map to the workplace's own shifts; fixed-crew patterns are not loadable —
+/* fill the Rotation Builder from a Library rotating pattern (D/N/X tokens
+   map to the workplace's own shifts; custom patterns already hold workplace
+   shift ids, which pass through; fixed-crew patterns are not loadable —
    they only work exactly as built, via Teams → Rotation) */
 function rbLoadLibrary(key){
   var r=ROTATIONS[key]; if(!r || !r.offsets) return;
@@ -1648,19 +1742,24 @@ function rbLoadLibrary(key){
   var dId=ss[0]?ss[0].id:0, nId=ss[1]?ss[1].id:dId;
   var map={D:dId, N:nId, X:dId};
   RB.cycle=r.cycle; RB.crews=r.crews;
-  RB.pattern=(r.pattern||[]).map(function(p){ return p===0 ? 0 : (map[p]!==undefined ? map[p] : 0); });
+  RB.pattern=(r.pattern||[]).map(function(p){
+    if(p===0||p==='OFF') return 0;
+    if(map[p]!==undefined) return map[p];
+    if(wpShift(p)) return p;
+    return 0;
+  });
   rbRenderAll();
   toast(r.name+' loaded \u2014 name it and save');
 }
-/* builder's "Pick a pattern" select: rotating built-ins only */
+/* builder's "Pick a pattern" select: rotating Library patterns (built-in + custom) */
 function rbRenderLibrarySelect(){
   var sel=document.getElementById('rbLibrary'); if(!sel) return;
   sel.innerHTML='';
   var ph=document.createElement('option'); ph.value=''; ph.textContent='Pick a pattern\u2026'; sel.appendChild(ph);
   Object.keys(ROTATIONS).forEach(function(k){
-    var r=ROTATIONS[k]; if(!r || r.custom || !r.offsets) return;
+    var r=ROTATIONS[k]; if(!r || !r.offsets) return;
     var o=document.createElement('option'); o.value=k;
-    o.textContent=r.name+' \u00b7 '+r.cycle+'-day cycle';
+    o.textContent=r.name+' \u00b7 '+r.cycle+'-day cycle'+(r.custom?' \u00b7 Custom':'');
     sel.appendChild(o);
   });
 }
@@ -1835,7 +1934,7 @@ function rotOptions(sel, current, coverage){
     var r=ROTATIONS[k];
     if((r.cov||[24]).indexOf(coverage)<0) return;
     var o=document.createElement('option'); o.value=k;
-    o.textContent=r.name+' · '+(r.hours||12)+'h'+(r.custom?' ★':'');
+    o.textContent=r.name+' · '+(r.hours||12)+'h'+(r.custom?' · Custom':'');
     sel.appendChild(o);
   });
   sel.value=current;
@@ -8605,7 +8704,7 @@ function hasContent(st){
 }
 function collectState(){
   var customs={};
-  try{ Object.keys(S.ROTATIONS).forEach(function(k){ if(S.ROTATIONS[k] && S.ROTATIONS[k].custom) customs[k]=S.ROTATIONS[k]; }); }catch(e){}
+  try{ Object.keys(ROTATIONS).forEach(function(k){ if(ROTATIONS[k] && ROTATIONS[k].custom) customs[k]=ROTATIONS[k]; }); }catch(e){}
   var st={ v:1, mtime:Date.now(), base:S.base||null, rosters:S.rosters||[], drafts:S.drafts||[], customs:customs, profileName:profileName(), company:S.company||null, apps:S.shiftApps||[], notifications:S.notifications||[] };
   try{
     st.heroLogo=localStorage.getItem('sfshift_hero_logo');
@@ -10927,7 +11026,8 @@ function saveSettingsProfile(){
 
 /* ---------- data: export / import / clear ---------- */
 function exportData(){
-  var blob=new Blob([JSON.stringify({base:S.base, rosters:S.rosters, drafts:S.drafts||[], apps:S.shiftApps||[], notifications:S.notifications||[]})],{type:'application/json'});
+  var _customs={}; Object.keys(ROTATIONS).forEach(function(k){ if(ROTATIONS[k]&&ROTATIONS[k].custom) _customs[k]=ROTATIONS[k]; });
+  var blob=new Blob([JSON.stringify({base:S.base, rosters:S.rosters, drafts:S.drafts||[], apps:S.shiftApps||[], notifications:S.notifications||[], customs:_customs})],{type:'application/json'});
   var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download='signalfox-shift-backup.json'; document.body.appendChild(a); a.click();
   setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },500);
@@ -10944,6 +11044,7 @@ function importData(file){
       if(d.drafts){ S.drafts=d.drafts; persistDrafts(); }
       if(d.apps){ S.shiftApps=d.apps; persistShiftApps(); loadShiftApps(); }
       if(d.notifications){ S.notifications=d.notifications; persistNotifications(); loadNotifications(); }
+      if(d.customs){ try{ localStorage.setItem('sfshift_custom_rot', JSON.stringify(d.customs)); }catch(e){} loadCustomRotations(); renderLibraryList(); }
       migrateShifts(); persistBase();
       renderHome(); renderAllRosters(); renderStaffTab(); renderSettings();
       queueCloudSave();
