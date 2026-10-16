@@ -335,6 +335,10 @@
   .herofox{width:150px; height:150px; border-radius:50%; margin:0 auto;
     background-image:var(--fox); background-size:230%; background-position:50% 26%;
     border:3px solid var(--accent);}
+  /* hero images for the Company + My Shifts landing pages */
+  .herofox img{width:100%; height:100%; object-fit:cover; border-radius:50%; display:block;}
+  .hero-initial{width:100%; height:100%; border-radius:50%; display:flex; align-items:center;
+    justify-content:center; font-size:56px; font-weight:800; color:var(--accent); background:var(--card2);}
     object-fit:cover; border:3px solid var(--accent); box-shadow:0 0 44px rgba(255,193,62,.28);
     opacity:0; transition:opacity .5s ease; background:#000;}
   a{color:var(--electric);}
@@ -835,6 +839,7 @@
 
   <!-- COMPANY VIEW (placeholder) -->
   <div class="view" id="v-company">
+    <div id="companyHero"></div>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><h3 style="margin:0;">Company</h3><button class="btn ghost" style="width:auto;flex:none;margin:0;padding:8px 14px;" onclick="switchTab('settings')" aria-label="Settings">&#9881;&#65038; Settings</button></div>
       <p class="sub">All your workplaces, in one place.</p>
@@ -855,6 +860,7 @@
 
   <!-- MY SHIFTS (employee view) -->
   <div class="view" id="v-myshifts">
+    <div id="msHero"></div>
     <div class="card">
       <h3 id="msTitle">My Shifts</h3>
       <p class="sub" id="msSub">Your roster.</p>
@@ -971,7 +977,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1880';
+var BUILD='20261015-1885';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -3176,7 +3182,70 @@ function msMonthData(y,m){
   });
   return out;
 }
+/* ---------- My Shifts landing hero ----------
+   Manager Home pattern: picture circle + greeting + next/today shift.
+   Picture reuses the staff record pic (set on the Profile tab). The
+   shift line is computed from the actual rosters; omitted when there
+   is none — never faked. */
+function msNextShiftInfo(name){
+  if(!name) return null;
+  var today=new Date(); today.setHours(0,0,0,0);
+  var end=new Date(today); end.setDate(end.getDate()+62);
+  var best=null;
+  try{ loadSaved(); }catch(e){}
+  (S.rosters||[]).forEach(function(u){
+    var R=u.roster; if(!R||R.kind!=='month') return;
+    var dim=daysInMonth(R.year,R.month);
+    for(var d=1; d<=dim; d++){
+      var dt=new Date(R.year,R.month,d);
+      if(dt<today||dt>end) continue;
+      var dateISO=R.year+'-'+String(R.month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      var info=null;
+      try{ info=calRosterDay(R,R.year,R.month,d); }catch(e){ continue; }
+      if(!info) continue;
+      var found=null;
+      try{
+        calSlotCrews(R,info.dayIdx).forEach(function(ps){
+          if(found) return;
+          ps.list.forEach(function(x){
+            if(found) return;
+            if(effShiftMembers(R,dateISO,ps.sl.id,x.c).indexOf(name)>=0){
+              var tm=''; try{ tm=slotTime(R,ps.sl.id); }catch(e){}
+              found={dateISO:dateISO, shift:ps.sl.name||ps.sl.id, time:tm};
+            }
+          });
+        });
+      }catch(e){}
+      if(found && (!best || found.dateISO<best.dateISO)) best=found;
+    }
+  });
+  return best;
+}
+function msHeroRender(){
+  var el=document.getElementById('msHero'); if(!el) return;
+  var nm=msPerson||profileName()||'';
+  var first=nm?nm.split(' ')[0]:'';
+  var st=msPerson?((S.base.staff||[]).find(function(s){ return s.name===msPerson; })||{}):{};
+  var pic=st.pic||'';
+  var circ=pic
+    ?'<img src="'+pic+'" alt="">'
+    :'<span class="hero-initial">'+escapeHtml((nm||'?').charAt(0).toUpperCase())+'</span>';
+  var nx=msNextShiftInfo(msPerson);
+  var line='';
+  if(nx){
+    var todayISO=isoDate(new Date());
+    line=nx.dateISO===todayISO
+      ?'On today: '+escapeHtml(nx.shift)+(nx.time?' '+escapeHtml(nx.time):'')
+      :'Next shift: '+escapeHtml(fmtDayTitle(nx.dateISO))+' \u2014 '+escapeHtml(nx.shift)+(nx.time?' '+escapeHtml(nx.time):'');
+  }
+  el.innerHTML='<div class="hero">'
+    +'<div class="herofox">'+circ+'</div>'
+    +'<h1>'+escapeHtml(first?('Hi, '+first):'Hi there')+'</h1>'
+    +(line?'<p>'+line+'</p>':'')
+    +'</div>';
+}
 function msRender(){
+  msHeroRender();
   if(!msPerson) return;
   document.getElementById('msTitle').textContent=msScope==='me'?msPerson+"'s Shifts":'Base Roster';
   document.getElementById('msSub').textContent=msScope==='me'?'Your roster for '+MN[msMonth]+' '+msYear+'.':'Whole base roster for '+MN[msMonth]+' '+msYear+'.';
@@ -3881,6 +3950,36 @@ function companyNameSave(){
   var v=inp?inp.value.trim():'';
   if(v){ c.name=v; companyPersist(); toast('Company name saved'); renderCompany(); }
 }
+/* ---------- Company landing hero (Dashboard tab) ----------
+   Manager Home pattern: logo circle + name + tagline. The logo is
+   stored on S.company.logo (data URL) and syncs with the company
+   (collectState includes S.company). Default is Dash. The logo URL
+   is applied via JS after render (never embedded in HTML). */
+function companyHeroHtml(){
+  var c=S.company||{};
+  var nm=c.name||'My Company';
+  return '<div class="hero">'
+    +'<div class="herofox" id="coHeroLogo"><button class="hero-edit" title="Change logo" onclick="document.getElementById(\'coHeroFile\').click()">&#9998;</button></div>'
+    +'<input type="file" id="coHeroFile" accept="image/*" style="display:none" onchange="companyLogoPick(this)">'
+    +'<button class="hero-reset" id="coHeroReset" style="display:'+(c.logo?'block':'none')+';" onclick="companyLogoReset()">Reset to Dash</button>'
+    +'<h1>'+escapeHtml(nm)+'</h1>'
+    +'<p>All your workplaces, in one place.</p>'
+    +'</div>';
+}
+function companyLogoPick(input){
+  var f=input.files&&input.files[0]; if(!f) return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    var c=companyEnsure(); if(!c) return;
+    c.logo=rd.result; companyPersist(); renderCompany(); toast('Company logo updated');
+  };
+  rd.readAsDataURL(f);
+  input.value='';
+}
+function companyLogoReset(){
+  var c=companyEnsure(); if(!c) return;
+  delete c.logo; companyPersist(); renderCompany(); toast('Back to Dash');
+}
 /* company rules (Company tab) — same 9 rules, same dropdowns */
 function companyRulesSet(key, raw, kind){
   var c=companyEnsure(); if(!c) return;
@@ -3899,7 +3998,8 @@ function companyRulesSet(key, raw, kind){
 function renderCompany(){
   var c=companyEnsure(); if(!c) return;
   var el=document.getElementById('companyContent'); if(!el) return;
-  if(c.drill){ el.innerHTML=companyDrillHtml(c.drill); return; }
+  var heroEl=document.getElementById('companyHero');
+  if(c.drill){ if(heroEl) heroEl.innerHTML=''; el.innerHTML=companyDrillHtml(c.drill); return; }
   var tab=c.tab||'dash';
   if(tab==='rules'){ tab='dash'; c.tab='dash'; companyPersist(); } /* Company Rules now live in Settings */
   var h='';
@@ -3910,6 +4010,14 @@ function renderCompany(){
   else if(tab==='stats') h+=companyStatsHtml();
   else h+=companyDashHtml();
   el.innerHTML=h;
+  /* Landing hero — Dashboard tab only (other tabs + drill-downs: no hero) */
+  if(heroEl){
+    heroEl.innerHTML=(tab==='dash')?companyHeroHtml():'';
+    if(tab==='dash' && c.logo){
+      var lg=document.getElementById('coHeroLogo');
+      if(lg){ lg.style.backgroundImage='url("'+c.logo+'")'; lg.style.backgroundSize='cover'; lg.style.backgroundPosition='50% 50%'; }
+    }
+  }
 }
 function companySetTab(t){
   if(t==='rules'){ switchTab('settings'); var card=document.getElementById('coRulesCard'); if(card) card.scrollIntoView(); return; }
@@ -4003,7 +4111,7 @@ function companyDashHtml(){
   var st=companyTodayStats(tISO);
   var qualParts=Object.keys(st.quals).map(function(q){ return escapeHtml(q)+' '+st.quals[q]; }).join(' \u00b7 ');
   var h='<h3 style="margin-top:4px;">'+escapeHtml(c.name||'My Company')+'</h3>'
-    +'<div style="display:flex;gap:6px;margin-bottom:8px;"><input id="coNameInp" value="'+escapeHtml(c.name||'')+'" placeholder="Company name" style="flex:1;min-width:0;">'
+    +'<div style="display:flex;gap:6px;margin-bottom:8px;"><input type="text" id="coNameInp" value="'+escapeHtml(c.name||'')+'" placeholder="Company name" style="flex:1;min-width:0;">'
     +'<button class="btn" style="margin-top:0;width:auto;flex:none;padding:12px 16px;" onclick="companyNameSave()">Save name</button></div>'
     +'<div class="daynav">'
     +'<button class="btn ghost" onclick="companyDashNav(-1)" aria-label="Previous day">‹</button>'
@@ -4039,7 +4147,7 @@ function companyBasesHtml(){
     +'<button class="btn ghost" onclick="companyRegenerateCode()">Generate new code</button></div>'
     +'<div class="card" style="padding:10px;"><h3>Join this company</h3>'
     +'<p class="sub">Enter the company invite code to link this base to the company.</p>'
-    +'<div style="display:flex;gap:6px;"><input id="coJoinCodeInp" placeholder="Invite code" maxlength="12" style="flex:1;min-width:0;text-transform:uppercase;">'
+    +'<div style="display:flex;gap:6px;"><input type="text" id="coJoinCodeInp" placeholder="Invite code" maxlength="12" style="flex:1;min-width:0;text-transform:uppercase;">'
     +'<button class="btn" style="margin-top:0;width:auto;flex:none;padding:12px 16px;" onclick="companyJoinWithCode(document.getElementById(\'coJoinCodeInp\').value)">Join</button></div>'
     +'<p class="fine" id="coJoinMsg" style="margin:6px 0 0;"></p></div>'
     +companyWorkplaces().map(function(wp){
@@ -4058,7 +4166,7 @@ function companyBasesHtml(){
         +'</div></div>';
     }).join('')
     +'<div class="card" style="padding:10px;"><h3>Add a workplace</h3>'
-    +'<div style="display:flex;gap:6px;"><input id="coNewBaseInp" placeholder="New workplace name" style="flex:1;min-width:0;">'
+    +'<div style="display:flex;gap:6px;"><input type="text" id="coNewBaseInp" placeholder="New workplace name" style="flex:1;min-width:0;">'
     +'<button class="btn" style="margin-top:0;width:auto;flex:none;padding:12px 16px;" onclick="companyAddBase()">Add base</button></div></div>';
   return h;
 }
@@ -4113,7 +4221,7 @@ function companyPeopleHtml(){
   var filt=c.peopleFilter||'all';
   var h='<h3 style="margin-top:4px;">People across the company</h3>'
     +'<p class="sub">One record per person (same name at two bases = the same person).</p>'
-    +'<div style="display:flex;gap:6px;margin-bottom:8px;"><input id="coPeopleQ" value="'+escapeHtml(c.peopleQ||'')+'" placeholder="Search name…" style="flex:1;min-width:0;" onchange="companyPeopleSetQ(this.value)">'
+    +'<div style="display:flex;gap:6px;margin-bottom:8px;"><input type="text" id="coPeopleQ" value="'+escapeHtml(c.peopleQ||'')+'" placeholder="Search name…" style="flex:1;min-width:0;" onchange="companyPeopleSetQ(this.value)">'
     +'<select onchange="companyPeopleSetFilter(this.value)" style="flex:none;"><option value="all"'+(filt==='all'?' selected':'')+'>All statuses</option><option value="working"'+(filt==='working'?' selected':'')+'>Working today</option><option value="sick"'+(filt==='sick'?' selected':'')+'>Sick</option><option value="leave"'+(filt==='leave'?' selected':'')+'>On leave</option><option value="off"'+(filt==='off'?' selected':'')+'>Off today</option></select></div>';
   var people=companyAllPeople();
   if(!people.length) h+='<p class="fine">No staff yet — add staff in Shift setup for a workplace.</p>';
