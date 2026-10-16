@@ -1096,7 +1096,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1973';
+var BUILD='20261015-1974';
 /* LEAVE_TYPES — the ONE shared list of leave types (single source of truth).
    Used by EVERY leave-reason picker: the day-sheet removal prompt, the draft
    Long-term leave section, and both On Duty leave flows (baseLeave +
@@ -4117,6 +4117,40 @@ function msMonthData(y,m){
   });
   return out;
 }
+/* collect all shift assignments for Offer-ON drafts in a given month —
+   the draft counterpart of msMonthData (same entry shape, plus
+   isDraft/draftId). Used by the Open Shifts Calendar so a draft-only
+   month renders populated instead of blank. */
+function msDraftMonthData(y,m){
+  var out=[];
+  loadDrafts();
+  (S.drafts||[]).forEach(function(d){
+    if(!d.offerOpenShifts) return;
+    var R=d.roster;
+    if(!R||R.kind!=='month'||d.year!==y||d.month!==m) return;
+    for(var dd=1; dd<=daysInMonth(y,m); dd++){
+      var dateISO=y+'-'+String(m+1).padStart(2,'0')+'-'+String(dd).padStart(2,'0');
+      var info=calRosterDay(R,y,m,dd);
+      if(!info) continue;
+      calSlotCrews(R,info.dayIdx).forEach(function(ps){
+        if(!ps.list.length) return;
+        ps.list.forEach(function(x){
+          var mems=effShiftMembers(R,dateISO,ps.sl.id,x.c);
+          var tm=''; try{ tm=slotTime(R,ps.sl.id); }catch(e){}
+          out.push({
+            date:dateISO, d:dd, dt:new Date(y,m,dd),
+            shift:ps.sl.name, time:tm,
+            crew:x.c.name, color:x.c.color||'#999',
+            team:d.name, members:mems.slice(),
+            original:(x.c.members||[]).slice(),
+            isDraft:true, draftId:d.id
+          });
+        });
+      });
+    }
+  });
+  return out;
+}
 /* ---------- My Shifts landing hero ----------
    Manager Home pattern: picture circle + greeting + next/today shift.
    Picture reuses the staff record pic (set on the Profile tab). The
@@ -4527,7 +4561,11 @@ function rulesWouldBreakForShift(rosterId, dateISO, shiftId, personName, isDraft
    CALENDAR = the FULL whole-workplace roster calendar for the viewed
    month (all teams, all days, all shifts, all people — the same bands
    as the My Shifts Whole base calendar, via msMonthData), NOT just the
-   available open shifts.
+   available open shifts. DRAFT bands: a month with NO live roster but
+   an Offer-ON draft shows the WHOLE draft roster (via
+   msDraftMonthData) with a DRAFT banner; a month with BOTH shows the
+   live bands PLUS the draft's available open shifts as red-bordered
+   DRAFT bands.
    Bands: ONE-MEMBER-PER-LINE (each member on their own .bmn line,
    white-space:nowrap, never wrapping — same as the manager roster
    calendar): a member name NEVER drops to a second line.
@@ -4606,7 +4644,16 @@ function mkRenderStaffDaySheet(){
   if(parts.length!==3) return;
   var y=+parts[0], m=+parts[1]-1;
   loadShiftApps();
-  var rosterDay=msMonthData(y, m).filter(function(s){ return s.date===dateISO; });
+  var liveMonthData=msMonthData(y, m);
+  var rosterDay=liveMonthData.filter(function(s){ return s.date===dateISO; });
+  /* Draft-only month (no live roster): the day sheet shows the DRAFT's
+     roster shifts for the day, so tapping a draft band shows the draft
+     roster (read-only) instead of "No shifts rostered". Live+draft
+     months keep the live roster here; draft opens still appear in the
+     Apply section below via mkAvailableOpen. */
+  if(!liveMonthData.length){
+    rosterDay=rosterDay.concat(msDraftMonthData(y, m).filter(function(s){ return s.date===dateISO; }));
+  }
   var dayAvail=mkAvailableOpen().filter(function(e){ return e.s.dateISO===dateISO; });
   document.getElementById('daySheetTitle').textContent=fmtDayTitle(dateISO);
   document.getElementById('daySheetSub').textContent=rosterDay.length
@@ -4619,7 +4666,7 @@ function mkRenderStaffDaySheet(){
   rosterDay.forEach(function(s){
     var mems=s.members.map(function(nm){ return rosterMemberHtml(nm, s.original||[]); }).join(', ');
     html+='<div class="dshift" style="border-left:5px solid '+s.color+'">'
-      +'<div class="dh"><span class="t">'+escapeHtml(s.shift)+'</span>'
+      +'<div class="dh"><span class="t">'+(s.isDraft?'<span class="draftbadge">DRAFT</span> ':'')+escapeHtml(s.shift)+'</span>'
       +'<span class="c">'+escapeHtml(s.team)+'</span></div>'
       +(s.time?'<div style="color:var(--muted);font-size:13px;">'+escapeHtml(s.time)+'</div>':'')
       +'<div style="color:var(--muted);font-size:13px;">Crew '+escapeHtml(s.crew)+'</div>'
@@ -4685,6 +4732,20 @@ function mkStaffSheetDoApply(){
      the sheet against the new state (applied row → "Applied — waiting"). */
   if(mkStaffSheetDate) mkRenderStaffDaySheet();
 }
+/* One Open Shifts Calendar band. ONE-MEMBER-PER-LINE: each member on
+   its own .bmn line (white-space:nowrap, never wrapping) — same as the
+   manager roster calendar. A name NEVER drops to a second line.
+   Draft bands get a DRAFT label. RED border (2px #CC0000 inset) only
+   when the caller says this band is available to THIS staff member. */
+function mkCalBandHtml(s, bandAvail, isDraft){
+  var band=s.color||'#888888';
+  var memHtml=s.members.map(function(nm){ return '<span class="bmn">'+rosterMemberHtml(nm, s.original||[])+'</span>'; }).join('');
+  return '<span class="band" style="background:'+band+';color:'+textOnBand(band)+(bandAvail?';box-shadow:inset 0 0 0 2px #CC0000':'')+'">'
+    +'<span class="bs">'+(isDraft?'<span class="draftbadge">DRAFT</span> ':'')+escapeHtml(shiftBandShort(s.shift))+'</span>'
+    +'<span class="bc">'+escapeHtml(s.crew)+'</span>'
+    +(memHtml?'<span class="bm">'+memHtml+'</span>':'')
+    +'</span>';
+}
 function mkRenderCal(){
   var wrap=document.getElementById('mkCal');
   if(!wrap) return;
@@ -4697,11 +4758,24 @@ function mkRenderCal(){
   /* POPULATED roster: the full whole-workplace roster for the viewed
      month (same bands as the My Shifts Whole base calendar). */
   var rosterData=msMonthData(mkYear, mkMonth);
+  /* DRAFT bands (Offer-ON drafts for this month, via msDraftMonthData):
+     - LIVE roster exists → ALSO show the draft's AVAILABLE open shifts
+       as red-bordered DRAFT bands, in addition to the live bands
+       (a draft open on the same date/shift as a live band shows
+       additionally, so staff can tap the day and apply for it).
+     - NO live roster → show the WHOLE draft roster (all days, shifts,
+       people) with a DRAFT banner, red borders only on the available
+       open bands — so a draft-only month is POPULATED, not blank.
+     - NEITHER → empty calendar, as today. */
+  var draftData=msDraftMonthData(mkYear, mkMonth);
+  var hasLive=rosterData.length>0;
   var h='<div class="sixnav"><button class="mnav" onclick="mkCalNav(-1)" aria-label="Previous month">&#8249;</button>'
     +'<b>'+MN[mkMonth]+' '+mkYear+'</b>'
     +'<button class="mnav" onclick="mkCalNav(1)" aria-label="Next month">&#8250;</button></div>';
   h+='<div style="text-align:center;margin-bottom:4px"><a href="#" onclick="mkCalToday();return false;" style="font-size:13px;">Today</a></div>';
   h+='<p class="sub" style="text-align:center;">'+monthAvail.length+' open shift'+(monthAvail.length===1?'':'s')+' you can cover in '+MN[mkMonth]+' '+mkYear+'. Red border = shift available to you.</p>';
+  if(draftData.length&&!hasLive) h+='<div class="draftbanner" style="display:block;">DRAFT &mdash; Not published yet</div>';
+  else if(draftData.length&&hasLive) h+='<p class="fine" style="text-align:center;">Bands labelled DRAFT are from the unpublished draft roster &mdash; not final yet.</p>';
   h+='<div class="dow">'+['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(function(x){ return '<span>'+x+'</span>'; }).join('')+'</div>';
   h+='<div class="grid">';
   var first=new Date(mkYear,mkMonth,1);
@@ -4715,11 +4789,6 @@ function mkRenderCal(){
     var dayAvail=monthAvail.filter(function(e){ return e.s.dateISO===dayISO; });
     var inner='<div class="dnum">'+d+'</div>';
     dayRoster.forEach(function(s){
-      var band=s.color||'#888888';
-      /* ONE-MEMBER-PER-LINE: each member on its own .bmn line
-         (white-space:nowrap, never wrapping) — same as the manager
-         roster calendar. A name NEVER drops to a second line. */
-      var memHtml=s.members.map(function(nm){ return '<span class="bmn">'+rosterMemberHtml(nm, s.original||[])+'</span>'; }).join('');
       /* RED border ON THIS BAND only when this open shift is AVAILABLE
          TO THIS staff member (same List filter set, via mkAvailableOpen).
          Matching is per (date, shift, team): memberOverrides are keyed
@@ -4730,12 +4799,39 @@ function mkRenderCal(){
         return e.s.dateISO===dayISO && e.s.shift===s.shift && e.s.team===s.team
           && !e.s.isDraft && !(e.s.workplaceId&&S.company&&e.s.workplaceId!==S.company.activeId);
       });
-      inner+='<span class="band" style="background:'+band+';color:'+textOnBand(band)+(bandAvail?';box-shadow:inset 0 0 0 2px #CC0000':'')+'">'
-        +'<span class="bs">'+escapeHtml(shiftBandShort(s.shift))+'</span>'
-        +'<span class="bc">'+escapeHtml(s.crew)+'</span>'
-        +(memHtml?'<span class="bm">'+memHtml+'</span>':'')
-        +'</span>';
+      inner+=mkCalBandHtml(s, bandAvail, false);
     });
+    if(!hasLive){
+      /* Draft-only month: the WHOLE draft roster. Red border only on
+         an open band AVAILABLE TO THIS staff member (same List filter
+         set, matched per date/shift/team/draft). A non-available open
+         band shows "Open" in red text with NO red border. */
+      draftData.filter(function(s){ return s.d===d; }).forEach(function(s){
+        var bandAvail=s.members.indexOf(OPEN_MARK)>=0 && avail.some(function(e){
+          return e.s.isDraft && e.s.dateISO===dayISO && e.s.shift===s.shift
+            && e.s.team===s.team && e.s.rosterId===s.draftId;
+        });
+        inner+=mkCalBandHtml(s, bandAvail, true);
+      });
+    }else{
+      /* Live+draft month: the draft's AVAILABLE open shifts only, as
+         red-bordered DRAFT bands in addition to the live bands. */
+      dayAvail.filter(function(e){ return e.s.isDraft; }).forEach(function(e){
+        var ds=null;
+        for(var k=0;k<draftData.length;k++){
+          var cand=draftData[k];
+          if(cand.date===dayISO&&cand.shift===e.s.shift&&cand.team===e.s.team&&cand.draftId===e.s.rosterId){ ds=cand; break; }
+        }
+        if(!ds){
+          /* Fallback (draft band not in the roster enumeration): the
+             open slot itself — members [OPEN], crew/color from the
+             marketplace entry. */
+          ds={date:dayISO, d:d, shift:e.s.shift, crew:e.s.crew, color:e.s.color,
+            team:e.s.team, members:[OPEN_MARK], original:[], isDraft:true, draftId:e.s.rosterId};
+        }
+        inner+=mkCalBandHtml(ds, true, true);
+      });
+    }
     /* NO red border on the DAY CELL in this view — the red border lives
        on the available shift BAND only. */
     h+='<div class="cell'+(isToday(dt)?' today':'')+'" data-date="'+dayISO+'" style="cursor:pointer;" onclick="mkOpenStaffDaySheet(\''+dayISO+'\')">'+inner+'</div>';
