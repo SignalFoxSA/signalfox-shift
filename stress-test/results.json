@@ -151,6 +151,10 @@
     {
       "label": "Load time (reload)",
       "value": "2301ms"
+    },
+    {
+      "label": "Calendar render",
+      "value": "609ms"
     }
   ],
   "progress": {
@@ -170,5 +174,5 @@
     "rosters": 120,
     "staff": 200
   },
-  "updatedAt": "2026-10-16T21:18:36.950+02:00"
+  "updatedAt": "2026-10-16T21:18:39.240+02:00"
 }
