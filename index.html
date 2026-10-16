@@ -474,16 +474,10 @@
      never the highest-qual label. Coexists with the cell borders. */
   .cell .rvdot{position:absolute; top:5px; right:6px; width:7px; height:7px; border-radius:50%; background:#CC0000;}
   .cell .band .bmn{display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  /* rotation preview ("View roster"): read-only month grid — one line per
-     crew on a shift, never wrapping (ellipsis if a name is very long) */
-  .pvgrid{display:grid; grid-template-columns:repeat(7,1fr); gap:4px;}
-  .pvdow{font-size:9px; font-weight:800; text-align:center; color:var(--muted); padding:2px 0;}
-  .pvcell{border:1px solid var(--line); border-radius:8px; padding:4px 3px; min-height:58px; overflow:hidden;}
-  .pvcell.out{opacity:.32;}
-  .pvcell .pvnum{font-size:11px; font-weight:800; margin-bottom:2px;}
-  .pvline{display:block; font-size:9px; font-weight:700; line-height:1.4; white-space:nowrap;
-    overflow:hidden; text-overflow:ellipsis; border-left:3px solid #888; padding-left:3px; margin-top:2px;}
-  .pvline.pvempty{border-left-color:transparent; color:var(--muted); font-weight:600;}
+  /* rotation preview ("View roster"): reuses the manager calendar's
+     .dow/.grid/.cell/.band/.bmn markup exactly (same gap/padding/bands);
+     read-only, so cells never get the manager's pointer cursor. */
+  #bysPrevGrid .cell{cursor:default;}
   .agshift{margin-bottom:5px;}
   .agmem{margin-top:2px;}
   .agqual{color:var(--muted); font-weight:600;}
@@ -1194,7 +1188,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1992';
+var BUILD='20261015-1993';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -1930,11 +1924,21 @@ function renderBysPreview(){
   title.textContent=r.name;
   expl.textContent=bysPreviewExplain(r);
   monthEl.textContent=MN[m]+' '+y+' — '+(team.name||'Team');
-  var html=WDS.map(function(d){ return '<div class="pvdow">'+d+'</div>'; }).join('');
-  for(var k=0;k<weekdayMon0(y,m,1);k++) html+='<div class="pvcell out"></div>';
+  var html='';
+  /* weekday header: same single-letter .dow row as the manager calendar */
+  var dowL=['S','M','T','W','T','F','S'], ws=wsDow(), dowH='';
+  for(var wi=0;wi<7;wi++) dowH+='<span>'+dowL[(ws+wi)%7]+'</span>';
+  html+='<div class="dow">'+dowH+'</div><div class="grid">';
+  var lead=leadDays(y,m);
+  for(var k=0;k<lead;k++) html+='<div class="cell out"></div>';
   for(var d=1;d<=dim;d++){
     var abs=anchor+(d-1);
-    /* group the crews on duty today by shift: one line per crew on a shift */
+    /* group the crews on duty today by shift: ONE BAND PER SHIFT, exactly
+       like the manager calendar — shift label (.bs) + crew (.bc) + one
+       .bmn line per crew member (full names, never a truncated label).
+       No staff yet: each crew's label ("Crew A") is its member line —
+       never an invented name. Days nobody works stay band-less, as on
+       the manager calendar. */
     var byShift={};
     crews.forEach(function(c,ci){
       var st=baseState(BYS_PREVIEW.key, ci, abs);
@@ -1945,22 +1949,34 @@ function renderBysPreview(){
       var ia=slotOrder.indexOf(a), ib=slotOrder.indexOf(b);
       return (ia<0?99:ia)-(ib<0?99:ib);
     });
-    var lines='';
+    var bands='';
     tokens.forEach(function(tok){
       var def=slotDef(tok);
-      var shiftLabel=def ? def.name : String(tok);
-      byShift[tok].forEach(function(c){
-        var who=c.members.length ? c.label+': '+c.members.join(', ') : c.label;
-        lines+='<span class="pvline" style="border-left-color:'+escapeHtml(c.color)+'">'+
-          escapeHtml(shiftLabel)+' — '+escapeHtml(who)+'</span>';
+      var shiftLabel=def ? shiftBandShort(def.name) : String(tok);
+      var onShift=byShift[tok];
+      var crewLabels=onShift.map(function(c){ return c.label; }).join(' / ');
+      var memNames=[];
+      onShift.forEach(function(c){
+        (c.members||[]).forEach(function(nm){
+          if(nm && memNames.indexOf(nm)<0) memNames.push(nm);
+        });
       });
+      /* no members yet → the crew letter(s) ARE the member lines */
+      var memLines=memNames.length ? memNames : onShift.map(function(c){ return c.label; });
+      var memLine='<span class="bm">'+memLines.map(function(nm){
+        return '<span class="bmn">'+escapeHtml(nm)+'</span>';
+      }).join('')+'</span>';
+      var band=(onShift[0]&&onShift[0].color)||'#888888';
+      bands+='<span class="band" style="background:'+band+';color:'+textOnBand(band)+'">'+
+        '<span class="bs">'+escapeHtml(shiftLabel)+'</span>'+
+        '<span class="bc">'+escapeHtml(crewLabels)+'</span>'+memLine+'</span>';
     });
-    if(!lines) lines='<span class="pvline pvempty">All crews off</span>';
-    html+='<div class="pvcell"><div class="pvnum">'+d+'</div>'+lines+'</div>';
+    html+='<div class="cell"><div class="dnum">'+d+'</div>'+bands+'</div>';
   }
-  var total=weekdayMon0(y,m,1)+dim;
-  for(var t2=total;t2<Math.ceil(total/7)*7;t2++) html+='<div class="pvcell out"></div>';
-  grid.innerHTML='<div class="pvgrid">'+html+'</div>';
+  var total=lead+dim;
+  for(var t2=total;t2<Math.ceil(total/7)*7;t2++) html+='<div class="cell out"></div>';
+  html+='</div>';
+  grid.innerHTML=html;
 }
 /* The long Library list is gone (see above). Existing callers still call
    this — it now just refreshes the Build-your-own-shift flow picker. */
