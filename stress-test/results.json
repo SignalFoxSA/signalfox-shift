@@ -1625,7 +1625,7 @@
     "rosters": 3600,
     "staff": 2000
   },
-  "updatedAt": "2026-10-16T21:29:57.496+02:00",
+  "updatedAt": "2026-10-16T21:30:00.071+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
@@ -1795,5 +1795,11 @@
         "rosters": 100
       }
     ]
-  }
+  },
+  "storageHistory": [
+    {
+      "time": "21:30",
+      "kb": 5394
+    }
+  ]
 }
