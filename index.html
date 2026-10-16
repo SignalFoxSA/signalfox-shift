@@ -1101,6 +1101,12 @@
         <span class="ds">The roster as text — copies to your clipboard for WhatsApp.</span></span>
         <span class="go">&#8250;</span><span class="spin"></span>
       </button>
+      <button class="fmt" data-fmt="ics">
+        <span class="dot" style="background:#e8f5e9">ICS</span>
+        <span class="tx"><span class="nm">Export to calendar (.ics)</span>
+        <span class="ds">Add these shifts to your phone calendar — import the file into Calendar.</span></span>
+        <span class="go">&#8250;</span><span class="spin"></span>
+      </button>
     </div>
     <div class="linkrow" id="expLinkRow">
       <span class="ltx"><span class="llab">Share alongside the image — opens the app:</span>
@@ -1126,7 +1132,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1982';
+var BUILD='20261015-1983';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -10503,6 +10509,7 @@ function expData(){
     changedDays:changedDays, hasChanges:changedDays.some(function(x){ return x; }),
     subXlsx:sub.replace(/ rotation/,''),
     footer:'Generated with SignalFox Shift · build '+BUILD,
+    vname:vname,
     crews:crews, pairs:pairs, pairsMembers:pairsMembers, hasNight:hasNight, shifts:shifts, nsh:nsh,
     dayLabel:hasNight?shiftShort('D'):'On duty',
     slug:slug, rotName:rot.name};
@@ -10918,8 +10925,81 @@ async function expGenerateImage(E, mode){
   var canvas=await expRenderGridCanvas(E, mode, 'png');
   return await new Promise(function(res){ canvas.toBlob(res,'image/png'); });
 }
+/* ---- Calendar export (.ics, 16 Oct 2026) ----
+   One VEVENT per person per shift. Personal (staff) = that person only;
+   manager (whole workplace) = every rostered person.
+   Times are FLOATING local times (no Z, no TZID): the importing calendar
+   app interprets them in the device's timezone, so a Night 18:00–06:00
+   always shows as 18:00–06:00. Overnight shifts end the NEXT day:
+   end <= start means DTEND is the following date (a 24h shift with
+   start == end is a full 24 hours, ending the next day at the same time). */
+function icsEscape(s){
+  return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r\n|\r|\n/g,'\\n');
+}
+function icsFold(line){
+  var out='';
+  while(line.length>75){ out+=line.slice(0,75)+'\r\n '; line=line.slice(75); }
+  return out+line;
+}
+function icsDateTime(y,m,d,hhmm){
+  var p=String(hhmm||'').split(':'), hh=String(p[0]||'00').padStart(2,'0'), mm=String(p[1]||'00').padStart(2,'0');
+  return String(y).padStart(4,'0')+String(m+1).padStart(2,'0')+String(d).padStart(2,'0')+'T'+hh+mm+'00';
+}
+function icsToMin(hhmm){
+  var p=String(hhmm||'').split(':');
+  return (parseInt(p[0]||'0',10)||0)*60+(parseInt(p[1]||'0',10)||0);
+}
+function icsBuild(E){
+  var L=[];
+  L.push('BEGIN:VCALENDAR','PRODID:-//SignalFox//Shift//EN','VERSION:2.0','CALSCALE:GREGORIAN','METHOD:PUBLISH');
+  L.push('X-WR-CALNAME:'+icsEscape(E.title));
+  var stamp=new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+  var slug=String(E.slug||'roster').replace(/[^a-z0-9-]+/g,'-');
+  var count=0;
+  for(var d=1; d<=E.dim; d++){
+    var pr=E.pairs[d-1]; if(!pr) continue;
+    var pm=((E.pairsMembers||[])[d-1])||[];
+    var dateISO=E.y+'-'+String(E.m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    E.shifts.forEach(function(s,i){
+      if(pr[i]<0) return;
+      var crew=E.crews[pr[i]]||{};
+      var crewName=crew.name||'';
+      var mems=(pm[i]&&pm[i].length)?pm[i].slice():[];
+      if(!mems.length && crew.names) mems=[]; /* no effective members = nobody to put on a calendar (e.g. open shift) */
+      if(E.expPerson){
+        mems=mems.indexOf(E.expPerson)>=0?[E.expPerson]:[];
+      } else {
+        mems=mems.filter(function(nm){ return nm&&nm!==OPEN_MARK; });
+      }
+      /* one event per person; dedupe in case a name appears twice */
+      var seen={};
+      mems.forEach(function(person){
+        if(seen[person]) return; seen[person]=1;
+        count++;
+        var startMin=icsToMin(s.start), endMin=icsToMin(s.end);
+        var endDay=d+(endMin<=startMin?1:0);
+        var endDate=new Date(E.y,E.m,endDay);
+        var dtStart=icsDateTime(E.y,E.m,d,s.start);
+        var dtEnd=icsDateTime(endDate.getFullYear(),endDate.getMonth(),endDate.getDate(),s.end);
+        var shiftLabel=(s.name||s.band||'')+' shift';
+        var summary=E.expPerson
+          ? shiftLabel+' — '+(E.vname||'')+' (Crew '+crewName+')'
+          : person+' — '+shiftLabel+' — '+(E.vname||'')+' (Crew '+crewName+')';
+        var desc='SignalFox Shift roster — '+MN[E.m]+' '+E.y+'. '+(s.name||'')+' '+String(s.start||'')+'–'+String(s.end||'')
+          +', Crew '+crewName+'.'+(E.expPerson?'':' Person: '+person);
+        var uid=slug+'-'+dateISO+'-'+String(s.id||i)+'-'+String(person).toLowerCase().replace(/[^a-z0-9]+/g,'-')+'@signalfox-shift';
+        ['BEGIN:VEVENT','UID:'+uid,'DTSTAMP:'+stamp,'DTSTART:'+dtStart,'DTEND:'+dtEnd,
+         'SUMMARY:'+icsEscape(summary),'DESCRIPTION:'+icsEscape(desc),
+         'LOCATION:'+icsEscape(E.vname||''),'STATUS:CONFIRMED','TRANSP:OPAQUE','END:VEVENT'].forEach(function(ln){ L.push(ln); });
+      });
+    });
+  }
+  L.push('END:VCALENDAR');
+  return {text:L.map(icsFold).join('\r\n')+'\r\n', count:count};
+}
 /* ---- delivery: system share sheet on mobile, download fallback ---- */
 function expFname(E, mode, kind){
+  if(kind==='ics') return E.slug+'.ics';
   var base=E.slug+(mode==='names'?'-names':'');
   return base+(kind==='xlsx'?'.xlsx':kind==='pdf'?'.pdf':kind==='png'?'-whatsapp.png':'-whatsapp.txt');
 }
@@ -11022,6 +11102,11 @@ async function expGenerateFormat(fmt){
       var r3=await expDeliver(await expGenerateImage(E,expMode),expFname(E,expMode,'png'),'image/png',APP_SHARE_TEXT);
       expShowSuccess(r3==='shared'?'Done \u2014 file shared.':'Done \u2014 file downloaded.',
         what+' roster as a picture, ready for WhatsApp.', true);
+    }else if(fmt==='ics'){
+      var ics=icsBuild(E);
+      var r4=await expDeliver(new Blob([ics.text],{type:'text/calendar;charset=utf-8'}),expFname(E,expMode,'ics'),'text/calendar');
+      expShowSuccess(r4==='shared'?'Done — file shared.':'Done — file downloaded.',
+        'Calendar file (.ics) for '+MN[E.m]+' '+E.y+' with '+ics.count+' shift'+(ics.count===1?'':'s')+'. Import it into your phone calendar.');
     }else if(fmt==='text'){
       var txt=expBuildText(E,expMode);
       try{ await navigator.clipboard.writeText(txt); }
