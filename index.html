@@ -1102,7 +1102,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1978';
+var BUILD='20261015-1979';
 /* LEAVE_TYPES — the ONE shared list of leave types (single source of truth).
    Used by EVERY leave-reason picker: the day-sheet removal prompt, the draft
    Long-term leave section, and both On Duty leave flows (baseLeave +
@@ -10644,12 +10644,73 @@ function expGridEl(E, mode, variant){
   var div=document.createElement('div'); div.innerHTML=h;
   return div.firstChild;
 }
+/* ---- Export watermark (16 Oct 2026) ----
+   Geometric fox head (black/gold), NOT the Dash mascot — drawn in canvas
+   2D onto the rendered export canvas AFTER html2canvas, so it lands on
+   PNG + PDF only (both go through expRenderGridCanvas). Excel/Text never
+   touch this canvas, so they have NO watermark. FAINT: low alpha, centred
+   over the calendar grid — the roster stays fully readable. */
+function expDrawWatermark(canvas){
+  try{
+    var W=canvas.width, H=canvas.height;
+    /* Draw the fox at FULL opacity onto an offscreen canvas, then stamp
+       it onto the export at one uniform low alpha. This caps the darkest
+       spot at ~12% (overlapping shapes can't stack darker), so the mark
+       stays faint everywhere. */
+    var off=document.createElement('canvas');
+    off.width=W; off.height=H;
+    var octx=off.getContext('2d');
+    if(!octx) return;
+    var s=Math.min(W,H)*0.30; /* half-size of the fox head bounding box */
+    var cx=W/2, cy=H*0.40; /* centre of the calendar grid area */
+    octx.translate(cx,cy);
+    octx.scale(s,s);
+    function poly(pts){
+      octx.beginPath();
+      octx.moveTo(pts[0][0],pts[0][1]);
+      for(var i=1;i<pts.length;i++) octx.lineTo(pts[i][0],pts[i][1]);
+      octx.closePath();
+      octx.fill();
+    }
+    /* Ears + head silhouette: black. */
+    octx.fillStyle='#000000';
+    poly([[-0.62,-0.28],[-0.78,-0.95],[-0.18,-0.52]]);
+    poly([[0.62,-0.28],[0.78,-0.95],[0.18,-0.52]]);
+    poly([[-0.62,-0.28],[-0.28,-0.55],[0,-0.68],[0.28,-0.55],[0.62,-0.28],
+          [0.52,0.35],[0.28,0.72],[0.12,0.95],[-0.12,0.95],[-0.28,0.72],[-0.52,0.35]]);
+    /* Inner ears + muzzle: gold. Eyes: gold diamonds. Nose: black. */
+    octx.fillStyle='#FFC13E';
+    poly([[-0.55,-0.35],[-0.66,-0.72],[-0.28,-0.48]]);
+    poly([[0.55,-0.35],[0.66,-0.72],[0.28,-0.48]]);
+    poly([[-0.22,0.45],[0.22,0.45],[0,0.88]]);
+    poly([[-0.28,-0.05],[-0.20,0.03],[-0.28,0.11],[-0.36,0.03]]);
+    poly([[0.28,-0.05],[0.36,0.03],[0.28,0.11],[0.20,0.03]]);
+    octx.fillStyle='#000000';
+    poly([[-0.07,0.52],[0.07,0.52],[0,0.64]]);
+    /* Stamp faintly: 12% opacity, roster stays fully readable. */
+    var ctx=canvas.getContext('2d');
+    if(!ctx) return;
+    ctx.save();
+    ctx.globalAlpha=0.12;
+    ctx.drawImage(off,0,0);
+    ctx.restore();
+  }catch(e){}
+}
 async function expRenderGridCanvas(E, mode, variant){
   var holder=document.getElementById('expRenderRoot');
   var el=expGridEl(E, mode, variant); holder.appendChild(el);
   try{ await document.fonts.ready; }catch(e){}
-  var canvas=await html2canvas(el,{backgroundColor:'#ffffff',scale:variant==='png'?1:2,logging:false});
+  var raw=await html2canvas(el,{backgroundColor:'#ffffff',scale:variant==='png'?1:2,logging:false});
   el.remove();
+  /* Copy onto a FRESH canvas first: html2canvas leaves its context with
+     a clip/transform that silently swallows later drawing on that canvas
+     (fillRect/drawImage on the raw canvas are no-ops). The fresh canvas
+     has a clean context, so the watermark below actually lands. */
+  var canvas=document.createElement('canvas');
+  canvas.width=raw.width; canvas.height=raw.height;
+  canvas.getContext('2d').drawImage(raw,0,0);
+  /* Watermark: PNG + PDF only (both flow through here). */
+  expDrawWatermark(canvas);
   return canvas;
 }
 async function expGeneratePDF(E, mode){
