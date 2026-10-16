@@ -109,6 +109,10 @@
     {
       "time": "21:18",
       "message": "Build complete — staff 200, rosters 120, changes 1700"
+    },
+    {
+      "time": "21:18",
+      "message": "Reloaded — load 2301ms"
     }
   ],
   "metrics": [
@@ -166,5 +170,5 @@
     "rosters": 120,
     "staff": 200
   },
-  "updatedAt": "2026-10-16T21:18:35.223+02:00"
+  "updatedAt": "2026-10-16T21:18:36.950+02:00"
 }
