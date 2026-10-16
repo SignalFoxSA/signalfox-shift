@@ -474,6 +474,16 @@
      never the highest-qual label. Coexists with the cell borders. */
   .cell .rvdot{position:absolute; top:5px; right:6px; width:7px; height:7px; border-radius:50%; background:#CC0000;}
   .cell .band .bmn{display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  /* rotation preview ("View roster"): read-only month grid — one line per
+     crew on a shift, never wrapping (ellipsis if a name is very long) */
+  .pvgrid{display:grid; grid-template-columns:repeat(7,1fr); gap:4px;}
+  .pvdow{font-size:9px; font-weight:800; text-align:center; color:var(--muted); padding:2px 0;}
+  .pvcell{border:1px solid var(--line); border-radius:8px; padding:4px 3px; min-height:58px; overflow:hidden;}
+  .pvcell.out{opacity:.32;}
+  .pvcell .pvnum{font-size:11px; font-weight:800; margin-bottom:2px;}
+  .pvline{display:block; font-size:9px; font-weight:700; line-height:1.4; white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis; border-left:3px solid #888; padding-left:3px; margin-top:2px;}
+  .pvline.pvempty{border-left-color:transparent; color:var(--muted); font-weight:600;}
   .agshift{margin-bottom:5px;}
   .agmem{margin-top:2px;}
   .agqual{color:var(--muted); font-weight:600;}
@@ -748,6 +758,7 @@
       <label class="f">Rotation</label>
       <select id="bysRotation" onchange="bysApplyRotation(this.value)"></select>
       <p class="fine" id="bysRotSummary" style="margin:6px 0 0;"></p>
+      <button class="btn ghost" id="bysViewRoster" type="button" style="margin-top:8px;" onclick="bysOpenPreview()">View roster</button>
       <button class="btn ghost" id="bysDelCustom" type="button" style="display:none;margin-top:8px;color:var(--red);border-color:var(--red);" onclick="bysDeleteCustom()">Delete this custom pattern</button>
       <p style="font-weight:800;margin:16px 0 4px;">Step 3 &mdash; Build your own rotation</p>
       <p class="fine" style="margin:-2px 0 8px">None of the ready-made rotations fit? Name your pattern, type one crew&rsquo;s cycle, pick the shift length &mdash; it saves into the Library and becomes pickable in Step 2.</p>
@@ -763,6 +774,20 @@
         <button class="btn" onclick="libSaveCustom()">Save pattern</button>
       </div>
       <button class="addperson" onclick="openRotBuilder()">+ Design your own rotation (grid)</button>
+    </div>
+  </div>
+
+  <!-- ROTATION PREVIEW ("View roster" from Build your own shift → Step 2) —
+       read-only: shows how the selected rotation works over one month.
+       Creates no roster, draft, or any data. -->
+  <div class="view" id="v-byspreview">
+    <div class="card">
+      <h3 id="bysPrevTitle"></h3>
+      <p class="fine" id="bysPrevLabel" style="margin:6px 0 0;font-weight:800;color:var(--accent);">Preview &mdash; not a real roster</p>
+      <p id="bysPrevExplain" style="margin:10px 0 0;line-height:1.5;"></p>
+      <p class="fine" id="bysPrevMonth" style="margin:10px 0 8px;font-weight:800;"></p>
+      <div id="bysPrevGrid"></div>
+      <p class="fine" style="margin:12px 0 0;">Read-only preview &mdash; nothing here is saved, published, or applied. Go back to change the rotation or keep setting up your shifts.</p>
     </div>
   </div>
 
@@ -1169,7 +1194,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1991';
+var BUILD='20261015-1992';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -1800,10 +1825,12 @@ function renderBysFlow(){
   var rotSel=document.getElementById('bysRotation');
   var sum=document.getElementById('bysRotSummary');
   var delBtn=document.getElementById('bysDelCustom');
+  var vrBtn=document.getElementById('bysViewRoster');
   if(!t){
     if(rotSel) rotSel.innerHTML='';
     if(sum) sum.textContent='Add a team first — then pick its rotation here.';
     if(delBtn) delBtn.style.display='none';
+    if(vrBtn) vrBtn.style.display='none';
     return;
   }
   if(rotSel){
@@ -1825,6 +1852,115 @@ function renderBysFlow(){
       : '';
   }
   if(delBtn) delBtn.style.display=(r && r.custom)?'block':'none';
+  if(vrBtn) vrBtn.style.display='block';
+}
+/* ---------- Rotation preview ("View roster", Build your own shift → Step 2) ----------
+   Read-only: rotation name + a brief explanation auto-generated from the
+   pattern (nothing hand-written per pattern) + one populated month of the
+   rotation. Uses the team's actual crews/staff when they exist; with no
+   crews/staff it shows crew letters only and never invents names.
+   Creates no roster, draft, or any data — it only reads. */
+var BYS_PREVIEW={ key:null, teamId:null };
+/* brief explanation, built from the pattern: the one-crew sequence
+   (libSeqText), the cycle length + shift length, and how crews move. */
+function bysPreviewExplain(r){
+  var parts=[];
+  parts.push(libSeqText(r)+'.');
+  parts.push('Repeats every '+r.cycle+'-day cycle'+(r.hours?' ('+(r.hours)+'-hour shifts)':'')+'.');
+  if(r.fortnightFlip) parts.push('Day and night swap every fortnight.');
+  else if(r.offsets) parts.push('Crews rotate through the cycle so there is always cover.');
+  else parts.push('Each crew follows its own pattern — crews stay on their own shifts.');
+  return parts.join(' ');
+}
+/* crews to show in the preview: the team's real crews (with their real
+   members), padded with letter-only placeholders up to the rotation's crew
+   count when the team has fewer crews / no staff yet. */
+function bysPreviewCrews(team, r){
+  var have=vehicleCrews(team.id)||[];
+  var letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  var out=[];
+  for(var i=0;i<r.crews;i++){
+    var c=have[i];
+    if(c){
+      var names=[];
+      (c.memberIds||[]).forEach(function(id){
+        var nm=id?staffName(id):'';
+        if(nm && names.indexOf(nm)<0) names.push(nm);
+      });
+      (c.members||[]).forEach(function(nm){
+        if(nm && names.indexOf(nm)<0) names.push(nm);
+      });
+      var nm0=(c.name||'').trim();
+      out.push({ label: nm0.length===1 ? 'Crew '+nm0 : (nm0||('Crew '+letters[i])),
+        color: c.color||CREW_COLORS[i%CREW_COLORS.length], members: names });
+    }else{
+      out.push({ label:'Crew '+letters[i], color:CREW_COLORS[i%CREW_COLORS.length], members:[] });
+    }
+  }
+  return out;
+}
+function bysOpenPreview(){
+  var t=bysTeam();
+  if(!t){ toast('Add a team first'); return; }
+  if(!ROTATIONS[t.rotation]) return;
+  BYS_PREVIEW.key=t.rotation; BYS_PREVIEW.teamId=t.id;
+  renderBysPreview();
+  show('v-byspreview');
+}
+function renderBysPreview(){
+  var title=document.getElementById('bysPrevTitle');
+  var expl=document.getElementById('bysPrevExplain');
+  var monthEl=document.getElementById('bysPrevMonth');
+  var grid=document.getElementById('bysPrevGrid');
+  if(!title || !grid) return;
+  var r=ROTATIONS[BYS_PREVIEW.key];
+  var team=(S.base.vehicles||[]).find(function(v){ return v.id===BYS_PREVIEW.teamId; })||bysTeam();
+  if(!r || !team) return;
+  /* current month, every time — consistent, and the rotation is anchored
+     so the preview is stable: weekday-locked rotations pin position 0 to
+     Monday; the rest count from a fixed epoch (1 Jan 2026). Only the
+     position inside the cycle matters, so any fixed epoch gives the same
+     repeating pattern. */
+  var now=new Date(), y=now.getFullYear(), m=now.getMonth();
+  var dim=daysInMonth(y,m);
+  var anchor=r.weekAnchored ? weekdayMon0(y,m,1) : dayDiff(new Date(2026,0,1), new Date(y,m,1));
+  var crews=bysPreviewCrews(team, r);
+  /* shift order: the rotation's own slot order (Day before Night, etc.) */
+  var slotOrder=rotSlots(BYS_PREVIEW.key).map(function(s){ return s.id; });
+  title.textContent=r.name;
+  expl.textContent=bysPreviewExplain(r);
+  monthEl.textContent=MN[m]+' '+y+' — '+(team.name||'Team');
+  var html=WDS.map(function(d){ return '<div class="pvdow">'+d+'</div>'; }).join('');
+  for(var k=0;k<weekdayMon0(y,m,1);k++) html+='<div class="pvcell out"></div>';
+  for(var d=1;d<=dim;d++){
+    var abs=anchor+(d-1);
+    /* group the crews on duty today by shift: one line per crew on a shift */
+    var byShift={};
+    crews.forEach(function(c,ci){
+      var st=baseState(BYS_PREVIEW.key, ci, abs);
+      if(!st || st==='OFF') return;
+      (byShift[st]||(byShift[st]=[])).push(c);
+    });
+    var tokens=Object.keys(byShift).sort(function(a,b){
+      var ia=slotOrder.indexOf(a), ib=slotOrder.indexOf(b);
+      return (ia<0?99:ia)-(ib<0?99:ib);
+    });
+    var lines='';
+    tokens.forEach(function(tok){
+      var def=slotDef(tok);
+      var shiftLabel=def ? def.name : String(tok);
+      byShift[tok].forEach(function(c){
+        var who=c.members.length ? c.label+': '+c.members.join(', ') : c.label;
+        lines+='<span class="pvline" style="border-left-color:'+escapeHtml(c.color)+'">'+
+          escapeHtml(shiftLabel)+' — '+escapeHtml(who)+'</span>';
+      });
+    });
+    if(!lines) lines='<span class="pvline pvempty">All crews off</span>';
+    html+='<div class="pvcell"><div class="pvnum">'+d+'</div>'+lines+'</div>';
+  }
+  var total=weekdayMon0(y,m,1)+dim;
+  for(var t2=total;t2<Math.ceil(total/7)*7;t2++) html+='<div class="pvcell out"></div>';
+  grid.innerHTML='<div class="pvgrid">'+html+'</div>';
 }
 /* The long Library list is gone (see above). Existing callers still call
    this — it now just refreshes the Build-your-own-shift flow picker. */
@@ -8880,7 +9016,7 @@ function enterApp(){
 var TAB_VIEWS={home:'v-home', rosters:'v-rosters', onduty:'v-base', staff:'v-staff', settings:'v-settings',
   myshifts:'v-myshifts', openshifts:'v-marketplace', profile:'v-profile', company:'v-company',
   codash:'v-company', costats:'v-company', cobases:'v-company', copeople:'v-company', coopen:'v-company'};
-var BACK_IDS=['v-newroster','v-anchor','v-cal','v-base','v-rotbuilder','v-ladder','v-shiftreq','v-rules','v-legal','v-inbox','v-bys'];
+var BACK_IDS=['v-newroster','v-anchor','v-cal','v-base','v-rotbuilder','v-ladder','v-shiftreq','v-rules','v-legal','v-inbox','v-bys','v-byspreview'];
 /* One small subtle back arrow (#backRow, just under the header) for every
    sub-view — plus Company drill-downs, which share the v-company view. */
 function syncBackRow(id){
@@ -9028,6 +9164,7 @@ function goBack(){
   if(active==='v-rotbuilder'){ openBaseSetup(); return; }
   if(active==='v-ladder'){ switchTab('staff'); return; }
   if(active==='v-bys'){ switchTab('staff'); return; }
+  if(active==='v-byspreview'){ show('v-bys'); return; }
   if(active==='v-shiftreq'){ switchTab('staff'); return; }
   if(active==='v-rules'){ switchTab('staff'); return; }
   if(active==='v-legal'){ switchTab('settings'); return; }
