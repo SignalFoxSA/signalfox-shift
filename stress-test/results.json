@@ -236,6 +236,10 @@
     {
       "label": "Storage (JSON bytes)",
       "value": "2361324"
+    },
+    {
+      "label": "Heap used",
+      "value": "9.5 MB"
     }
   ],
   "progress": {
@@ -255,5 +259,5 @@
     "rosters": 600,
     "staff": 500
   },
-  "updatedAt": "2026-10-16T21:20:40.435+02:00"
+  "updatedAt": "2026-10-16T21:20:42.158+02:00"
 }
