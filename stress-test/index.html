@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0a0a0a">
+<title>SignalFox Shift — Stress Test Live</title>
+<style>
+  :root{
+    --bg:#0a0a0a; --card:#161616; --card2:#1e1e1e; --line:#2c2c2c;
+    --text:#f5f5f5; --muted:#a8a29e; --gold:#FFC13E; --blue:#4DABF7;
+    --green:#51CF66; --red:#FF8787;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    -webkit-text-size-adjust:100%}
+  .wrap{max-width:640px;margin:0 auto;padding:16px 14px 40px}
+  h1{font-size:22px;margin:6px 0 2px;line-height:1.25}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 14px}
+  .banner{border-radius:12px;padding:14px 16px;font-size:17px;font-weight:700;
+    text-align:center;margin:0 0 14px;border:2px solid transparent}
+  .banner.waiting{background:#2a2110;color:var(--gold);border-color:var(--gold)}
+  .banner.running{background:#0d1d2b;color:var(--blue);border-color:var(--blue)}
+  .banner.done{background:#12261a;color:var(--green);border-color:var(--green)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:14px 16px;margin:0 0 12px}
+  .card h2{font-size:15px;margin:0 0 10px;color:var(--gold);letter-spacing:.2px}
+  .stage{font-size:16px;font-weight:600;margin:0 0 8px;line-height:1.35}
+  .bar{height:14px;background:var(--card2);border:1px solid var(--line);
+    border-radius:999px;overflow:hidden}
+  .barfill{height:100%;background:var(--gold);width:0%;transition:width .4s}
+  .barlabel{font-size:12px;color:var(--muted);margin-top:6px}
+  .thr{display:flex;justify-content:space-between;align-items:center;
+    padding:10px 0;border-bottom:1px solid var(--line);gap:10px}
+  .thr:last-child{border-bottom:none}
+  .thr .lbl{font-size:15px;font-weight:600}
+  .thr .val{font-size:14px;color:var(--muted);text-align:right;word-break:break-word}
+  .thr .val.found{color:var(--text)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  td{padding:8px 0;border-bottom:1px solid var(--line);vertical-align:top}
+  td:last-child{text-align:right;color:var(--text);padding-left:10px;word-break:break-word}
+  tr:last-child td{border-bottom:none}
+  .empty{color:var(--muted);font-size:14px;margin:0}
+  #log{max-height:280px;overflow-y:auto;font-size:13px;line-height:1.5}
+  .logline{padding:6px 0;border-bottom:1px solid var(--line)}
+  .logline:last-child{border-bottom:none}
+  .logtime{color:var(--gold);font-weight:600;margin-right:6px}
+  .foot{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);
+    margin-top:4px}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--green);
+    display:inline-block;flex:none}
+  .dot.pulse{animation:pulse 1.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  .dot.off{background:var(--red);animation:none}
+  a{color:var(--blue)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>SignalFox Shift — Stress Test Live</h1>
+  <p class="sub">Watch the stress test as it runs. No login needed.</p>
+
+  <div id="banner" class="banner waiting">Waiting…</div>
+
+  <div class="card">
+    <h2>Progress</h2>
+    <p class="stage" id="stage">Waiting for the stress test to start</p>
+    <div class="bar"><div class="barfill" id="barfill"></div></div>
+    <p class="barlabel" id="barlabel">Stage 0 of 7</p>
+  </div>
+
+  <div class="card">
+    <h2>The three lines</h2>
+    <div class="thr"><span class="lbl">Handles perfectly</span><span class="val" id="thr-perfect">—</span></div>
+    <div class="thr"><span class="lbl">Starts to glitch</span><span class="val" id="thr-glitch">—</span></div>
+    <div class="thr"><span class="lbl">Breaks</span><span class="val" id="thr-break">—</span></div>
+  </div>
+
+  <div class="card">
+    <h2>Metrics</h2>
+    <p class="empty" id="metrics-empty">No metrics yet.</p>
+    <table id="metrics-table" style="display:none"><tbody id="metrics-body"></tbody></table>
+  </div>
+
+  <div class="card">
+    <h2>Live event log</h2>
+    <div id="log"></div>
+  </div>
+
+  <div class="foot">
+    <span class="dot off" id="livedot"></span>
+    <span id="live-label">Connecting…</span>
+    <span id="updated" style="margin-left:auto"></span>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+function render(d){
+  const status = d.status || "waiting";
+  const banner = $("banner");
+  banner.className = "banner " + (status==="running"?"running":status==="done"?"done":"waiting");
+  banner.textContent = status==="running" ? "Running" : status==="done" ? "Done" : "Waiting";
+
+  $("stage").textContent = d.stage || "—";
+  const cur = d.progress ? (d.progress.current||0) : 0;
+  const tot = d.progress ? (d.progress.total||7) : 7;
+  $("barfill").style.width = (tot>0 ? Math.round(cur/tot*100) : 0) + "%";
+  $("barlabel").textContent = "Stage " + cur + " of " + tot;
+
+  const th = d.thresholds || {};
+  const set = (id, v) => { const el=$(id); el.textContent = v ? v : "—"; el.classList.toggle("found", !!v); };
+  set("thr-perfect", th.perfect);
+  set("thr-glitch", th.glitch);
+  set("thr-break", th.break);
+
+  const metrics = Array.isArray(d.metrics) ? d.metrics : [];
+  $("metrics-empty").style.display = metrics.length ? "none" : "block";
+  $("metrics-table").style.display = metrics.length ? "table" : "none";
+  $("metrics-body").innerHTML = metrics.map(m =>
+    "<tr><td>"+esc(m.label)+"</td><td>"+esc(m.value)+"</td></tr>").join("");
+
+  const log = Array.isArray(d.log) ? d.log : [];
+  $("log").innerHTML = log.map(l =>
+    "<div class='logline'><span class='logtime'>"+esc(l.time)+"</span>"+esc(l.message)+"</div>").join("") || "<p class='empty'>No events yet.</p>";
+
+  $("updated").textContent = d.updatedAt ? "Last updated: " + new Date(d.updatedAt).toLocaleTimeString() : "";
+}
+
+async function poll(){
+  try{
+    const r = await fetch("results.json?t=" + Date.now(), {cache:"no-store"});
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    render(await r.json());
+    $("livedot").className = "dot pulse";
+    $("live-label").textContent = "Live";
+  }catch(e){
+    $("livedot").className = "dot off";
+    $("live-label").textContent = "Offline — retrying…";
+  }
+}
+poll();
+setInterval(poll, 5000);
+</script>
+</body>
+</html>

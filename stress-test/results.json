@@ -1,0 +1,1 @@
+{"status":"waiting","stage":"Waiting for the stress test to start","progress":{"current":0,"total":7},"thresholds":{"perfect":null,"glitch":null,"break":null},"metrics":[],"log":[{"time":"20:55","message":"Dashboard ready — waiting for the stress test to start."}],"updatedAt":"2026-10-16T20:55:00+02:00"}
