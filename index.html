@@ -1188,7 +1188,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1993';
+var BUILD='20261015-1994';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -6873,7 +6873,13 @@ function companyEnsure(){
      (existing companies get one on first load after this build) */
   if(!S.company.inviteCode || typeof S.company.inviteCode!=='string'){
     S.company.inviteCode=companyInviteCodeGen();
-    companyPersist();
+    /* Q1: NEVER companyPersist() here. companyEnsure() runs on READ
+       paths (e.g. companyMonthStats) and companyPersist() runs
+       companySyncActive(), which overwrites this workplace's STORED
+       rosters with live S.rosters — so merely viewing Stats on a
+       company whose only base has no rosters yet showed the live
+       base's 18 slots instead of 0. Save the code as-is, no sync. */
+    companyPersistNoSync();
   }
   if(!Array.isArray(S.company.crossBaseLog)) S.company.crossBaseLog=[];
   if(!S.company.workplaces.length){
@@ -6923,6 +6929,13 @@ function companyPersist(){
   try{ localStorage.setItem('sfshift_company', JSON.stringify(S.company)); }catch(e){}
   queueCloudSave();
 }
+/* Save S.company exactly as-is, WITHOUT companySyncActive(). For read
+   paths that must not rewrite stored rosters (see companyEnsure Q1). */
+function companyPersistNoSync(){
+  if(!S.company) return;
+  try{ localStorage.setItem('sfshift_company', JSON.stringify(S.company)); }catch(e){}
+  queueCloudSave();
+}
 function companyLoad(){
   try{ S.company=JSON.parse(localStorage.getItem('sfshift_company')||'null'); }catch(e){ S.company=null; }
   if(S.company && Array.isArray(S.company.workplaces)) return S.company;
@@ -6959,7 +6972,9 @@ function companyInviteCodeGen(){
 }
 function companyInviteCode(){
   var c=companyEnsure(); if(!c) return '';
-  if(!c.inviteCode){ c.inviteCode=companyInviteCodeGen(); companyPersist(); }
+  /* Q1: no-sync save — generating a missing code must not run
+     companySyncActive() and overwrite stored rosters. */
+  if(!c.inviteCode){ c.inviteCode=companyInviteCodeGen(); companyPersistNoSync(); }
   return c.inviteCode;
 }
 function companyRegenerateCode(){
