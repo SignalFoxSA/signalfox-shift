@@ -48,6 +48,13 @@
       "staff": 200,
       "rosters": 120,
       "changes": 1700
+    },
+    {
+      "time": "21:18",
+      "companies": 5,
+      "staff": 200,
+      "rosters": 120,
+      "changes": 1700
     }
   ],
   "log": [
@@ -98,12 +105,16 @@
     {
       "time": "21:18",
       "message": "Added drafts — 50 of 50"
+    },
+    {
+      "time": "21:18",
+      "message": "Build complete — staff 200, rosters 120, changes 1700"
     }
   ],
   "metrics": [
     {
       "label": "Companies",
-      "value": "0"
+      "value": "5"
     },
     {
       "label": "Staff rostered",
@@ -131,9 +142,9 @@
   },
   "totals": {
     "changes": 1700,
-    "companies": 0,
+    "companies": 5,
     "rosters": 120,
     "staff": 200
   },
-  "updatedAt": "2026-10-16T21:18:21.497+02:00"
+  "updatedAt": "2026-10-16T21:18:23.689+02:00"
 }
