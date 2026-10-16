@@ -1513,6 +1513,10 @@
     {
       "time": "21:29",
       "message": "Added notifications — 3000 of 8000"
+    },
+    {
+      "time": "21:29",
+      "message": "Added notifications — 4000 of 8000"
     }
   ],
   "metrics": [
@@ -1550,5 +1554,5 @@
     "rosters": 3600,
     "staff": 2000
   },
-  "updatedAt": "2026-10-16T21:29:20.636+02:00"
+  "updatedAt": "2026-10-16T21:29:22.868+02:00"
 }
