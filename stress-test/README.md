@@ -22,9 +22,7 @@ while the stress test runs.
   "thresholds": { "perfect": null, "glitch": null, "break": null },
   "metrics": [],
   "totals": { "companies": null, "staff": null, "rosters": null, "changes": null },
-  "history": [],
   "perfHistory": [],
-  "breakdown": { "staffPerWorkplace": [], "rostersPerMonth": [] },
   "storageHistory": [],
   "log": [ { "time": "20:55", "message": "Dashboard ready — waiting for the stress test to start." } ],
   "updatedAt": "2026-10-16T20:55:00+02:00"
@@ -42,21 +40,12 @@ while the stress test runs.
 - `totals`: the current system totals (numbers or `null` until the
   stress test writes them). Drives the four big counters:
   Companies / Staff rostered / Active rosters / Changes.
-- `history`: array of `{ "time": "HH:MM", "companies": 1, "staff": 200,
-  "rosters": 12, "changes": 340 }`, SAST, oldest first. Drives the
-  movement graph (inline SVG line chart, no library). Append one point
-  each time the totals change — the lines should visibly go UP as the
-  stress test scales.
 - `perfHistory`: array of `{ "staff": 200, "loadMs": 2301,
   "renderMs": 145, "exportMs": 8200 }`. Drives the three
   "Performance vs size" charts (one per metric, own scale, ms on the
   y-axis, staff count on the x-axis). Append one point after each
   measurement — this shows WHERE the app starts to slow down as the
   company grows (the "glitch" threshold).
-- `breakdown`: `{ "staffPerWorkplace": [ { "name": "Base Alpha",
-  "staff": 120 } ], "rostersPerMonth": [ { "month": "2026-10",
-  "rosters": 60 } ] }`. Drives the two "Breakdown" horizontal bar
-  charts. Update as you scale.
 - `storageHistory`: array of `{ "time": "HH:MM", "kb": 4828 }`,
   SAST, oldest first. Drives the "Storage" chart (localStorage usage in
   KB over time). Append as localStorage usage changes — this shows when
@@ -75,13 +64,18 @@ live).
   finishes. Leave it `"waiting"` until then.
 - Update `progress.current`, `stage`, `thresholds`, `metrics`, and append
   to `log` as the test runs.
-- Write `totals` + append to `history` as you scale up (never invent
-  numbers — only what the test actually measured). The dashboard draws
-  the graph from `history`.
-- Write `perfHistory` after each measurement, update `breakdown` as
-  you scale, append `storageHistory` as localStorage usage changes —
-  never invent numbers. The dashboard shows "Waiting for data…" for any
-  of these fields until you write them.
+- Write `totals` as you scale up (never invent numbers — only what the
+  test actually measured).
+- Write `perfHistory` after each measurement, append
+  `storageHistory` as localStorage usage changes — never invent numbers.
+  The dashboard shows "Waiting for data…" for any of these fields until
+  you write them.
+- **Breakdown + Movement graph removed per Ian (16 Oct 2026)** — both
+  had no meaning at scale ("That movement one also becomes irrelevant
+  once it's higher. Both of those are not very good."); the relevant
+  graphs are performance vs size and storage. The dashboard ignores any
+  `breakdown` / `history` data in `results.json` (do NOT error, do NOT
+  show it). You may stop writing them.
 - Do NOT invent numbers — only write what the test actually measured.
 - Keep the schema above exactly (same keys, same types).
 - Do NOT touch the app (`index.html`, `sw.js`, BUILD) or the private repo.
