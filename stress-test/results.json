@@ -195,6 +195,10 @@
     {
       "time": "21:20",
       "message": "Added applications — 400 of 400"
+    },
+    {
+      "time": "21:20",
+      "message": "Added drafts — 100 of 100"
     }
   ],
   "metrics": [
@@ -232,5 +236,5 @@
     "rosters": 600,
     "staff": 500
   },
-  "updatedAt": "2026-10-16T21:20:32.154+02:00"
+  "updatedAt": "2026-10-16T21:20:34.135+02:00"
 }
