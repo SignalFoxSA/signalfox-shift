@@ -188,6 +188,13 @@
       "staff": 1000,
       "rosters": 1200,
       "changes": 16000
+    },
+    {
+      "time": "21:25",
+      "companies": 0,
+      "staff": 0,
+      "rosters": 0,
+      "changes": 0
     }
   ],
   "log": [
@@ -390,79 +397,35 @@
     {
       "time": "21:23",
       "message": "Stage 3 done — countsOk=true"
+    },
+    {
+      "time": "21:25",
+      "message": "Building up — seeding…"
     }
   ],
   "metrics": [
     {
       "label": "Companies",
-      "value": "5"
+      "value": "0"
     },
     {
       "label": "Staff rostered",
-      "value": "1000"
+      "value": "0"
     },
     {
       "label": "Active rosters",
-      "value": "1200"
+      "value": "0"
     },
     {
       "label": "Changes",
-      "value": "16000"
-    },
-    {
-      "label": "Seed time",
-      "value": "n/a"
-    },
-    {
-      "label": "Storage (JSON bytes)",
-      "value": "4944287"
-    },
-    {
-      "label": "Heap used",
-      "value": "9.5 MB"
-    },
-    {
-      "label": "Persist",
-      "value": "83ms, 4944287 bytes"
-    },
-    {
-      "label": "Load time (reload)",
-      "value": "2747ms"
-    },
-    {
-      "label": "Calendar render",
-      "value": "1720ms"
-    },
-    {
-      "label": "Rosters list render",
-      "value": "589ms"
-    },
-    {
-      "label": "On Duty render",
-      "value": "461ms"
-    },
-    {
-      "label": "Company Dashboard render",
-      "value": "814ms"
-    },
-    {
-      "label": "Company Stats compute",
-      "value": "ok ms=48430 total=15500"
-    },
-    {
-      "label": "Rules engine",
-      "value": "ok ms=32 violDays=undefined"
-    },
-    {
-      "label": "Inbox render",
-      "value": "1334ms"
+      "value": "0"
     }
   ],
   "progress": {
-    "current": 3,
+    "current": 4,
     "total": 7
   },
-  "stage": "Stage 3 of 7 — 1000 staff, 24 months",
+  "stage": "Stage 4 of 7 — 2000 staff, 36 months",
   "status": "running",
   "thresholds": {
     "break": null,
@@ -470,10 +433,10 @@
     "perfect": null
   },
   "totals": {
-    "changes": 16000,
-    "companies": 5,
-    "rosters": 1200,
-    "staff": 1000
+    "changes": 0,
+    "companies": 0,
+    "rosters": 0,
+    "staff": 0
   },
-  "updatedAt": "2026-10-16T21:23:55.041+02:00"
+  "updatedAt": "2026-10-16T21:25:42.554+02:00"
 }
