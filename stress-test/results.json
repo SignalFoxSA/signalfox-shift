@@ -440,6 +440,10 @@
     {
       "label": "Company Dashboard render",
       "value": "814ms"
+    },
+    {
+      "label": "Company Stats compute",
+      "value": "ok ms=48430 total=15500"
     }
   ],
   "progress": {
@@ -459,5 +463,5 @@
     "rosters": 1200,
     "staff": 1000
   },
-  "updatedAt": "2026-10-16T21:22:56.454+02:00"
+  "updatedAt": "2026-10-16T21:23:46.769+02:00"
 }
