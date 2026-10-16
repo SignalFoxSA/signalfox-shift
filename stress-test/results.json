@@ -55,6 +55,13 @@
       "staff": 200,
       "rosters": 120,
       "changes": 1700
+    },
+    {
+      "time": "21:20",
+      "companies": 0,
+      "staff": 0,
+      "rosters": 0,
+      "changes": 0
     }
   ],
   "log": [
@@ -117,79 +124,35 @@
     {
       "time": "21:18",
       "message": "Stage 1 done — countsOk=false"
+    },
+    {
+      "time": "21:20",
+      "message": "Building up — seeding…"
     }
   ],
   "metrics": [
     {
       "label": "Companies",
-      "value": "5"
+      "value": "0"
     },
     {
       "label": "Staff rostered",
-      "value": "200"
+      "value": "0"
     },
     {
       "label": "Active rosters",
-      "value": "120"
+      "value": "0"
     },
     {
       "label": "Changes",
-      "value": "1700"
-    },
-    {
-      "label": "Seed time",
-      "value": "n/a"
-    },
-    {
-      "label": "Storage (JSON bytes)",
-      "value": "740162"
-    },
-    {
-      "label": "Heap used",
-      "value": "9.5 MB"
-    },
-    {
-      "label": "Persist",
-      "value": "18ms, 740162 bytes"
-    },
-    {
-      "label": "Load time (reload)",
-      "value": "2301ms"
-    },
-    {
-      "label": "Calendar render",
-      "value": "609ms"
-    },
-    {
-      "label": "Rosters list render",
-      "value": "419ms"
-    },
-    {
-      "label": "On Duty render",
-      "value": "414ms"
-    },
-    {
-      "label": "Company Dashboard render",
-      "value": "577ms"
-    },
-    {
-      "label": "Company Stats compute",
-      "value": "ok ms=1062 total=3100"
-    },
-    {
-      "label": "Rules engine",
-      "value": "ok ms=6 violDays=undefined"
-    },
-    {
-      "label": "Inbox render",
-      "value": "504ms"
+      "value": "0"
     }
   ],
   "progress": {
-    "current": 1,
+    "current": 2,
     "total": 7
   },
-  "stage": "Stage 1 of 7 — 200 staff, 12 months",
+  "stage": "Stage 2 of 7 — 500 staff, 24 months",
   "status": "running",
   "thresholds": {
     "break": null,
@@ -197,10 +160,10 @@
     "perfect": null
   },
   "totals": {
-    "changes": 1700,
-    "companies": 5,
-    "rosters": 120,
-    "staff": 200
+    "changes": 0,
+    "companies": 0,
+    "rosters": 0,
+    "staff": 0
   },
-  "updatedAt": "2026-10-16T21:18:55.308+02:00"
+  "updatedAt": "2026-10-16T21:20:15.936+02:00"
 }
