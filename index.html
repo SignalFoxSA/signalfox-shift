@@ -408,7 +408,8 @@
   .draftleave-card{background:var(--card); border:1px solid var(--line);
     border-radius:var(--radius); padding:12px 14px;}
   .draftleave-head{display:flex; align-items:center; justify-content:space-between;
-    cursor:pointer; font-weight:800; font-size:15px;}
+    cursor:pointer; font-weight:800; font-size:15px; color:var(--text);}
+  .draftleave-head .dl-arrow{color:var(--accent);}
   .draftleave-card select, .draftleave-card input[type=date], .draftleave-card input[type=text]{
     width:100%; padding:10px; border:1px solid var(--line); border-radius:8px;
     background:var(--card2); color:var(--text); margin-bottom:8px;}
@@ -1071,7 +1072,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1930';
+var BUILD='20261015-1935';
 /* LEAVE_TYPES — the ONE shared list of leave types (single source of truth).
    Used by EVERY leave-reason picker: the day-sheet removal prompt, the draft
    Long-term leave section, and both On Duty leave flows (baseLeave +
@@ -3731,7 +3732,7 @@ function renderDraftLeaveSection(){
   var min=y+'-'+String(m+1).padStart(2,'0')+'-01';
   var max=y+'-'+String(m+1).padStart(2,'0')+'-'+String(daysInMonth(y,m)).padStart(2,'0');
   var names=allStaffNames().filter(function(nm){ return nm && nm!==OPEN_MARK; });
-  var head='<div class="draftleave-card"><div class="draftleave-head" onclick="toggleDraftLeaveSection()"><span>Long-term leave</span><span>'+(draftLeaveOpen?'\u25be':'\u25b8')+'</span></div>';
+  var head='<div class="draftleave-card"><div class="draftleave-head" onclick="toggleDraftLeaveSection()"><span>Long-term leave</span><span class=\"dl-arrow\">'+(draftLeaveOpen?'\u25be':'\u25b8')+'</span></div>';
   if(!draftLeaveOpen){ sec.innerHTML=head+'</div>'; sec.dataset.built='1'; return; }
   sec.innerHTML=head+
     '<p class="sub" style="margin:6px 0 10px;">Remove someone from this draft for a date range. Their shifts become open.</p>'+
