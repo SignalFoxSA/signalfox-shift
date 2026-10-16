@@ -1072,7 +1072,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1935';
+var BUILD='20261015-1940';
 /* LEAVE_TYPES — the ONE shared list of leave types (single source of truth).
    Used by EVERY leave-reason picker: the day-sheet removal prompt, the draft
    Long-term leave section, and both On Duty leave flows (baseLeave +
@@ -1495,6 +1495,7 @@ var S = {
   draft:null,       // roster being built / viewed
   rosters:[],       // saved roster snapshots: [{id, name, roster}]
   drafts:[],        // persisted draft rosters: [{id, teamId, year, month, name, roster, createdAt, offerOpenShifts}]
+  shiftApps:[],     // persisted marketplace applications (localStorage 'sfshift_apps' + cloud sync via collectState)
   draftId:null,     // id of the persisted draft currently being viewed (null = transient / live)
   base:null,
   cal:null,         // calendar view context: {vehicleId, y, m, mode:'month'|'agenda', sub:'month'|'week', weekISO}
@@ -3270,6 +3271,7 @@ function loadSaved(){
   loadDrafts();
   try{ S.rosters=JSON.parse(localStorage.getItem('sfshift_units')||'[]'); }catch(e){ S.rosters=[]; }
   S._rostersLoaded=true; companyLoad();
+  loadShiftApps();
   if(!Array.isArray(S.rosters)) S.rosters=[];
   if(!S.rosters.length){
     try{ /* migrate old single-roster saves */
@@ -3341,6 +3343,10 @@ function openRoster(id){
 }
 function deleteRoster(id){
   S.rosters=S.rosters.filter(function(x){ return x.id!==id; });
+  /* pending applications on a deleted roster can no longer be filled (mirrors deleteDraftById;
+     decline in-memory first: the roster is already gone, so a load here would prune instead) */
+  (S.shiftApps||[]).forEach(function(a){ if(a.rosterId===id && !a.isDraft && a.status==='pending') a.status='declined'; });
+  persistShiftApps();
   persist(); renderRosters(); toast('Deleted');
 }
 
@@ -3368,6 +3374,46 @@ function persistDrafts(){
   try{ localStorage.setItem('sfshift_drafts', JSON.stringify(S.drafts||[])); }catch(e){}
   S._draftsLoaded=true;
   queueCloudSave();
+}
+/* ---------- Marketplace applications: persisted, like drafts ----------
+   S.shiftApps lives in localStorage ('sfshift_apps') + cloud sync via
+   collectState. Pending applications whose roster/draft no longer exists
+   are dropped silently on load (never shown as a broken approval). A
+   pending application whose slot has since been filled is KEPT — the
+   approval-time open-slot re-check (mkSlotStillOpen) blocks filling it. */
+function loadShiftApps(){
+  try{ S.shiftApps=JSON.parse(localStorage.getItem('sfshift_apps')||'[]'); }catch(e){ S.shiftApps=[]; }
+  S._appsLoaded=true;
+  if(!Array.isArray(S.shiftApps)) S.shiftApps=[];
+  /* prune stale PENDING applications only when rosters + drafts are loaded,
+     so a half-loaded state can never wipe valid applications */
+  if(!S._rostersLoaded || !S._draftsLoaded) return;
+  var before=S.shiftApps.length;
+  S.shiftApps=S.shiftApps.filter(function(a){
+    if(!a || a.status!=='pending') return true;
+    if(a.isDraft) return (S.drafts||[]).some(function(d){ return d && d.id===a.rosterId; });
+    if(a.workplaceId && S.company && a.workplaceId!==S.company.activeId){
+      var wp=companyWorkplaceById(a.workplaceId);
+      return !!(wp && (wp.rosters||[]).some(function(u){ return u && u.id===a.rosterId; }));
+    }
+    if(a.workplaceId && !S.company) return true; /* can't verify without company state — keep */
+    return (S.rosters||[]).some(function(u){ return u && u.id===a.rosterId; });
+  });
+  if(S.shiftApps.length!==before) persistShiftApps();
+}
+function persistShiftApps(){
+  try{ localStorage.setItem('sfshift_apps', JSON.stringify(S.shiftApps||[])); }catch(e){}
+  S._appsLoaded=true;
+  queueCloudSave();
+}
+/* Approval-time re-check: the slot must STILL be open (an OPEN marker in
+   the override) — approving a stale application must never fill a slot
+   that someone else already filled. Mirrors mkFindOpen, which only ever
+   lists override-OPEN slots. */
+function mkSlotStillOpen(R, dateISO, shiftId){
+  if(!R||!R.memberOverrides) return false;
+  var per=R.memberOverrides[dateISO];
+  return !!(per && Array.isArray(per[shiftId]) && per[shiftId].indexOf(OPEN_MARK)>=0);
 }
 /* Upsert the working copy (S.draft) into S.drafts. Dedupe by team+month:
    the same team+month never gets a second draft entry — it is updated.
@@ -3428,9 +3474,11 @@ function publishDraft(){
     S.rosters.unshift({id:liveId, name:S.unitName||R.name, roster:JSON.parse(JSON.stringify(R))});
   }
   /* pending applications on the draft carry over to the live roster */
+  loadShiftApps();
   (S.shiftApps||[]).forEach(function(a){
     if(a.rosterId===ex.id && a.isDraft && a.status==='pending'){ a.rosterId=liveId; a.isDraft=false; }
   });
+  persistShiftApps();
   S.drafts=S.drafts.filter(function(d){ return d.id!==ex.id; });
   S.draftId=null;
   persistDrafts(); persist();
@@ -3450,8 +3498,11 @@ function deleteDraftById(id, skipConfirm){
   if(!skipConfirm && !confirm('Delete this draft? It will not go live.')) return;
   loadDrafts();
   S.drafts=S.drafts.filter(function(d){ return d.id!==id; });
-  /* pending applications on a deleted draft can no longer be filled */
+  /* pending applications on a deleted draft can no longer be filled
+     (decline in-memory first: the draft is already gone from S.drafts,
+     so a load here would prune them instead of declining them) */
   (S.shiftApps||[]).forEach(function(a){ if(a.rosterId===id && a.isDraft && a.status==='pending') a.status='declined'; });
+  persistShiftApps();
   persistDrafts();
   if(S.draftId===id){ S.draft=null; S.draftId=null; S.fromSaved=false; }
   renderDrafts();
@@ -3869,12 +3920,18 @@ function mkHasConflictDraft(personName, dateISO){
    written into the DRAFT's roster (as an override, like a normal
    approval). The draft stays a draft. Same rules checks as live. */
 function mkApproveDraft(a){
+  var appId=a.id;
   loadDrafts();
+  loadShiftApps();
+  /* loads re-read S.shiftApps from storage — re-find, the passed object is stale */
+  a=(S.shiftApps||[]).find(function(x){ return x.id===appId; });
+  if(!a) return;
   var d=(S.drafts||[]).find(function(x){ return x.id===a.rosterId; });
   if(!d||!d.roster){ toast('That draft no longer exists.'); return; }
   var R=d.roster;
   /* on leave in this draft on this date — cannot fill a shift while on leave */
   if(isOnLeaveInRoster(R, a.applicant, a.dateISO)){ toast(a.applicant+' is on leave on '+a.dateISO+'.'); return; }
+  if(!mkSlotStillOpen(R, a.dateISO, a.shiftId)){ toast('That shift is no longer open.'); return; }
   if(!R.memberOverrides) R.memberOverrides={};
   if(!R.memberOverrides[a.dateISO]) R.memberOverrides[a.dateISO]={};
   var prospectMems=(R.memberOverrides[a.dateISO][a.shiftId]||[]).slice();
@@ -3895,6 +3952,7 @@ function mkApproveDraft(a){
   syncLeaveLogFills(R);
   a.status='approved';
   persistDrafts();
+  persistShiftApps();
   persistBase();
   if(S.draftId===d.id && S.draft && !S.fromSaved) S.draft=JSON.parse(JSON.stringify(R));
   toast(a.applicant+' approved for '+a.shift+' (draft).');
@@ -4356,6 +4414,7 @@ function rulesWouldBreakForShift(rosterId, dateISO, shiftId, personName, isDraft
   return rulesCheckPerson(hypo, personName).length>0;
 }
 function renderMarketplace(){
+  loadShiftApps();
   var open=mkFindOpen();
   try{ open=open.concat(mkFindOpenOtherBases()); }catch(e){}
   try{ open=open.concat(mkFindOpenDraft()); }catch(e){}
@@ -4457,6 +4516,7 @@ function mkApply(i){
     toast('Your qualification cannot cover this shift.');
     return;
   }
+  loadShiftApps();
   if(!S.shiftApps) S.shiftApps=[];
   S.shiftApps.push({
     id:'app'+Date.now(),
@@ -4466,6 +4526,7 @@ function mkApply(i){
     workplaceId:s.workplaceId||(S.company&&S.company.activeId)||null,
     workplaceName:s.workplaceName||''
   });
+  persistShiftApps();
   persistBase();
   toast('Applied — the manager will review it.');
   renderMarketplace();
@@ -4478,6 +4539,7 @@ function mkApproveCrossBase(a){
   var u=(wp.rosters||[]).find(function(x){ return x.id===a.rosterId; });
   if(!u||!u.roster) return false;
   var R=u.roster;
+  if(!mkSlotStillOpen(R, a.dateISO, a.shiftId)){ toast('That shift is no longer open.'); return false; }
   if(!R.memberOverrides) R.memberOverrides={};
   if(!R.memberOverrides[a.dateISO]) R.memberOverrides[a.dateISO]={};
   var prospectMems=(R.memberOverrides[a.dateISO][a.shiftId]||[]).slice();
@@ -4515,19 +4577,26 @@ function mkApproveCrossBase(a){
   return true;
 }
 function mkApprove(appId){
+  loadShiftApps();
   var a=(S.shiftApps||[]).find(function(x){ return x.id===appId; });
   if(!a) return;
   if(a.isDraft){ mkApproveDraft(a); return; }
   if(a.workplaceId && S.company && a.workplaceId!==S.company.activeId){
     if(!mkApproveCrossBase(a)) return;
     a.status='approved';
+    persistShiftApps();
     persistBase();
     toast(a.applicant+' approved for '+a.shift+' at '+(a.workplaceName||'another base')+'.');
     renderBase();
     return;
   }
   loadSaved();
+  /* loadSaved re-read S.shiftApps from storage — re-find, the earlier object is stale */
+  a=(S.shiftApps||[]).find(function(x){ return x.id===appId; });
+  if(!a) return;
   var u=(S.rosters||[]).find(function(x){ return x.id===a.rosterId; });
+  if(!u||!u.roster){ toast('That roster no longer exists.'); return; }
+  if(!mkSlotStillOpen(u.roster, a.dateISO, a.shiftId)){ toast('That shift is no longer open.'); return; }
   if(u&&u.roster){
     var R=u.roster;
     if(!R.memberOverrides) R.memberOverrides={};
@@ -4551,14 +4620,17 @@ function mkApprove(appId){
   }
   a.status='approved';
   syncLeaveLogFills(R);
+  persistShiftApps();
   persistBase(); persist();
   toast(a.applicant+' approved for '+a.shift+'.');
   renderBase();
 }
 function mkDecline(appId){
+  loadShiftApps();
   var a=(S.shiftApps||[]).find(function(x){ return x.id===appId; });
   if(!a) return;
   a.status='declined';
+  persistShiftApps();
   persistBase();
   toast('Application declined.');
   renderBase();
@@ -6446,7 +6518,7 @@ function hasContent(st){
 function collectState(){
   var customs={};
   try{ Object.keys(S.ROTATIONS).forEach(function(k){ if(S.ROTATIONS[k] && S.ROTATIONS[k].custom) customs[k]=S.ROTATIONS[k]; }); }catch(e){}
-  var st={ v:1, mtime:Date.now(), base:S.base||null, rosters:S.rosters||[], drafts:S.drafts||[], customs:customs, profileName:profileName(), company:S.company||null };
+  var st={ v:1, mtime:Date.now(), base:S.base||null, rosters:S.rosters||[], drafts:S.drafts||[], customs:customs, profileName:profileName(), company:S.company||null, apps:S.shiftApps||[] };
   try{
     st.heroLogo=localStorage.getItem('sfshift_hero_logo');
   }catch(e){}
@@ -6458,6 +6530,7 @@ function applyState(st){
     if(st.base) localStorage.setItem('sfshift_base', JSON.stringify(st.base));
     if(st.rosters) localStorage.setItem('sfshift_units', JSON.stringify(st.rosters));
     if(st.drafts) localStorage.setItem('sfshift_drafts', JSON.stringify(st.drafts));
+    if(st.apps) localStorage.setItem('sfshift_apps', JSON.stringify(st.apps));
     if(st.customs) localStorage.setItem('sfshift_custom_rot', JSON.stringify(st.customs));
     if(st.company) localStorage.setItem('sfshift_company', JSON.stringify(st.company));
     if(st.heroLogo) localStorage.setItem('sfshift_hero_logo', st.heroLogo);
@@ -8547,7 +8620,7 @@ function saveSettingsProfile(){
 
 /* ---------- data: export / import / clear ---------- */
 function exportData(){
-  var blob=new Blob([JSON.stringify({base:S.base, rosters:S.rosters, drafts:S.drafts||[]})],{type:'application/json'});
+  var blob=new Blob([JSON.stringify({base:S.base, rosters:S.rosters, drafts:S.drafts||[], apps:S.shiftApps||[]})],{type:'application/json'});
   var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download='signalfox-shift-backup.json'; document.body.appendChild(a); a.click();
   setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },500);
@@ -8562,6 +8635,7 @@ function importData(file){
       if(d.base){ S.base=d.base; persistBase(); }
       if(d.rosters){ S.rosters=d.rosters; persist(); }
       if(d.drafts){ S.drafts=d.drafts; persistDrafts(); }
+      if(d.apps){ S.shiftApps=d.apps; persistShiftApps(); loadShiftApps(); }
       migrateShifts(); persistBase();
       renderHome(); renderAllRosters(); renderStaffTab(); renderSettings();
       queueCloudSave();
@@ -8572,7 +8646,7 @@ function importData(file){
 }
 function clearData(){
   if(!confirm('Delete ALL bases, rosters and staff \u2014 on this device and in your cloud account?')) return;
-  ['sfshift_base','sfshift_units','sfshift_rosters','sfshift_hero_logo','sfshift_profile_name','sfshift_mtime','sfshift_custom_rot','sfshift_company','sfshift_drafts'].forEach(function(k){
+  ['sfshift_base','sfshift_units','sfshift_rosters','sfshift_hero_logo','sfshift_profile_name','sfshift_mtime','sfshift_custom_rot','sfshift_company','sfshift_drafts','sfshift_apps'].forEach(function(k){
     try{ localStorage.removeItem(k); }catch(e){}
   });
   try{
@@ -8584,7 +8658,7 @@ function clearData(){
   Object.keys(ROTATIONS).forEach(function(k){ if(ROTATIONS[k]&&ROTATIONS[k].custom) delete ROTATIONS[k]; });
   if(sb && sbUser){ try{ sb.from('app_state').delete().eq('user_id', sbUser.id).then(function(){}).catch(function(){}); }catch(e){} }
   S.company=null; S._rostersLoaded=false;
-  S.drafts=[]; S.draftId=null; S.draft=null; S.fromSaved=false; S.unitId=null;
+  S.drafts=[]; S.shiftApps=[]; S.draftId=null; S.draft=null; S.fromSaved=false; S.unitId=null;
   loadBase(); loadSaved();
   renderHome(); renderAllRosters(); renderStaffTab(); renderSettings();
   toast('All data cleared');
