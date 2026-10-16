@@ -1661,174 +1661,158 @@
     "rosters": 3600,
     "staff": 2000
   },
-  "updatedAt": "2026-10-16T21:30:36.254+02:00",
+  "updatedAt": "2026-10-16T21:30:38.447+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
         "name": "Workplace 1",
-        "staff": 400
-      },
-      {
-        "name": "Workplace 2",
-        "staff": 400
-      },
-      {
-        "name": "Workplace 3",
-        "staff": 400
-      },
-      {
-        "name": "Workplace 4",
-        "staff": 400
-      },
-      {
-        "name": "Workplace 5",
         "staff": 400
       }
     ],
     "rostersPerMonth": [
       {
         "month": "2026-01",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2026-02",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2026-03",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2026-04",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2026-05",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2026-06",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2026-07",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2026-08",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2026-09",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2026-10",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2026-11",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2026-12",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2027-01",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2027-02",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2027-03",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2027-04",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2027-05",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2027-06",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2027-07",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2027-08",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2027-09",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2027-10",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2027-11",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2027-12",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2028-01",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2028-02",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2028-03",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2028-04",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2028-05",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2028-06",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2028-07",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2028-08",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2028-09",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2028-10",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2028-11",
-        "rosters": 100
+        "rosters": 20
       },
       {
         "month": "2028-12",
-        "rosters": 100
+        "rosters": 20
       }
     ]
   },
