@@ -131,6 +131,10 @@
     {
       "label": "Seed time",
       "value": "n/a"
+    },
+    {
+      "label": "Storage (JSON bytes)",
+      "value": "740162"
     }
   ],
   "progress": {
@@ -150,5 +154,5 @@
     "rosters": 120,
     "staff": 200
   },
-  "updatedAt": "2026-10-16T21:18:25.623+02:00"
+  "updatedAt": "2026-10-16T21:18:27.252+02:00"
 }
