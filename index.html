@@ -722,6 +722,9 @@
       <h3>Rotations</h3>
       <p class="sub">Patterns you designed yourself &mdash; reusable on any team.</p>
       <div id="bsCustom"></div>
+      <label class="f" style="margin-top:14px;">Rotation Library</label>
+      <p class="sub">Built-in patterns &mdash; pick one in Teams &rarr; Rotation, or load a rotating one into the builder to adapt it.</p>
+      <div id="bsLibrary"></div>
       <button class="addperson" onclick="openRotBuilder()">+ Design your own rotation</button>
     </div>
   </div>
@@ -854,6 +857,9 @@
       <p class="sub">Tap out <b>one crew's</b> pattern using your workplace shifts &mdash; Shift staggers the rest of the crews for you. Preview it live, name it, save it.</p>
       <label class="f">Rotation name</label>
       <input type="text" id="rbName" maxlength="30" placeholder="e.g. Mine A Shift">
+      <label class="f">Pick a pattern from the Library</label>
+      <select id="rbLibrary" onchange="if(this.value){ rbLoadLibrary(this.value); this.value=''; }"></select>
+      <p class="fine">Load a built-in rotating pattern (e.g. Panama, Kelly) into the grid below, then name it and save it as your own.</p>
       <label class="f">Cycle length</label>
       <div class="pills" id="rbCycle"></div>
       <label class="f">Number of crews</label>
@@ -1120,7 +1126,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1981';
+var BUILD='20261015-1982';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -1273,6 +1279,35 @@ var ROTATIONS = {
       ['N','N','N','N','N','N','N',0,0,0,0,0,0,0],
       [0,0,0,0,0,0,0,'N','N','N','N','N','N','N']
     ] },
+  /* Rotating X-on / X-off: one crew's block runs days, then nights, with
+     equal time off — every crew works exactly half the cycle, so each day
+     has exactly one DAY crew and one NIGHT crew. Fixed-crew versions above
+     keep their crews permanently on days or nights; these rotate. */
+  '2on2offRot': { name:'2-on / 2-off (rotating)', cycle:8, crews:4, hours:12, offsets:[0,2,4,6],
+    pattern:['D','D',0,0,'N','N',0,0],
+    note:'2 days, 2 off, 2 nights, 2 off — rotating' },
+  '3on3offRot': { name:'3-on / 3-off (rotating)', cycle:12, crews:4, hours:12, offsets:[0,3,6,9],
+    pattern:['D','D','D',0,0,0,'N','N','N',0,0,0],
+    note:'3 days, 3 off, 3 nights, 3 off — rotating' },
+  '4on4offRot': { name:'4-on / 4-off (rotating)', cycle:16, crews:4, hours:12, offsets:[0,4,8,12],
+    pattern:['D','D','D','D',0,0,0,0,'N','N','N','N',0,0,0,0],
+    note:'4 days, 4 off, 4 nights, 4 off — rotating' },
+  '5on5offRot': { name:'5-on / 5-off (rotating)', cycle:20, crews:4, hours:12, offsets:[0,5,10,15],
+    pattern:['D','D','D','D','D',0,0,0,0,0,'N','N','N','N','N',0,0,0,0,0],
+    note:'5 days, 5 off, 5 nights, 5 off — rotating' },
+  '7on7offRot': { name:'7-on / 7-off (rotating)', cycle:28, crews:4, hours:12, offsets:[0,7,14,21],
+    pattern:['D','D','D','D','D','D','D',0,0,0,0,0,0,0,'N','N','N','N','N','N','N',0,0,0,0,0,0,0],
+    note:'7 days, 7 off, 7 nights, 7 off — rotating' },
+  /* 24-hour fire / EMS classics: 3 platoons, exactly one crew on each day. */
+  '2448': { name:'24/48', cycle:3, crews:3, hours:24, offsets:[0,1,2],
+    pattern:['X',0,0],
+    note:'24 hours on, 48 off — 3 platoons' },
+  '4896': { name:'48/96', cycle:6, crews:3, hours:24, offsets:[0,2,4],
+    pattern:['X','X',0,0,0,0],
+    note:'48 hours on, 96 off — 3 platoons' },
+  'kelly': { name:'Kelly', cycle:9, crews:3, hours:24, offsets:[0,3,6],
+    pattern:['X',0,'X',0,'X',0,0,0,0],
+    note:'24 on, 24 off, 24 on, 24 off, 24 on, 4 days off — 3 platoons' },
   /* partial-day coverage presets (one shift per day) */
   'lsw12': { name:'Long/short week (days)', cycle:14, crews:2, hours:12, cov:[12,8], weekAnchored:true,
     patterns:[
@@ -1409,7 +1444,13 @@ function openRotBuilder(){
   show('v-rotbuilder');
 }
 function rbRenderAll(){
-  rbPillRow('rbCycle', [[7,'7 days'],[8,'8 days'],[14,'14 days'],[28,'28 days']], RB.cycle, function(v){
+  rbRenderLibrarySelect();
+  /* cycle pills include the loaded cycle when it isn't a standard length
+     (e.g. Kelly's 9 days, 48/96's 6 days) so it stays selected */
+  var cycleOpts=[[7,'7 days'],[8,'8 days'],[14,'14 days'],[28,'28 days']];
+  if(cycleOpts.every(function(o){ return o[0]!==RB.cycle; })) cycleOpts.push([RB.cycle, RB.cycle+' days']);
+  cycleOpts.sort(function(a,b){ return a[0]-b[0]; });
+  rbPillRow('rbCycle', cycleOpts, RB.cycle, function(v){
     RB.cycle=v; rbResize(); rbRenderGrid(); rbRenderPreview();
   });
   rbPillRow('rbCrews', [[2,'2'],[3,'3'],[4,'4']], RB.crews, function(v){
@@ -1530,7 +1571,7 @@ function rbDelete(key){
 function renderCustomList(){
   var wrap=document.getElementById('bsCustom'); if(!wrap) return; wrap.innerHTML='';
   var keys=Object.keys(ROTATIONS).filter(function(k){ return ROTATIONS[k].custom; });
-  if(!keys.length){ wrap.innerHTML='<p class="fine">None yet.</p>'; return; }
+  if(!keys.length){ wrap.innerHTML='<p class="fine">None yet.</p>'; renderLibraryList(); return; }
   keys.forEach(function(k){
     var r=ROTATIONS[k];
     var row=document.createElement('div'); row.className='custrow';
@@ -1541,6 +1582,74 @@ function renderCustomList(){
     var del=document.createElement('button'); del.className='rm'; del.textContent='✕'; del.title='Delete rotation';
     del.onclick=(function(key){ return function(){ rbDelete(key); }; })(k);
     row.appendChild(nm); row.appendChild(del); wrap.appendChild(row);
+  });
+  renderLibraryList();
+}
+
+/* ---------- Rotation Library: browsable catalogue of built-in patterns ---------- */
+/* one crew's sequence, compressed into runs: "2× Day · 2× Night · 4× Off" */
+function libSeqText(r){
+  var pat=r.offsets ? r.pattern : (r.patterns ? r.patterns[0] : []);
+  var lab={D:'Day', N:'Night', X:'24h'};
+  var runs=[];
+  (pat||[]).forEach(function(p){
+    var t=(p===0||p==='OFF') ? 'Off' : (lab[p]||String(p));
+    if(runs.length && runs[runs.length-1].t===t) runs[runs.length-1].n++;
+    else runs.push({t:t, n:1});
+  });
+  var seq=runs.map(function(x){ return x.n>1 ? x.n+'\u00d7 '+x.t : x.t; }).join(' \u00b7 ');
+  if(!r.offsets) seq+=' \u00b7 fixed crews';
+  if(r.fortnightFlip) seq+=' \u00b7 flips day/night each fortnight';
+  return seq;
+}
+function renderLibraryList(){
+  var wrap=document.getElementById('bsLibrary'); if(!wrap) return; wrap.innerHTML='';
+  Object.keys(ROTATIONS).forEach(function(k){
+    var r=ROTATIONS[k]; if(!r || r.custom) return;
+    var row=document.createElement('div'); row.className='custrow'; row.setAttribute('data-lib-key', k);
+    var nm=document.createElement('div'); nm.className='cn'; nm.textContent=r.name;
+    var meta=document.createElement('span'); meta.className='cm';
+    meta.textContent=r.cycle+'-day cycle \u00b7 '+r.crews+' crews \u00b7 '+(r.hours||12)+'h shifts \u00b7 '+libSeqText(r);
+    nm.appendChild(meta);
+    row.appendChild(nm);
+    if(r.offsets){
+      var btn=document.createElement('button'); btn.className='btn ghost';
+      btn.style.cssText='width:auto;flex:none;margin:0;padding:8px 14px;font-size:13px;';
+      btn.textContent='Load into builder';
+      btn.onclick=(function(key){ return function(){ openRotBuilder(); rbLoadLibrary(key); }; })(k);
+      row.appendChild(btn);
+    } else {
+      var f=document.createElement('span'); f.className='fine';
+      f.style.cssText='flex:none;font-size:12px;max-width:150px;text-align:right;';
+      f.textContent='Fixed crews \u2014 pick it in Teams \u2192 Rotation';
+      row.appendChild(f);
+    }
+    wrap.appendChild(row);
+  });
+}
+/* fill the Rotation Builder from a built-in rotating pattern (D/N/X tokens
+   map to the workplace's own shifts; fixed-crew patterns are not loadable —
+   they only work exactly as built, via Teams → Rotation) */
+function rbLoadLibrary(key){
+  var r=ROTATIONS[key]; if(!r || !r.offsets) return;
+  var ss=wpShifts();
+  var dId=ss[0]?ss[0].id:0, nId=ss[1]?ss[1].id:dId;
+  var map={D:dId, N:nId, X:dId};
+  RB.cycle=r.cycle; RB.crews=r.crews;
+  RB.pattern=(r.pattern||[]).map(function(p){ return p===0 ? 0 : (map[p]!==undefined ? map[p] : 0); });
+  rbRenderAll();
+  toast(r.name+' loaded \u2014 name it and save');
+}
+/* builder's "Pick a pattern" select: rotating built-ins only */
+function rbRenderLibrarySelect(){
+  var sel=document.getElementById('rbLibrary'); if(!sel) return;
+  sel.innerHTML='';
+  var ph=document.createElement('option'); ph.value=''; ph.textContent='Pick a pattern\u2026'; sel.appendChild(ph);
+  Object.keys(ROTATIONS).forEach(function(k){
+    var r=ROTATIONS[k]; if(!r || r.custom || !r.offsets) return;
+    var o=document.createElement('option'); o.value=k;
+    o.textContent=r.name+' \u00b7 '+r.cycle+'-day cycle';
+    sel.appendChild(o);
   });
 }
 
