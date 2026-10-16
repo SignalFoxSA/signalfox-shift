@@ -1584,6 +1584,10 @@
     {
       "time": "21:30",
       "message": "On Duty render skipped (state exceeds localStorage)"
+    },
+    {
+      "time": "21:30",
+      "message": "Inbox render skipped (state exceeds localStorage)"
     }
   ],
   "metrics": [
@@ -1657,7 +1661,7 @@
     "rosters": 3600,
     "staff": 2000
   },
-  "updatedAt": "2026-10-16T21:30:31.705+02:00",
+  "updatedAt": "2026-10-16T21:30:34.115+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
