@@ -380,7 +380,7 @@
   #removalReasonBg{position:absolute; inset:0; background:rgba(0,0,0,.6);}
   #removalReasonBox{position:absolute; left:0; right:0; bottom:0; max-width:480px; margin:0 auto;
     background:var(--card); border-radius:20px 20px 0 0; padding:18px 18px 24px;
-    border-top:1px solid var(--line);}
+    border-top:1px solid var(--line); max-height:88vh; overflow-y:auto;}
   #removalReasonBox h3{margin:6px 0 2px; font-size:18px;}
   #removalReasonBox .rr-opt{display:flex; align-items:center; justify-content:space-between;
     background:var(--card2); border:1px solid var(--line); border-radius:10px;
@@ -996,9 +996,7 @@
   <div id="removalReasonBox">
     <h3 id="removalReasonTitle">Why is this person being removed?</h3>
     <p class="sub" style="margin:0 0 8px;">Pick a reason — it will be logged in the Leave list.</p>
-    <div class="rr-opt" data-rr="Sick leave" onclick="removalReasonPick('Sick leave',this)">Sick leave <span>&#8594;</span></div>
-    <div class="rr-opt" data-rr="Annual leave" onclick="removalReasonPick('Annual leave',this)">Annual leave <span>&#8594;</span></div>
-    <div class="rr-opt" data-rr="Other" onclick="removalReasonPick('Other',this)">Other <span>&#8594;</span></div>
+    <div id="removalReasonOpts"></div>
     <label class="f" style="margin-top:10px;">Note (optional)</label>
     <input type="text" id="removalReasonNote" maxlength="120" placeholder="e.g. Called in sick, family emergency…">
     <div class="btnrow">
@@ -1073,7 +1071,15 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1920';
+var BUILD='20261015-1925';
+/* LEAVE_TYPES — the ONE shared list of leave types (single source of truth).
+   Used by EVERY leave-reason picker: the day-sheet removal prompt, the draft
+   Long-term leave section, and both On Duty leave flows (baseLeave +
+   baseLongLeave). Stored verbatim in leaveLog entries' type field and shown
+   in the Leave list + exports. Legacy stored strings (e.g. 'Sick', 'Annual',
+   'Maternity / Paternity', 'Family responsibility') are NOT migrated — the
+   Leave list / exports render whatever type string is stored. */
+var LEAVE_TYPES=['Annual leave','Sick leave','Family responsibility leave','Maternity leave','Parental leave','Adoption leave','Commissioning parental leave','Study leave','Unpaid leave','Compassionate leave','Other'];
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -3039,6 +3045,13 @@ function removalReasonPick(type){
   var opts=document.querySelectorAll('#removalReasonBox .rr-opt');
   for(var i=0;i<opts.length;i++) opts[i].classList.toggle('sel', opts[i].getAttribute('data-rr')===type);
 }
+/* Build the removal-prompt options from the shared LEAVE_TYPES list. */
+(function(){
+  var wrap=document.getElementById('removalReasonOpts'); if(!wrap) return;
+  wrap.innerHTML=LEAVE_TYPES.map(function(t){
+    return '<div class="rr-opt" data-rr="'+t.replace(/"/g,'&quot;')+'" onclick="removalReasonPick(\''+t.replace(/'/g,"\\'")+'\',this)">'+t+' <span>&#8594;</span></div>';
+  }).join('');
+})();
 function removalReasonCancel(){
   /* Cancel = removal cancelled: nothing removed, nothing logged. */
   removalReasonCtx=null;
@@ -3725,7 +3738,7 @@ function renderDraftLeaveSection(){
     '<label class="f">Person</label><select id="dlPerson"><option value="">\u2014 Pick a person \u2014</option>'+
       names.map(function(n){ return '<option value="'+escapeHtml(n)+'">'+escapeHtml(n)+'</option>'; }).join('')+'</select>'+
     '<label class="f">Reason</label><select id="dlReason"><option value="">\u2014 Pick a reason \u2014</option>'+
-      ['Sick leave','Annual leave','Other'].map(function(t){ return '<option>'+escapeHtml(t)+'</option>'; }).join('')+'</select>'+
+      LEAVE_TYPES.map(function(t){ return '<option>'+escapeHtml(t)+'</option>'; }).join('')+'</select>'+
     '<label class="f">Note (optional)</label><input type="text" id="dlNote" maxlength="120" placeholder="e.g. Doctor\u2019s note, holiday\u2026">'+
     '<label class="f">From</label><input type="date" id="dlFrom" min="'+min+'" max="'+max+'" value="'+min+'">'+
     '<label class="f">To</label><input type="date" id="dlTo" min="'+min+'" max="'+max+'" value="'+min+'">'+
@@ -5777,8 +5790,7 @@ function renderBase(){
   });
   document.getElementById('baseCoverPanel').innerHTML='';
 }
-/* Sick cover from Who's on duty */
-var LEAVE_TYPES=['Sick leave','Annual leave','Family responsibility','Study leave','Maternity / Paternity','Unpaid leave','Other'];
+/* Sick cover from Who's on duty — leave types come from the shared LEAVE_TYPES list (defined near BUILD). */
 var OPEN_MARK='__OPEN__'; /* marker for an unfilled position in memberOverrides */
 function baseLeave(rosterId, shiftId, personName){
   var panel=document.getElementById('baseCoverPanel');
