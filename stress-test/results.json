@@ -1606,6 +1606,10 @@
     {
       "label": "Heap used",
       "value": "33.5 MB"
+    },
+    {
+      "label": "Persist",
+      "value": "FAILED (sfshift_apps:Failed to execute 'setItem' on 'Storage': Setting the value of 'sfshift_apps' exceeded the quota.)"
     }
   ],
   "progress": {
@@ -1625,7 +1629,7 @@
     "rosters": 3600,
     "staff": 2000
   },
-  "updatedAt": "2026-10-16T21:30:00.071+02:00",
+  "updatedAt": "2026-10-16T21:30:02.362+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
