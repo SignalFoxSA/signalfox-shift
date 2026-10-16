@@ -4752,6 +4752,10 @@
     {
       "label": "Company Dashboard render",
       "value": "1029ms"
+    },
+    {
+      "label": "Company Stats compute",
+      "value": "ok ms=64664 total=12400"
     }
   ],
   "progress": {
@@ -4771,7 +4775,7 @@
     "rosters": 9600,
     "staff": 4000
   },
-  "updatedAt": "2026-10-16T21:40:30.331+02:00",
+  "updatedAt": "2026-10-16T21:41:35.006+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
