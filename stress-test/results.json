@@ -175,6 +175,10 @@
     {
       "label": "Rules engine",
       "value": "ok ms=6 violDays=undefined"
+    },
+    {
+      "label": "Inbox render",
+      "value": "504ms"
     }
   ],
   "progress": {
@@ -194,5 +198,5 @@
     "rosters": 120,
     "staff": 200
   },
-  "updatedAt": "2026-10-16T21:18:50.976+02:00"
+  "updatedAt": "2026-10-16T21:18:53.205+02:00"
 }
