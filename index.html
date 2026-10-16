@@ -841,7 +841,7 @@
   <div class="view" id="v-company">
     <div id="companyHero"></div>
     <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><h3 style="margin:0;">Company</h3><button class="btn ghost" style="width:auto;flex:none;margin:0;padding:8px 14px;" onclick="switchTab('settings')" aria-label="Settings">&#9881;&#65038; Settings</button></div>
+      <h3>Company</h3>
       <p class="sub">All your workplaces, in one place.</p>
       <div id="companyContent"></div>
     </div>
@@ -977,7 +977,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1885';
+var BUILD='20261015-1890';
 /* ============ SignalFox Shift V1 — roster engine (verified) ============ */
 /* Crew colors (locked 10 Oct 2026): A gold, B blue, C green, D coral, then extended palette cycling. */
 var CREW_COLORS = ['#FFC13E','#4DABF7','#51CF66','#FF8787','#B197FC','#FFD43B','#63E6BE','#E599F7'];
@@ -4033,7 +4033,7 @@ function companyClearDrill(){
   c.drill=null; companyPersist(); renderCompany();
 }
 function companyBackBtn(){
-  return '<div class="btnrow"><button class="btn ghost" onclick="companyClearDrill()">Back</button></div>';
+  return '<div class="btnrow"><button class="btn ghost" onclick="companyClearDrill()">&#8592; Back</button></div>';
 }
 function rosterCoversDate(R, dateISO){
   if(!R) return false;
@@ -4258,8 +4258,7 @@ function companyPersonDrillHtml(name){
   h+='<h3>Company rule check</h3>';
   if(!viols.length) h+='<p class="fine">No company-wide rule violations.</p>';
   else h+='<div class="card" style="padding:10px;border:2px solid #CC0000;color:#CC0000;">'+viols.map(function(v){ return '<div>'+escapeHtml(v)+'</div>'; }).join('')+'</div>';
-  h+=companyBackBtn();
-  return h;
+  return companyBackBtn()+h;
 }
 /* every open slot across the company, grouped per (base, roster, date, shift, crew) */
 function companyOpenShifts(){
@@ -4739,8 +4738,7 @@ function companyDrillHtml(drill){
       if(wp.id!==S.company.activeId) h+='<div class="btnrow"><button class="btn" onclick="companySwitchWorkplace(\''+wp.id+'\'); switchTab(\'rosters\');">Open this base</button></div>';
     }
   } else if(drill.type==='person'){ return companyPersonDrillHtml(drill.name); }
-  h+=companyBackBtn();
-  return h;
+  return companyBackBtn()+h;
 }
 
 /* ---------- Employee export: WYSIWYG — exports the current view ---------- */
@@ -5792,7 +5790,8 @@ function renderTabs(){
       {id:'costats', icon:'\uD83D\uDCC8', label:'Stats'},
       {id:'cobases', icon:'\uD83C\uDFE2', label:'Bases'},
       {id:'copeople', icon:'\uD83D\uDC65', label:'People'},
-      {id:'coopen', icon:'\uD83D\uDCB0', label:'Open'}
+      {id:'coopen', icon:'\uD83D\uDCB0', label:'Open'},
+      {id:'settings', icon:'\u2699\uFE0F', label:'Settings'}
     ];
   }else{
     tabs=[
