@@ -550,6 +550,11 @@
   #v-myshifts .seg button{flex:1; border:none; background:transparent; border-radius:9px; padding:10px;
     font-size:14px; font-weight:700; color:var(--muted); cursor:pointer; font-family:inherit;}
   #v-myshifts .seg button.on{background:var(--accent); color:var(--accent-ink);}
+  /* open shifts segmented controls — same pattern as My Shifts */
+  #v-marketplace .seg{display:flex; background:var(--card2); border:1px solid var(--line); border-radius:12px; padding:4px;}
+  #v-marketplace .seg button{flex:1; border:none; background:transparent; border-radius:9px; padding:10px;
+    font-size:14px; font-weight:700; color:var(--muted); cursor:pointer; font-family:inherit;}
+  #v-marketplace .seg button.on{background:var(--accent); color:var(--accent-ink);}
   /* company view segmented controls — same pattern, tighter for 6 tabs */
   #v-company .seg{display:flex; background:var(--card2); border:1px solid var(--line); border-radius:12px; padding:4px;}
   #v-company .seg button{flex:1; border:none; background:transparent; border-radius:9px; padding:9px 2px;
@@ -943,7 +948,12 @@
     <div class="card">
       <h3>Open Shifts</h3>
       <p class="sub">Overtime available — tap Apply to request a shift.</p>
+      <div class="seg" id="mkViewSeg" style="margin:8px 0;">
+        <button id="mkViewCal" onclick="mkSetView('cal')">Calendar</button>
+        <button id="mkViewList" class="on" onclick="mkSetView('list')">List</button>
+      </div>
       <div id="mkList"></div>
+      <div id="mkCal" style="display:none;"></div>
       <h3 style="margin-top:16px;">My applications</h3>
       <div id="mkMine"></div>
     </div>
@@ -1086,7 +1096,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1970';
+var BUILD='20261015-1971';
 /* LEAVE_TYPES — the ONE shared list of leave types (single source of truth).
    Used by EVERY leave-reason picker: the day-sheet removal prompt, the draft
    Long-term leave section, and both On Duty leave flows (baseLeave +
@@ -4504,11 +4514,141 @@ function rulesWouldBreakForShift(rosterId, dateISO, shiftId, personName, isDraft
   rulesSetOverride(hypo, dateISO, shiftId, mems);
   return rulesCheckPerson(hypo, personName).length>0;
 }
+/* ---------- Open Shifts Calendar view ----------
+   Open Shifts tab gets its own Calendar/List toggle (separate from the
+   My Shifts toggle and from the My Shifts Draft view, which stay as-is).
+   LIST (default) = the marketplace list, unchanged.
+   CALENDAR = a month calendar showing the SAME available shifts as the
+   List (same filters, via mkAvailableOpen — the exact filter set the
+   List loop applies). Each open shift is a tappable band on its date
+   (shift + team + DRAFT label when from a draft); tapping opens an
+   "Apply for this shift?" confirm, then the SAME mkApply flow as the
+   List (same rules checks, same application record, same manager
+   notification). Shifts NOT available to this staff member are not
+   shown. "My applications" stays below in both views. */
+var mkView='list', mkYear=null, mkMonth=null, mkCalConfirm=null;
+function mkSyncSeg(){
+  var c=document.getElementById('mkViewCal'); if(c) c.className=mkView==='cal'?'on':'';
+  var l=document.getElementById('mkViewList'); if(l) l.className=mkView==='list'?'on':'';
+  var list=document.getElementById('mkList'); if(list) list.style.display=mkView==='list'?'':'none';
+  var cal=document.getElementById('mkCal'); if(cal) cal.style.display=mkView==='cal'?'':'none';
+}
+function mkSetView(v){ mkView=v; mkCalConfirm=null; mkSyncSeg(); renderMarketplace(); }
+function mkCalNavInit(){ if(mkYear===null){ var n=new Date(); mkYear=n.getFullYear(); mkMonth=n.getMonth(); } }
+function mkCalNav(d){
+  mkCalNavInit();
+  mkMonth+=d;
+  if(mkMonth<0){ mkMonth=11; mkYear--; }
+  if(mkMonth>11){ mkMonth=0; mkYear++; }
+  mkCalConfirm=null;
+  renderMarketplace();
+}
+function mkCalToday(){
+  var n=new Date(); mkYear=n.getFullYear(); mkMonth=n.getMonth();
+  mkCalConfirm=null;
+  renderMarketplace();
+}
+/* The List's filter set, as a reusable function: every open shift in
+   S._mkOpen that the List would show to THIS staff member. */
+function mkAvailableOpen(){
+  var out=[];
+  (S._mkOpen||[]).forEach(function(s,i){
+    var cross=(s.workplaceId&&S.company&&s.workplaceId!==S.company.activeId);
+    if(msPerson&&(cross?mkHasConflictCompany(msPerson, s.dateISO):(mkHasConflict(msPerson, s.dateISO)||(s.isDraft&&mkHasConflictDraft(msPerson, s.dateISO))))) return;
+    if(msPerson&&s.needQid&&!(cross?mkCanCoverAcross(msPerson, s.needQid, s.borrowingBase):qualCanCover(staffQualIdByName(msPerson), s.needQid))) return;
+    if(msPerson&&(cross?rulesWouldBreakForShiftCompany(s.workplaceId, s.rosterId, s.dateISO, s.shiftId, msPerson):rulesWouldBreakForShift(s.rosterId, s.dateISO, s.shiftId, msPerson, !!s.isDraft))) return;
+    if(msPerson&&s.isDraft&&draftLeaveBlocks(s.rosterId, msPerson, s.dateISO)) return;
+    out.push({s:s, idx:i});
+  });
+  return out;
+}
+function mkCalConfirmHtml(){
+  if(!mkCalConfirm) return '';
+  var s=(S._mkOpen||[])[mkCalConfirm.idx];
+  if(!s) return '';
+  var already=(S.shiftApps||[]).some(function(a){
+    return a.rosterId===s.rosterId&&a.dateISO===s.dateISO&&a.shiftId===s.shiftId
+      &&a.applicant===msPerson&&a.status==='pending';
+  });
+  var h='<div class="card" id="mkCalConfirm" style="border-left:3px solid var(--accent);margin:10px 0;">'
+    +'<div style="font-weight:800;">Apply for this shift?</div>'
+    +'<div style="font-size:13px;color:var(--muted);margin-top:2px;">'
+    +escapeHtml(s.dt.toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'}))
+    +' &middot; '+(s.isDraft?'<span class="draftbadge">DRAFT</span> ':'')+escapeHtml(s.shift)
+    +' &middot; '+escapeHtml(s.team)+' &middot; Crew '+escapeHtml(s.crew)+'</div>'
+    +(already
+      ?'<p class="fine" style="margin:8px 0 0;">Applied — waiting for approval</p>'
+        +'<div class="btnrow" style="margin-top:8px;"><button class="btn ghost" onclick="mkCalConfirmClear()">Close</button></div>'
+      :'<div class="btnrow" style="margin-top:8px;"><button class="btn" onclick="mkCalApply()">Apply</button>'
+        +'<button class="btn ghost" onclick="mkCalConfirmClear()">Cancel</button></div>')
+    +'</div>';
+  return h;
+}
+function mkCalTap(idx){
+  mkCalConfirm={idx:idx};
+  renderMarketplace();
+  setTimeout(function(){
+    var c=document.getElementById('mkCalConfirm');
+    if(c) c.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }, 50);
+}
+function mkCalConfirmClear(){ mkCalConfirm=null; renderMarketplace(); }
+function mkCalApply(){
+  var c=mkCalConfirm; if(!c) return;
+  mkCalConfirm=null;
+  mkApply(c.idx);
+}
+function mkRenderCal(){
+  var wrap=document.getElementById('mkCal');
+  if(!wrap) return;
+  mkCalNavInit();
+  var avail=mkAvailableOpen();
+  var monthAvail=avail.filter(function(e){
+    var p=String(e.s.dateISO||'').split('-');
+    return p.length===3 && +p[0]===mkYear && +p[1]-1===mkMonth;
+  });
+  var h='<div class="sixnav"><button class="mnav" onclick="mkCalNav(-1)" aria-label="Previous month">&#8249;</button>'
+    +'<b>'+MN[mkMonth]+' '+mkYear+'</b>'
+    +'<button class="mnav" onclick="mkCalNav(1)" aria-label="Next month">&#8250;</button></div>';
+  h+='<div style="text-align:center;margin-bottom:4px"><a href="#" onclick="mkCalToday();return false;" style="font-size:13px;">Today</a></div>';
+  h+='<p class="sub" style="text-align:center;">'+monthAvail.length+' open shift'+(monthAvail.length===1?'':'s')+' you can cover in '+MN[mkMonth]+' '+mkYear+'.</p>';
+  h+=mkCalConfirmHtml();
+  h+='<div class="dow">'+['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(function(x){ return '<span>'+x+'</span>'; }).join('')+'</div>';
+  h+='<div class="grid">';
+  var first=new Date(mkYear,mkMonth,1);
+  var lead=(first.getDay()+6)%7;
+  for(var i=0;i<lead;i++) h+='<div class="cell out"></div>';
+  var dim=daysInMonth(mkYear,mkMonth);
+  for(var d=1; d<=dim; d++){
+    var dt=new Date(mkYear,mkMonth,d);
+    var dayISO=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var inner='<div class="dnum">'+d+'</div>';
+    monthAvail.forEach(function(e){
+      if(e.s.dateISO!==dayISO) return;
+      var s=e.s;
+      inner+='<span class="band" style="background:'+(s.color||'#888888')+';color:'+textOnBand(s.color||'#888888')+';cursor:pointer;" onclick="mkCalTap('+e.idx+')">'
+        +'<span class="bs">'+escapeHtml(s.team)+'</span>'
+        +'<span class="bc">'+(s.isDraft?'DRAFT · ':'')+escapeHtml(s.shift)+'</span>'
+        +'<span class="bm">Crew '+escapeHtml(s.crew)+'</span>'
+        +'</span>';
+    });
+    h+='<div class="cell'+(isToday(dt)?' today':'')+'">'+inner+'</div>';
+  }
+  var trail=(lead+dim)%7;
+  if(trail) for(var t=trail;t<7;t++) h+='<div class="cell out"></div>';
+  h+='</div>';
+  if(!monthAvail.length) h+='<p class="fine" style="margin-top:8px;text-align:center;">No open shifts you can cover this month.</p>';
+  wrap.innerHTML=h;
+}
 function renderMarketplace(){
   loadShiftApps();
   var open=mkFindOpen();
   try{ open=open.concat(mkFindOpenOtherBases()); }catch(e){}
   try{ open=open.concat(mkFindOpenDraft()); }catch(e){}
+  /* stash for apply — before rendering, so the calendar (same render
+     pass) can map its bands to mkApply indexes */
+  S._mkOpen=open;
+  mkSyncSeg();
   var wrap=document.getElementById('mkList');
   if(!open.length){
     wrap.innerHTML='<p class="fine">No open shifts right now. Check back later.</p>';
@@ -4565,8 +4705,8 @@ function renderMarketplace(){
     });
     mh.innerHTML=h2;
   }
-  /* stash for apply */
-  S._mkOpen=open;
+  /* calendar view (same render pass, same filtered set) */
+  if(mkView==='cal') mkRenderCal();
 }
 /* check if person is already rostered on a date (any shift) — prevents double-booking and 24h stretches */
 function mkHasConflict(personName, dateISO){
