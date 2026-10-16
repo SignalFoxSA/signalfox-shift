@@ -416,6 +416,10 @@
     {
       "label": "Persist",
       "value": "83ms, 4944287 bytes"
+    },
+    {
+      "label": "Load time (reload)",
+      "value": "2747ms"
     }
   ],
   "progress": {
@@ -435,5 +439,5 @@
     "rosters": 1200,
     "staff": 1000
   },
-  "updatedAt": "2026-10-16T21:22:37.090+02:00"
+  "updatedAt": "2026-10-16T21:22:42.161+02:00"
 }
