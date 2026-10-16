@@ -118,6 +118,13 @@
       "staff": 100,
       "rosters": 120,
       "changes": 1600
+    },
+    {
+      "time": "21:21",
+      "companies": 0,
+      "staff": 200,
+      "rosters": 240,
+      "changes": 3200
     }
   ],
   "log": [
@@ -240,6 +247,10 @@
     {
       "time": "21:21",
       "message": "Added teams — staff 100, rosters 120, changes 1600"
+    },
+    {
+      "time": "21:21",
+      "message": "Added teams — staff 200, rosters 240, changes 3200"
     }
   ],
   "metrics": [
@@ -249,15 +260,15 @@
     },
     {
       "label": "Staff rostered",
-      "value": "100"
+      "value": "200"
     },
     {
       "label": "Active rosters",
-      "value": "120"
+      "value": "240"
     },
     {
       "label": "Changes",
-      "value": "1600"
+      "value": "3200"
     }
   ],
   "progress": {
@@ -272,10 +283,10 @@
     "perfect": null
   },
   "totals": {
-    "changes": 1600,
+    "changes": 3200,
     "companies": 0,
-    "rosters": 120,
-    "staff": 100
+    "rosters": 240,
+    "staff": 200
   },
-  "updatedAt": "2026-10-16T21:21:50.708+02:00"
+  "updatedAt": "2026-10-16T21:21:52.905+02:00"
 }
