@@ -71,6 +71,9 @@
   }
   header .brand{font-weight:800; font-size:18px; letter-spacing:.2px;}
   header .brand small{display:block; font-weight:500; font-size:11px; color:var(--muted); letter-spacing:1.5px; text-transform:uppercase;}
+  /* Inbox bell (header, all roles): theme variables only, no hard-coded colours */
+  .bellbtn{margin-left:auto; position:relative; background:none; border:none; padding:6px; cursor:pointer; font-size:22px; line-height:1; flex:none;}
+  .bellbadge{position:absolute; top:0; right:0; min-width:18px; height:18px; padding:0 4px; border-radius:9px; background:var(--red); color:var(--card); font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; box-sizing:border-box;}
   .view{display:none;}
   .view.active{display:block; animation:fade .18s ease;}
   @keyframes fade{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
@@ -592,6 +595,7 @@
   <header>
     <div class="brandfox"></div>
     <div class="brand">SignalFox Shift<small>A Signal Fox app</small></div>
+    <button id="bellBtn" class="bellbtn" onclick="openInbox()" aria-label="Inbox">&#128276;<span id="bellBadge" class="bellbadge" style="display:none;">0</span></button>
   </header>
   <div id="backRow"><button id="backBtn" onclick="goBack()" aria-label="Back">&#8592;</button></div>
   <!-- LOGIN -->
@@ -742,6 +746,16 @@
       <p class="sub">The fine print. These are drafts &mdash; see the note at the top of each document.</p>
       <div id="legalBody" style="max-height:62vh;overflow-y:auto;line-height:1.6;font-size:14px;"></div>
     </div>
+  </div>
+
+  <!-- INBOX -->
+  <div class="view" id="v-inbox">
+    <div class="card">
+      <h3>Inbox</h3>
+      <p class="sub">Notifications for you. Tap one to open it.</p>
+      <button class="btn ghost" onclick="inboxMarkAllRead()">Mark all read</button>
+    </div>
+    <div id="inboxList"></div>
   </div>
 
   <!-- SETTINGS -->
@@ -1072,7 +1086,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1945';
+var BUILD='20261015-1950';
 /* LEAVE_TYPES — the ONE shared list of leave types (single source of truth).
    Used by EVERY leave-reason picker: the day-sheet removal prompt, the draft
    Long-term leave section, and both On Duty leave flows (baseLeave +
@@ -1496,6 +1510,7 @@ var S = {
   rosters:[],       // saved roster snapshots: [{id, name, roster}]
   drafts:[],        // persisted draft rosters: [{id, teamId, year, month, name, roster, createdAt, offerOpenShifts}]
   shiftApps:[],     // persisted marketplace applications (localStorage 'sfshift_apps' + cloud sync via collectState)
+  notifications:[], // persisted inbox notifications (localStorage 'sfshift_notifications' + cloud sync via collectState)
   draftId:null,     // id of the persisted draft currently being viewed (null = transient / live)
   base:null,
   cal:null,         // calendar view context: {vehicleId, y, m, mode:'month'|'agenda', sub:'month'|'week', weekISO}
@@ -3963,6 +3978,7 @@ function mkApproveDraft(a){
   a.status='approved';
   persistDrafts();
   persistShiftApps();
+  notifyApplicationDecision(a, 'approved'); /* Inbox: staff gets the news */
   persistBase();
   if(S.draftId===d.id && S.draft && !S.fromSaved) S.draft=JSON.parse(JSON.stringify(R));
   toast(a.applicant+' approved for '+a.shift+' (draft).');
@@ -4528,15 +4544,21 @@ function mkApply(i){
   }
   loadShiftApps();
   if(!S.shiftApps) S.shiftApps=[];
-  S.shiftApps.push({
+  var newApp={
     id:'app'+Date.now(),
     rosterId:s.rosterId, dateISO:s.dateISO, shiftId:s.shiftId,
     shift:s.shift, crew:s.crew, team:s.team,
     applicant:msPerson, status:'pending', ts:Date.now(), isDraft:!!s.isDraft,
     workplaceId:s.workplaceId||(S.company&&S.company.activeId)||null,
     workplaceName:s.workplaceName||''
-  });
+  };
+  S.shiftApps.push(newApp);
   persistShiftApps();
+  /* Inbox: the manager gets a notification for every application */
+  addNotification({forRole:'manager', forPerson:'manager', type:'application',
+    title:msPerson+' wants '+s.shift,
+    body:msPerson+' applied for '+s.shift+' on '+s.dateISO+' — '+s.team+(s.isDraft?' (Draft)':''),
+    rosterId:s.rosterId, applicationId:newApp.id, isDraft:!!s.isDraft});
   persistBase();
   toast('Applied — the manager will review it.');
   renderMarketplace();
@@ -4595,6 +4617,7 @@ function mkApprove(appId){
     if(!mkApproveCrossBase(a)) return;
     a.status='approved';
     persistShiftApps();
+    notifyApplicationDecision(a, 'approved'); /* Inbox: staff gets the news */
     persistBase();
     toast(a.applicant+' approved for '+a.shift+' at '+(a.workplaceName||'another base')+'.');
     renderBase();
@@ -4631,6 +4654,7 @@ function mkApprove(appId){
   a.status='approved';
   syncLeaveLogFills(R);
   persistShiftApps();
+  notifyApplicationDecision(a, 'approved'); /* Inbox: staff gets the news */
   persistBase(); persist();
   toast(a.applicant+' approved for '+a.shift+'.');
   renderBase();
@@ -4641,6 +4665,7 @@ function mkDecline(appId){
   if(!a) return;
   a.status='declined';
   persistShiftApps();
+  notifyApplicationDecision(a, 'declined'); /* Inbox: staff gets the news */
   persistBase();
   toast('Application declined.');
   renderBase();
@@ -4690,6 +4715,7 @@ function mkUnapprove(appId){
   syncLeaveLogFills(R);
   a.status='pending';
   persistShiftApps();
+  notifyApplicationDecision(a, 'unapproved'); /* Inbox: staff gets the news */
   if(after) after();
   persistBase();
   toast(a.applicant+' removed from '+a.shift+' — shift is open again.');
@@ -4754,6 +4780,143 @@ function rosterAppsHtml(ctx){
 function rosterAppApprove(appId){ mkApprove(appId); renderCalendar(); }
 function rosterAppDecline(appId){ mkDecline(appId); renderCalendar(); }
 function rosterAppUnapprove(appId){ mkUnapprove(appId); renderCalendar(); }
+/* ---------- Inbox / Notifications ----------
+   System notifications, NOT two-way chat — staff cannot reply through it.
+   S.notifications lives in localStorage ('sfshift_notifications') + cloud
+   sync via collectState, exactly like S.shiftApps. addNotification() is the
+   general container any future feature can call; only the four
+   application-decision types exist today. */
+function loadNotifications(){
+  try{ S.notifications=JSON.parse(localStorage.getItem('sfshift_notifications')||'[]'); }catch(e){ S.notifications=[]; }
+  S._notificationsLoaded=true;
+  if(!Array.isArray(S.notifications)) S.notifications=[];
+}
+function persistNotifications(){
+  try{ localStorage.setItem('sfshift_notifications', JSON.stringify(S.notifications||[])); }catch(e){}
+  S._notificationsLoaded=true;
+  queueCloudSave();
+  updateBell();
+}
+/* General helper: {forRole:'manager'|'staff', forPerson, type, title, body,
+   rosterId, applicationId, isDraft}. Manager notifications use
+   forPerson:'manager'. */
+function addNotification(n){
+  loadNotifications();
+  if(!S.notifications) S.notifications=[];
+  var item={id:'nt'+Date.now()+Math.floor(Math.random()*1000),
+    forRole:n.forRole||'manager', forPerson:n.forPerson||'manager', type:n.type||'application',
+    title:n.title||'', body:n.body||'', rosterId:n.rosterId||null,
+    applicationId:n.applicationId||null, isDraft:!!n.isDraft, read:false, createdAt:Date.now()};
+  S.notifications.push(item);
+  persistNotifications();
+  return item;
+}
+/* Staff-facing wording for an application decision (approve / decline /
+   unapprove) — one place so all three approve paths stay identical. */
+function notifyApplicationDecision(a, kind){
+  if(!a||!a.applicant) return;
+  var t='', b='';
+  if(kind==='approved'){ t='Approved: '+a.shift+' on '+a.dateISO; b="You've been approved to work "+a.shift+' on '+a.dateISO+' — '+(a.team||'')+'.'; }
+  else if(kind==='declined'){ t='Declined: '+a.shift+' on '+a.dateISO; b='Your request for '+a.shift+' on '+a.dateISO+' — '+(a.team||'')+' was declined.'; }
+  else if(kind==='unapproved'){ t='Approval removed: '+a.shift+' on '+a.dateISO; b='Your approval for '+a.shift+' on '+a.dateISO+' — '+(a.team||'')+' was removed. The shift is open again.'; }
+  else return;
+  addNotification({forRole:'staff', forPerson:a.applicant, type:kind, title:t, body:b,
+    rosterId:a.rosterId||null, applicationId:a.id, isDraft:!!a.isDraft});
+}
+/* Notifications for the CURRENT role — Manager role → manager ones; Staff
+   role → only the linked staff person's; Company role → manager ones. */
+function inboxForCurrent(){
+  loadNotifications();
+  var r=appRole();
+  var list=(S.notifications||[]).filter(function(n){
+    if(!n) return false;
+    if(r==='staff') return n.forRole==='staff' && n.forPerson===msPerson;
+    return n.forRole==='manager';
+  });
+  return list.slice().sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); });
+}
+function inboxUnreadCount(){
+  return inboxForCurrent().filter(function(n){ return !n.read; }).length;
+}
+/* Header bell badge: unread count for the current role. Hidden on the
+   login view (no inbox before sign-in). Defensive: no-op before the
+   header exists. */
+function updateBell(){
+  var btn=document.getElementById('bellBtn');
+  if(!btn) return;
+  var login=document.getElementById('v-login');
+  if(login && login.classList.contains('active')){ btn.style.display='none'; return; }
+  btn.style.display='';
+  var badge=document.getElementById('bellBadge');
+  if(!badge) return;
+  var n=inboxUnreadCount();
+  if(n>0){ badge.style.display='flex'; badge.textContent=n>99?'99+':String(n); }
+  else badge.style.display='none';
+}
+function openInbox(){
+  var av=document.querySelector('.view.active');
+  S._inboxReturn=av&&av.id?av.id:null;
+  renderInbox();
+  show('v-inbox');
+}
+function renderInbox(){
+  var wrap=document.getElementById('inboxList');
+  if(!wrap) return;
+  var list=inboxForCurrent();
+  if(!list.length){ wrap.innerHTML='<p class="fine">No notifications yet.</p>'; return; }
+  var h='';
+  list.forEach(function(n){
+    var when='';
+    try{ when=new Date(n.createdAt).toLocaleString('en-ZA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}); }catch(e){}
+    h+='<div class="card" style="cursor:pointer;'+(n.read?'':'border-left:3px solid var(--accent);')+'" onclick="inboxTap(\''+escapeHtml(n.id)+'\')">'
+      +'<div style="font-size:14px;'+(n.read?'':'font-weight:800;')+'">'+(n.read?'':'\u25cf ')+escapeHtml(n.title)+'</div>'
+      +'<div style="font-size:13px;color:var(--muted);margin-top:2px;">'+escapeHtml(n.body)+'</div>'
+      +'<div style="font-size:12px;color:var(--muted);margin-top:4px;">'+escapeHtml(when)+'</div>'
+      +'</div>';
+  });
+  wrap.innerHTML=h;
+}
+/* Tap a notification: mark it READ, then navigate. Manager application →
+   the roster view for that roster (draft or live), applications section.
+   Staff → My Shifts. Missing target → mark read, stay in Inbox, toast. */
+function inboxTap(id){
+  loadNotifications();
+  var n=(S.notifications||[]).find(function(x){ return x.id===id; });
+  if(!n) return;
+  n.read=true;
+  persistNotifications();
+  renderInbox();
+  if(n.forRole==='manager' && n.type==='application'){
+    if(n.isDraft){
+      loadDrafts();
+      var d=(S.drafts||[]).find(function(x){ return x.id===n.rosterId; });
+      if(!d){ toast('That roster is no longer available.'); return; }
+      openDraft(n.rosterId);
+    }else{
+      loadSaved();
+      var u=(S.rosters||[]).find(function(x){ return x.id===n.rosterId; });
+      if(!u){ toast('That roster is no longer available.'); return; }
+      openRoster(n.rosterId);
+    }
+    /* land on the applications section below the calendar */
+    setTimeout(function(){ var w=document.getElementById('calAppsWrap'); if(w) w.scrollIntoView(); }, 150);
+    return;
+  }
+  if(n.forRole==='staff'){
+    var who=n.forPerson||msPerson;
+    if(!who){ toast('Pick a staff member in Settings first'); return; }
+    openMyShifts(who);
+    return;
+  }
+  /* manager notifications of future types: stay in the Inbox */
+}
+function inboxMarkAllRead(){
+  loadNotifications();
+  inboxForCurrent().forEach(function(n){ n.read=true; });
+  persistNotifications();
+  renderInbox();
+  toast('All notifications marked read.');
+}
 /* ---------- Staff profile tab ---------- */
 function renderStaffProfile(){
   var wrap=document.getElementById('profContent');
@@ -6637,7 +6800,7 @@ function hasContent(st){
 function collectState(){
   var customs={};
   try{ Object.keys(S.ROTATIONS).forEach(function(k){ if(S.ROTATIONS[k] && S.ROTATIONS[k].custom) customs[k]=S.ROTATIONS[k]; }); }catch(e){}
-  var st={ v:1, mtime:Date.now(), base:S.base||null, rosters:S.rosters||[], drafts:S.drafts||[], customs:customs, profileName:profileName(), company:S.company||null, apps:S.shiftApps||[] };
+  var st={ v:1, mtime:Date.now(), base:S.base||null, rosters:S.rosters||[], drafts:S.drafts||[], customs:customs, profileName:profileName(), company:S.company||null, apps:S.shiftApps||[], notifications:S.notifications||[] };
   try{
     st.heroLogo=localStorage.getItem('sfshift_hero_logo');
   }catch(e){}
@@ -6650,6 +6813,7 @@ function applyState(st){
     if(st.rosters) localStorage.setItem('sfshift_units', JSON.stringify(st.rosters));
     if(st.drafts) localStorage.setItem('sfshift_drafts', JSON.stringify(st.drafts));
     if(st.apps) localStorage.setItem('sfshift_apps', JSON.stringify(st.apps));
+    if(st.notifications) localStorage.setItem('sfshift_notifications', JSON.stringify(st.notifications));
     if(st.customs) localStorage.setItem('sfshift_custom_rot', JSON.stringify(st.customs));
     if(st.company) localStorage.setItem('sfshift_company', JSON.stringify(st.company));
     if(st.heroLogo) localStorage.setItem('sfshift_hero_logo', st.heroLogo);
@@ -6712,7 +6876,7 @@ function enterApp(){
 var TAB_VIEWS={home:'v-home', rosters:'v-rosters', onduty:'v-base', staff:'v-staff', settings:'v-settings',
   myshifts:'v-myshifts', openshifts:'v-marketplace', profile:'v-profile', company:'v-company',
   codash:'v-company', costats:'v-company', cobases:'v-company', copeople:'v-company', coopen:'v-company'};
-var BACK_IDS=['v-newroster','v-anchor','v-cal','v-base','v-rotbuilder','v-ladder','v-shiftreq','v-rules','v-legal'];
+var BACK_IDS=['v-newroster','v-anchor','v-cal','v-base','v-rotbuilder','v-ladder','v-shiftreq','v-rules','v-legal','v-inbox'];
 /* One small subtle back arrow (#backRow, just under the header) for every
    sub-view — plus Company drill-downs, which share the v-company view. */
 function syncBackRow(id){
@@ -6732,6 +6896,7 @@ function show(id){
     b.classList.toggle('sel', !!(t && TAB_VIEWS[t]===id));
   });
   window.scrollTo(0,0);
+  updateBell(); /* bell badge reflects the current role on every navigation */
 }
 /* ---------- Role switcher ---------- */
 function appRole(){ return S.role||'manager'; }
@@ -6855,6 +7020,14 @@ function goBack(){
   if(active==='v-shiftreq'){ switchTab('staff'); return; }
   if(active==='v-rules'){ switchTab('staff'); return; }
   if(active==='v-legal'){ switchTab('settings'); return; }
+  if(active==='v-inbox'){
+    /* back to wherever the Inbox was opened from (or the role's home tab) */
+    if(S._inboxReturn && document.getElementById(S._inboxReturn)){ show(S._inboxReturn); return; }
+    if(appRole()==='staff') switchTab('myshifts');
+    else if(appRole()==='company') switchTab('company');
+    else switchTab('home');
+    return;
+  }
   if(active==='v-anchor'){ show('v-newroster'); return; }
   if(active==='v-cal'){
     var cal=ensureCal();
@@ -8739,7 +8912,7 @@ function saveSettingsProfile(){
 
 /* ---------- data: export / import / clear ---------- */
 function exportData(){
-  var blob=new Blob([JSON.stringify({base:S.base, rosters:S.rosters, drafts:S.drafts||[], apps:S.shiftApps||[]})],{type:'application/json'});
+  var blob=new Blob([JSON.stringify({base:S.base, rosters:S.rosters, drafts:S.drafts||[], apps:S.shiftApps||[], notifications:S.notifications||[]})],{type:'application/json'});
   var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download='signalfox-shift-backup.json'; document.body.appendChild(a); a.click();
   setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },500);
@@ -8755,6 +8928,7 @@ function importData(file){
       if(d.rosters){ S.rosters=d.rosters; persist(); }
       if(d.drafts){ S.drafts=d.drafts; persistDrafts(); }
       if(d.apps){ S.shiftApps=d.apps; persistShiftApps(); loadShiftApps(); }
+      if(d.notifications){ S.notifications=d.notifications; persistNotifications(); loadNotifications(); }
       migrateShifts(); persistBase();
       renderHome(); renderAllRosters(); renderStaffTab(); renderSettings();
       queueCloudSave();
@@ -8765,7 +8939,7 @@ function importData(file){
 }
 function clearData(){
   if(!confirm('Delete ALL bases, rosters and staff \u2014 on this device and in your cloud account?')) return;
-  ['sfshift_base','sfshift_units','sfshift_rosters','sfshift_hero_logo','sfshift_profile_name','sfshift_mtime','sfshift_custom_rot','sfshift_company','sfshift_drafts','sfshift_apps'].forEach(function(k){
+  ['sfshift_base','sfshift_units','sfshift_rosters','sfshift_hero_logo','sfshift_profile_name','sfshift_mtime','sfshift_custom_rot','sfshift_company','sfshift_drafts','sfshift_apps','sfshift_notifications'].forEach(function(k){
     try{ localStorage.removeItem(k); }catch(e){}
   });
   try{
@@ -8777,9 +8951,10 @@ function clearData(){
   Object.keys(ROTATIONS).forEach(function(k){ if(ROTATIONS[k]&&ROTATIONS[k].custom) delete ROTATIONS[k]; });
   if(sb && sbUser){ try{ sb.from('app_state').delete().eq('user_id', sbUser.id).then(function(){}).catch(function(){}); }catch(e){} }
   S.company=null; S._rostersLoaded=false;
-  S.drafts=[]; S.shiftApps=[]; S.draftId=null; S.draft=null; S.fromSaved=false; S.unitId=null;
+  S.drafts=[]; S.shiftApps=[]; S.notifications=[]; S.draftId=null; S.draft=null; S.fromSaved=false; S.unitId=null;
   loadBase(); loadSaved();
   renderHome(); renderAllRosters(); renderStaffTab(); renderSettings();
+  updateBell(); /* inbox badge clears with the data */
   toast('All data cleared');
 }
 
