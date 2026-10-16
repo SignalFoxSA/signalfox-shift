@@ -1086,7 +1086,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1955';
+var BUILD='20261015-1960';
 /* LEAVE_TYPES — the ONE shared list of leave types (single source of truth).
    Used by EVERY leave-reason picker: the day-sheet removal prompt, the draft
    Long-term leave section, and both On Duty leave flows (baseLeave +
@@ -2388,7 +2388,7 @@ function renderCalMonth(ctx){
   for(var t=lead+dim;t<weeks*7;t++) html+='<div class="cell out"></div>';
   grid.innerHTML=html;
   /* Shift applications for THIS roster (whole month) — below the calendar,
-     above the Leave list; absent entirely when there are none */
+     above the Needs filling list; absent entirely when there are none */
   var appsWrap=document.getElementById('calAppsWrap');
   if(!appsWrap){
     appsWrap=document.createElement('div'); appsWrap.id='calAppsWrap';
@@ -2397,13 +2397,15 @@ function renderCalMonth(ctx){
     else grid.parentNode.appendChild(appsWrap);
   }
   appsWrap.innerHTML=rosterAppsHtml(ctx);
-  /* Leave list at the bottom of the roster */
+  /* Needs filling list at the bottom of the roster (replaces the old
+     Leave list): OPEN slots only, card-styled, tappable → day sheet.
+     Fixed entries leave the list; the record lives in exports. */
   var lvWrap=document.getElementById('calLeaveWrap');
   if(!lvWrap){
     lvWrap=document.createElement('div'); lvWrap.id='calLeaveWrap';
     grid.parentNode.appendChild(lvWrap);
   }
-  lvWrap.innerHTML=rosterLeaveHtml(collectLeaveEntries(R,y,m,null));
+  lvWrap.innerHTML=rosterNeedsFillingHtml(R,y,m);
   /* Rule warnings at the bottom of the roster (never block) */
   var rwWrap=document.getElementById('calRuleWrap');
   if(!rwWrap){
@@ -2818,6 +2820,9 @@ function renderDaySheet(){
       });
       html+='</div>';
     });
+    /* THAT DATE's applications for THIS roster (same actions as the
+       roster-view list). Nothing when there are none for this date. */
+    html+=daySheetAppsHtml();
     document.getElementById('daySheetBody').innerHTML=html;
     document.getElementById('daySheetFoot').innerHTML=
       '<div class="btnrow"><button class="btn ghost" onclick="closeDaySheet()">Close</button>'+
@@ -4874,6 +4879,79 @@ function mkReopen(appId){
   toast('Application reopened — pending again.');
 }
 function rosterAppReopen(appId){ mkReopen(appId); renderCalendar(); }
+/* Day-sheet applications: THAT DATE's applications for THIS roster
+   (same rosterId + isDraft scoping as the roster-view list), grouped by
+   status with the same actions. Empty string when there are none for
+   this date — no section. Read-only day sheet only; the Edit view
+   (renderDayEdit) has no applications section. */
+function daySheetAppsHtml(){
+  if(!dayCtx||!dayCtx.R) return '';
+  loadShiftApps();
+  var rosterId=null, isDraft=false;
+  if(S.fromSaved){ rosterId=S.unitId; isDraft=false; }
+  else{
+    var de=draftEntryForCurrent();
+    rosterId=de?de.id:(S.draftId||null);
+    isDraft=true;
+  }
+  if(!rosterId) return '';
+  var apps=(S.shiftApps||[]).filter(function(a){
+    return a && a.rosterId===rosterId && !!a.isDraft===isDraft && a.dateISO===dayCtx.dateISO;
+  });
+  if(!apps.length) return '';
+  apps.sort(function(a,b){
+    if(a.shift<b.shift) return -1;
+    if(a.shift>b.shift) return 1;
+    return 0;
+  });
+  function row(a, group){
+    var labels=(a.isDraft?' · DRAFT':'')+(a.workplaceId&&S.company&&a.workplaceId!==S.company.activeId?' · at '+escapeHtml(a.workplaceName||'another base'):'');
+    var btns='';
+    if(group==='pending'){
+      btns='<div class="btnrow" style="margin-top:4px;">'
+        +'<button class="btn" style="padding:6px 12px;font-size:13px;" onclick="dayAppApprove(\''+escapeHtml(a.id)+'\')">Approve</button>'
+        +'<button class="btn ghost" style="padding:6px 12px;font-size:13px;" onclick="dayAppDecline(\''+escapeHtml(a.id)+'\')">Decline</button>'
+        +'</div>';
+    }else if(group==='approved'){
+      btns='<div class="btnrow" style="margin-top:4px;">'
+        +'<button class="btn ghost" style="padding:6px 12px;font-size:13px;" onclick="dayAppUnapprove(\''+escapeHtml(a.id)+'\')">Unapprove</button>'
+        +'</div>';
+    }else if(group==='declined'){
+      /* manager only: reopen a manager-DECLINED application (never a
+         staff-WITHDRAWN one — you can only reverse your own action) */
+      btns='<div class="btnrow" style="margin-top:4px;">'
+        +'<button class="btn ghost" style="padding:6px 12px;font-size:13px;" onclick="dayAppReopen(\''+escapeHtml(a.id)+'\')">Reopen</button>'
+        +'</div>';
+    }
+    var style=(group==='declined'||group==='withdrawn')?'opacity:0.55;':'';
+    return '<div style="font-size:13px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--line);'+style+'">'
+      +'<b>'+escapeHtml(a.applicant)+'</b> wants <b>'+escapeHtml(a.shift)+'</b>'
+      +'<div style="color:var(--muted);font-size:12px;">'+escapeHtml(a.dateISO)+' · Crew '+escapeHtml(a.crew)+labels+'</div>'
+      +btns+'</div>';
+  }
+  var h='<div class="card" id="daySheetApps" style="border-left:3px solid #4DABF7;margin-bottom:10px;padding:10px 12px;">'
+    +'<div style="font-size:13px;font-weight:700;margin-bottom:6px;">Shift applications ('+apps.length+')</div>';
+  [['pending','Pending'],['approved','Approved'],['declined','Declined'],['withdrawn','Withdrawn']].forEach(function(g){
+    var list=apps.filter(function(a){ return a.status===g[0]; });
+    if(!list.length) return;
+    h+='<div style="font-size:12px;font-weight:700;color:var(--muted);margin:8px 0 4px;">'+g[1]+' ('+list.length+')</div>';
+    list.forEach(function(a){ h+=row(a, g[0]); });
+  });
+  return h+'</div>';
+}
+/* Day-sheet application actions: same behaviour as the roster-view list,
+   then refresh the calendar (which re-syncs S.draft from the saved
+   roster/draft) and re-render the day sheet against the fresh copy —
+   mkApprove/mkUnapprove update the stored roster, not dayCtx.R. */
+function daySheetRefreshAfterApp(){
+  if(!dayCtx) return;
+  try{ renderCalendar(); }catch(e){}
+  if(dayCtx){ dayCtx.R=S.draft; try{ renderDaySheet(); }catch(e){} }
+}
+function dayAppApprove(appId){ mkApprove(appId); daySheetRefreshAfterApp(); }
+function dayAppDecline(appId){ mkDecline(appId); daySheetRefreshAfterApp(); }
+function dayAppUnapprove(appId){ mkUnapprove(appId); daySheetRefreshAfterApp(); }
+function dayAppReopen(appId){ mkReopen(appId); daySheetRefreshAfterApp(); }
 /* ---------- Inbox / Notifications ----------
    System notifications, NOT two-way chat — staff cannot reply through it.
    S.notifications lives in localStorage ('sfshift_notifications') + cloud
@@ -8464,7 +8542,75 @@ function syncLeaveLogFills(R){
     });
   });
 }
-/* Leave list HTML for the bottom of a roster view (same content as the export Leave section). */
+/* "Needs filling" list for the roster view (draft + live): ALL OPEN slots
+   in THIS roster (team + month), computed by scanning effective members —
+   NOT just leaveLog entries. One row per OPEN slot: date, shift, crew,
+   plus (when a still-OPEN leaveLog entry matches date+shift) the leave
+   person + type, and OPEN in red. Rows are tappable → day sheet for that
+   date, so the manager can fill the slot from there. A filled slot
+   disappears from this list on next render — no "replaced by" rows here;
+   the record lives in the calendar + exports. Empty string when nothing
+   is open, so the section hides entirely. Exports are untouched: they
+   still use collectLeaveEntries (full Leave section, incl. replaced). */
+function rosterNeedsFillingHtml(R,y,m){
+  if(!R) return '';
+  var dim=daysInMonth(y,m);
+  /* still-OPEN leave entries, pooled per date|shift — one per OPEN slot */
+  var leavePool={};
+  (R.leaveLog||[]).forEach(function(lg){
+    if(!lg||lg.type==='Swap'||lg.type==='Cover'||lg.person===OPEN_MARK) return;
+    var parts=String(lg.date||'').split('-');
+    if(parts.length!==3) return;
+    if(+parts[0]!==y||+parts[1]-1!==m) return;
+    if(!(lg.cover==='OPEN'||!lg.cover)) return;
+    var k=lg.date+'|'+lg.shift;
+    (leavePool[k]=leavePool[k]||[]).push(lg);
+  });
+  var rows=[];
+  for(var d=1;d<=dim;d++){
+    var info=calRosterDay(R,y,m,d);
+    if(!info) continue;
+    var dateISO=isoDate(info.date);
+    calSlotCrews(R,info.dayIdx).forEach(function(ps){
+      if(!ps.list.length) return;
+      /* memberOverrides are per date+shift (not per crew): one override
+         list covers the whole shift; otherwise each crew's own members. */
+      var mo=R.memberOverrides&&R.memberOverrides[dateISO]&&R.memberOverrides[dateISO][ps.sl.id];
+      var groups=[];
+      if(mo) groups.push({mems:mo.slice(), crewLabel:ps.list.map(function(x){ return x.c.name; }).join(' / ')});
+      else ps.list.forEach(function(x){ groups.push({mems:(x.c.members||[]).slice(), crewLabel:x.c.name}); });
+      groups.forEach(function(g){
+        var openCount=g.mems.filter(function(nm){ return nm===OPEN_MARK; }).length;
+        var slotNo=0;
+        g.mems.forEach(function(nm){
+          if(nm!==OPEN_MARK) return;
+          slotNo++;
+          var lg=null;
+          var pool=leavePool[dateISO+'|'+ps.sl.id];
+          if(pool&&pool.length) lg=pool.shift();
+          rows.push({dateISO:dateISO, dateLabel:fmtDayTitle(dateISO),
+            shift:ps.sl.name, crew:g.crewLabel,
+            leave:lg?dispMemberQual(lg.person)+' — '+(lg.type||'Leave'):null,
+            slotLabel:openCount>1?' · slot '+slotNo+' of '+openCount:''});
+        });
+      });
+    });
+  }
+  if(!rows.length) return '';
+  var h='<div class="card" id="needsFillingCard" style="border-left:3px solid #CC0000;margin-bottom:10px;padding:10px 12px;">'
+    +'<div style="font-size:13px;font-weight:700;margin-bottom:6px;">Needs filling ('+rows.length+')</div>';
+  rows.forEach(function(r){
+    h+='<div class="needfill-row" data-date="'+escapeHtml(r.dateISO)+'" onclick="openDaySheet(\''+escapeHtml(r.dateISO)+'\')" style="cursor:pointer;font-size:13px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--line);">'
+      +'<div><b>'+escapeHtml(r.dateLabel)+'</b> · '+escapeHtml(r.shift)+' · Crew '+escapeHtml(r.crew)+'</div>'
+      +'<div style="margin-top:2px;">'+(r.leave?escapeHtml(r.leave)+' · ':'')
+      +'<span style="color:#CC0000;font-weight:800;">OPEN'+escapeHtml(r.slotLabel)+'</span></div>'
+      +'</div>';
+  });
+  return h+'</div>';
+}
+/* Leave list HTML — now used by the My Shifts month view only (same
+   content as the export Leave section). The roster view uses the
+   "Needs filling" list above instead. */
 function rosterLeaveHtml(entries){
   if(!entries||!entries.length) return '';
   var h='<div style="margin-top:16px;"><div style="font-size:15px;font-weight:800;margin-bottom:6px;">Leave</div>';
