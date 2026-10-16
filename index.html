@@ -725,12 +725,28 @@
       <div id="staffList"></div>
       <button class="addperson" onclick="staffAdd()">+ Add staff member</button>
     </div>
-    <div class="card">
-      <h3>Rotations</h3>
-      <p class="sub">The Rotation Library &mdash; every rotation you can choose from. Pick one in Teams &rarr; Rotation, or load a rotating one into the builder to adapt it.</p>
-      <div id="bsLibrary"></div>
-      <button class="addperson" id="libAddBtn" onclick="libShowAdd(true)">+ Add your own</button>
-      <div id="libAddForm" style="display:none; margin-top:10px; border:1px solid var(--line); border-radius:10px; padding:12px;">
+    <div class="card" id="bysCard">
+      <h3>Build your own shift</h3>
+      <p class="sub">One place to set up how your shifts work: how many people are on each shift, which rotation you run, and &mdash; if none of the ready-made ones fit &mdash; build your own rotation.</p>
+      <p style="font-weight:800;margin:14px 0 4px;">Step 1 &mdash; People per shift</p>
+      <p class="fine" style="margin:-2px 0 8px">How many people work on each shift. Every crew gets this many people &mdash; fill the empty slots in Staff. Nobody already in a crew is ever removed.</p>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn ghost" type="button" style="width:48px;flex:none;margin:0;font-size:20px;padding:8px 0;" onclick="bysChangePeople(-1)" aria-label="Fewer people per shift">&minus;</button>
+        <input type="number" id="bysPeople" min="1" max="20" step="1" style="text-align:center;font-weight:800;font-size:18px;" onchange="bysApplyPeople(this.value)">
+        <button class="btn ghost" type="button" style="width:48px;flex:none;margin:0;font-size:20px;padding:8px 0;" onclick="bysChangePeople(1)" aria-label="More people per shift">+</button>
+      </div>
+      <p class="fine" id="bysPeopleNote" style="margin:6px 0 0;"></p>
+      <p style="font-weight:800;margin:16px 0 4px;">Step 2 &mdash; Rotation</p>
+      <p class="fine" style="margin:-2px 0 8px">Pick one rotation at a time from the Library (ready-made plus your own).</p>
+      <label class="f">Team</label>
+      <select id="bysTeam" onchange="bysSelectTeam(this.value)"></select>
+      <label class="f">Rotation</label>
+      <select id="bysRotation" onchange="bysApplyRotation(this.value)"></select>
+      <p class="fine" id="bysRotSummary" style="margin:6px 0 0;"></p>
+      <button class="btn ghost" id="bysDelCustom" type="button" style="display:none;margin-top:8px;color:var(--red);border-color:var(--red);" onclick="bysDeleteCustom()">Delete this custom pattern</button>
+      <p style="font-weight:800;margin:16px 0 4px;">Step 3 &mdash; Build your own rotation</p>
+      <p class="fine" style="margin:-2px 0 8px">None of the ready-made rotations fit? Name your pattern, type one crew&rsquo;s cycle, pick the shift length &mdash; it saves into the Library and becomes pickable in Step 2.</p>
+      <div id="libAddForm" style="margin-top:10px; border:1px solid var(--line); border-radius:10px; padding:12px;">
         <label class="f">Pattern name</label>
         <input type="text" id="libName" maxlength="30" placeholder="e.g. My 3-on-3-off">
         <label class="f">Cycle &mdash; one crew&rsquo;s pattern</label>
@@ -740,9 +756,8 @@
         <select id="libHours"><option value="12">12-hour shifts</option><option value="24">24-hour shifts</option><option value="8">8-hour shifts</option></select>
         <p class="fine" id="libAddErr" style="display:none; color:var(--red); font-weight:700;"></p>
         <button class="btn" onclick="libSaveCustom()">Save pattern</button>
-        <button class="btn ghost" onclick="libShowAdd(false)">Cancel</button>
       </div>
-      <button class="addperson" onclick="openRotBuilder()">+ Design your own rotation</button>
+      <button class="addperson" onclick="openRotBuilder()">+ Design your own rotation (grid)</button>
     </div>
   </div>
 
@@ -1149,7 +1164,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1987';
+var BUILD='20261015-1988';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -1640,9 +1655,11 @@ function libDeriveCrews(tokens){
   return {crews:4, offsets:offs4};
 }
 function libShowAdd(show){
+  /* the Add-your-own form lives in Build your own shift → Step 3 now, always visible */
   var f=document.getElementById('libAddForm'); if(!f) return;
-  f.style.display=show?'block':'none';
-  var err=document.getElementById('libAddErr'); if(err){ err.style.display='none'; err.textContent=''; }
+  f.style.display='block';
+  var err=document.getElementById('libAddErr');
+  if(!show && err){ err.style.display='none'; err.textContent=''; }
   if(show){ var nm=document.getElementById('libName'); if(nm) nm.focus(); }
 }
 function libSaveCustom(){
@@ -1679,7 +1696,7 @@ function libSaveCustom(){
   toast('Pattern saved');
 }
 
-/* ---------- Rotation Library: browsable catalogue of built-in patterns ---------- */
+/* ---------- Rotation Library: one crew's sequence, compressed into runs ---------- */
 /* one crew's sequence, compressed into runs: "2× Day · 2× Night · 4× Off" */
 function libSeqText(r){
   var pat=r.offsets ? r.pattern : (r.patterns ? r.patterns[0] : []);
@@ -1698,40 +1715,115 @@ function libSeqText(r){
   if(r.fortnightFlip) seq+=' \u00b7 flips day/night each fortnight';
   return seq;
 }
-function renderLibraryList(){
-  var wrap=document.getElementById('bsLibrary'); if(!wrap) return; wrap.innerHTML='';
-  Object.keys(ROTATIONS).forEach(function(k){
-    var r=ROTATIONS[k]; if(!r) return;
-    var row=document.createElement('div'); row.className='custrow'; row.setAttribute('data-lib-key', k);
-    var nm=document.createElement('div'); nm.className='cn'; nm.textContent=r.name;
-    if(r.custom){
-      var tag=document.createElement('span'); tag.className='customtag'; tag.textContent='Custom'; tag.setAttribute('data-custom-tag', k);
-      nm.appendChild(tag);
-    }
-    var meta=document.createElement('span'); meta.className='cm';
-    meta.textContent=r.cycle+'-day cycle \u00b7 '+r.crews+' crews \u00b7 '+(r.hours||12)+'h shifts \u00b7 '+libSeqText(r);
-    nm.appendChild(meta);
-    row.appendChild(nm);
-    if(r.offsets){
-      var btn=document.createElement('button'); btn.className='btn ghost';
-      btn.style.cssText='width:auto;flex:none;margin:0;padding:8px 14px;font-size:13px;';
-      btn.textContent='Load into builder';
-      btn.onclick=(function(key){ return function(){ openRotBuilder(); rbLoadLibrary(key); }; })(k);
-      row.appendChild(btn);
-    } else {
-      var f=document.createElement('span'); f.className='fine';
-      f.style.cssText='flex:none;font-size:12px;max-width:150px;text-align:right;';
-      f.textContent='Fixed crews \u2014 pick it in Teams \u2192 Rotation';
-      row.appendChild(f);
-    }
-    if(r.custom){
-      var del=document.createElement('button'); del.className='rm'; del.textContent='\u2715'; del.title='Delete rotation'; del.setAttribute('data-lib-del', k);
-      del.onclick=(function(key){ return function(){ rbDelete(key); }; })(k);
-      row.appendChild(del);
-    }
-    wrap.appendChild(row);
-  });
+/* ---------- Build your own shift: one flow in Shift setup ---------- */
+/* The long Library list is gone — the Library now lives in the pickers
+   (Build your own shift → Step 2, Teams → Rotation, Rotation Builder),
+   one pattern at a time. The Library itself (built-ins + customs) is
+   unchanged, and so is the roster engine. */
+var BYS={ teamId:null };
+/* Step 1 — People per shift. One setting for the whole workplace: every
+   crew gets this many people. Shrinking never removes a real person — empty
+   slots are dropped first, real members stay. Empty slots are vacancies to
+   fill in Staff. */
+function bysPeoplePerShift(){
+  if(S.base && typeof S.base.peoplePerShift==='number') return S.base.peoplePerShift;
+  var max=0; ((S.base&&S.base.crews)||[]).forEach(function(c){ max=Math.max(max,(c.memberIds||[]).length); });
+  return max||2;
 }
+function bysApplyPeople(n){
+  n=parseInt(n,10); if(isNaN(n)) n=bysPeoplePerShift();
+  n=Math.max(1,Math.min(20,n));
+  S.base.peoplePerShift=n;
+  (S.base.crews||[]).forEach(function(c){
+    c.memberIds=c.memberIds||[];
+    while(c.memberIds.length>n){
+      var ei=c.memberIds.lastIndexOf('');
+      if(ei>=0) c.memberIds.splice(ei,1); else break;
+    }
+    while(c.memberIds.length<n) c.memberIds.push('');
+  });
+  persistBase(); renderBysFlow(); renderBsVehicles(); renderStaffTab();
+}
+function bysChangePeople(d){ bysApplyPeople(bysPeoplePerShift()+d); }
+/* Step 2 — Rotation picker: one pattern at a time, for one team. */
+function bysTeam(){
+  var teams=S.base.vehicles||[];
+  if(!teams.length) return null;
+  for(var i=0;i<teams.length;i++) if(teams[i].id===BYS.teamId) return teams[i];
+  return teams[0];
+}
+function bysSelectTeam(id){ BYS.teamId=id||null; renderBysFlow(); }
+function bysApplyRotation(key){
+  var t=bysTeam(); if(!t||!ROTATIONS[key]) return;
+  t.rotation=key;
+  t.shiftIds=rotSlots(key).map(function(s){ return s.id; });
+  ensureCrews(t); persistBase(); renderBysFlow(); renderBsVehicles(); renderBsCrews();
+}
+function bysDeleteCustom(){
+  var t=bysTeam(); if(!t) return;
+  var key=t.rotation;
+  if(!ROTATIONS[key]||!ROTATIONS[key].custom) return;
+  rbDelete(key); renderBysFlow();
+}
+function renderBysFlow(){
+  var peopleEl=document.getElementById('bysPeople');
+  if(!peopleEl || !S.base) return; /* flow card not in this view */
+  var n=bysPeoplePerShift();
+  if(document.activeElement!==peopleEl) peopleEl.value=n;
+  /* Step 1 note: crew sizes + whether anyone sits above the setting */
+  var note=document.getElementById('bysPeopleNote');
+  if(note){
+    var over=0, crews=S.base.crews||[];
+    crews.forEach(function(c){
+      var real=(c.memberIds||[]).filter(function(id){ return !!id; }).length;
+      if(real>n) over++;
+    });
+    var txt='Each crew has room for '+n+' people per shift.';
+    if(crews.length) txt+=' Vacant slots are empty crew places — add people in Staff.';
+    if(over) txt+=' '+over+' crew'+(over>1?'s have':' has')+' more than '+n+' real members — nobody was removed.';
+    note.textContent=txt;
+  }
+  var t=bysTeam();
+  var teamSel=document.getElementById('bysTeam');
+  if(teamSel){
+    teamSel.innerHTML='';
+    (S.base.vehicles||[]).forEach(function(v){
+      var o=document.createElement('option'); o.value=v.id; o.textContent=v.name||'Team'; teamSel.appendChild(o);
+    });
+    if(t) teamSel.value=t.id;
+  }
+  var rotSel=document.getElementById('bysRotation');
+  var sum=document.getElementById('bysRotSummary');
+  var delBtn=document.getElementById('bysDelCustom');
+  if(!t){
+    if(rotSel) rotSel.innerHTML='';
+    if(sum) sum.textContent='Add a team first — then pick its rotation here.';
+    if(delBtn) delBtn.style.display='none';
+    return;
+  }
+  if(rotSel){
+    rotSel.innerHTML='';
+    Object.keys(ROTATIONS).forEach(function(k){
+      var r=ROTATIONS[k];
+      if((r.cov||[24]).indexOf(t.coverage)<0) return; /* same filter as Teams → Rotation */
+      var o=document.createElement('option'); o.value=k;
+      o.textContent=r.name+' \u00b7 '+(r.hours||12)+'h'+(r.custom?' \u00b7 Custom':'');
+      rotSel.appendChild(o);
+    });
+    rotSel.value=t.rotation;
+    if(rotSel.selectedIndex<0 && rotSel.options.length) rotSel.selectedIndex=0;
+  }
+  var r=ROTATIONS[t.rotation];
+  if(sum){
+    sum.textContent=r
+      ? (r.name+' — '+r.cycle+'-day cycle \u00b7 '+r.crews+' crews \u00b7 '+(r.hours||12)+'h shifts \u00b7 '+libSeqText(r)+(r.custom?' \u00b7 Custom pattern':''))
+      : '';
+  }
+  if(delBtn) delBtn.style.display=(r && r.custom)?'block':'none';
+}
+/* The long Library list is gone (see above). Existing callers still call
+   this — it now just refreshes the Build-your-own-shift flow picker. */
+function renderLibraryList(){ renderBysFlow(); }
 /* fill the Rotation Builder from a Library rotating pattern (D/N/X tokens
    map to the workplace's own shifts; custom patterns already hold workplace
    shift ids, which pass through; fixed-crew patterns are not loadable —
@@ -1834,7 +1926,7 @@ function wirePills(id, cb){
 function pillVal(id){ return document.querySelector('#'+id+' .pill.sel').getAttribute('data-v'); }
 
 /* ---------- base: build once, every roster follows the standard ---------- */
-function defaultBase(){ return {name:'My Workplace', vehicles:[], staff:[], crews:[], quals:[]}; }
+function defaultBase(){ return {name:'My Workplace', vehicles:[], staff:[], crews:[], quals:[], peoplePerShift:2}; }
 function loadBase(){
   try{ S.base=JSON.parse(localStorage.getItem('sfshift_base')||'null'); }catch(e){ S.base=null; }
   if(!S.base || !S.base.vehicles){ S.base=defaultBase(); migrateUnitsToBase(); persistBase(); }
@@ -1901,6 +1993,8 @@ function ensureCrews(v){
   while(vc.length<need){
     var c={id:'c'+Date.now()+''+vc.length+''+Math.floor(Math.random()*999), vehicleId:v.id,
       name:nextCrewName(), color:CREW_COLORS[vc.length%CREW_COLORS.length], memberIds:[]};
+    /* a new crew starts with the workplace's People-per-shift size (empty slots) */
+    for(var pi=0; pi<bysPeoplePerShift(); pi++) c.memberIds.push('');
     S.base.crews.push(c); vc.push(c);
   }
   if(vc.length>need){
