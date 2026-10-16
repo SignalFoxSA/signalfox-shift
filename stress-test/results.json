@@ -272,6 +272,10 @@
     {
       "label": "Company Stats compute",
       "value": "ok ms=11584 total=7750"
+    },
+    {
+      "label": "Rules engine",
+      "value": "ok ms=5 violDays=undefined"
     }
   ],
   "progress": {
@@ -291,5 +295,5 @@
     "rosters": 600,
     "staff": 500
   },
-  "updatedAt": "2026-10-16T21:21:13.481+02:00"
+  "updatedAt": "2026-10-16T21:21:15.232+02:00"
 }
