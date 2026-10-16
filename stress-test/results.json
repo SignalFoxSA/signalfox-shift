@@ -351,6 +351,10 @@
     {
       "time": "21:22",
       "message": "Added notifications — 3000 of 4000"
+    },
+    {
+      "time": "21:22",
+      "message": "Added notifications — 4000 of 4000"
     }
   ],
   "metrics": [
@@ -388,5 +392,5 @@
     "rosters": 1200,
     "staff": 1000
   },
-  "updatedAt": "2026-10-16T21:22:15.942+02:00"
+  "updatedAt": "2026-10-16T21:22:17.847+02:00"
 }
