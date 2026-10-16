@@ -2876,6 +2876,13 @@
       "staff": 200,
       "rosters": 120,
       "changes": 1700
+    },
+    {
+      "time": "21:46",
+      "companies": 0,
+      "staff": 0,
+      "rosters": 0,
+      "changes": 0
     }
   ],
   "log": [
@@ -4874,48 +4881,28 @@
     {
       "time": "21:43",
       "message": "Build complete — staff 200, rosters 120, changes 1700"
+    },
+    {
+      "time": "21:46",
+      "message": "Building up — seeding…"
     }
   ],
   "metrics": [
     {
       "label": "Companies",
-      "value": "5"
+      "value": "0"
     },
     {
       "label": "Staff rostered",
-      "value": "200"
+      "value": "0"
     },
     {
       "label": "Active rosters",
-      "value": "120"
+      "value": "0"
     },
     {
       "label": "Changes",
-      "value": "1700"
-    },
-    {
-      "label": "Export Excel (mega 200 staff)",
-      "value": "no-expData"
-    },
-    {
-      "label": "Export PNG (mega 200 staff)",
-      "value": "no-expData"
-    },
-    {
-      "label": "Export PDF (mega 200 staff)",
-      "value": "no-expData"
-    },
-    {
-      "label": "Storage persist+reload",
-      "value": "persist ok 0ms, reload 2031ms, staffAfter=40 rostersAfter=0 draftsAfter=0"
-    },
-    {
-      "label": "Rapid actions",
-      "value": "EXCEPTION: S is not defined"
-    },
-    {
-      "label": "Multi-tab",
-      "value": "draftsBefore=50 pageBseesMarker=true"
+      "value": "0"
     }
   ],
   "progress": {
@@ -4930,12 +4917,12 @@
     "perfect": null
   },
   "totals": {
-    "changes": 1700,
-    "companies": 5,
-    "rosters": 120,
-    "staff": 200
+    "changes": 0,
+    "companies": 0,
+    "rosters": 0,
+    "staff": 0
   },
-  "updatedAt": "2026-10-16T21:43:05.195+02:00",
+  "updatedAt": "2026-10-16T21:46:02.469+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
