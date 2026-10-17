@@ -1651,6 +1651,76 @@
       "staff": 20000,
       "rosters": 60000,
       "changes": 600800
+    },
+    {
+      "time": "12:26",
+      "companies": 0,
+      "staff": 40,
+      "rosters": 24,
+      "changes": 290
+    },
+    {
+      "time": "12:26",
+      "companies": 0,
+      "staff": 80,
+      "rosters": 48,
+      "changes": 580
+    },
+    {
+      "time": "12:26",
+      "companies": 0,
+      "staff": 120,
+      "rosters": 72,
+      "changes": 870
+    },
+    {
+      "time": "12:26",
+      "companies": 0,
+      "staff": 160,
+      "rosters": 96,
+      "changes": 1160
+    },
+    {
+      "time": "12:26",
+      "companies": 0,
+      "staff": 200,
+      "rosters": 120,
+      "changes": 1450
+    },
+    {
+      "time": "12:26",
+      "companies": 0,
+      "staff": 40,
+      "rosters": 24,
+      "changes": 290
+    },
+    {
+      "time": "12:26",
+      "companies": 0,
+      "staff": 80,
+      "rosters": 48,
+      "changes": 580
+    },
+    {
+      "time": "12:26",
+      "companies": 0,
+      "staff": 120,
+      "rosters": 72,
+      "changes": 870
+    },
+    {
+      "time": "12:26",
+      "companies": 0,
+      "staff": 160,
+      "rosters": 96,
+      "changes": 1160
+    },
+    {
+      "time": "12:26",
+      "companies": 0,
+      "staff": 200,
+      "rosters": 120,
+      "changes": 1450
     }
   ],
   "log": [
@@ -2953,76 +3023,144 @@
     {
       "time": "12:26",
       "message": "Stage 6 — functional probes starting"
+    },
+    {
+      "time": "12:26",
+      "message": "Building up — seeding…"
+    },
+    {
+      "time": "12:26",
+      "message": "Added teams — staff 40, rosters 24 (active 24, archived 0), changes 290"
+    },
+    {
+      "time": "12:26",
+      "message": "Added teams — staff 80, rosters 48 (active 48, archived 0), changes 580"
+    },
+    {
+      "time": "12:26",
+      "message": "Added teams — staff 120, rosters 72 (active 72, archived 0), changes 870"
+    },
+    {
+      "time": "12:26",
+      "message": "Added teams — staff 160, rosters 96 (active 96, archived 0), changes 1160"
+    },
+    {
+      "time": "12:26",
+      "message": "Added teams — staff 200, rosters 120 (active 120, archived 0), changes 1450"
+    },
+    {
+      "time": "12:26",
+      "message": "Added notifications — 1000 of 1000"
+    },
+    {
+      "time": "12:26",
+      "message": "Added applications — 200 of 200"
+    },
+    {
+      "time": "12:26",
+      "message": "Added drafts — 50 of 50"
+    },
+    {
+      "time": "12:26",
+      "message": "Building up — seeding…"
+    },
+    {
+      "time": "12:26",
+      "message": "Added teams — staff 40, rosters 24 (active 24, archived 0), changes 290"
+    },
+    {
+      "time": "12:26",
+      "message": "Added teams — staff 80, rosters 48 (active 48, archived 0), changes 580"
+    },
+    {
+      "time": "12:26",
+      "message": "Added teams — staff 120, rosters 72 (active 72, archived 0), changes 870"
+    },
+    {
+      "time": "12:26",
+      "message": "Added teams — staff 160, rosters 96 (active 96, archived 0), changes 1160"
+    },
+    {
+      "time": "12:26",
+      "message": "Added teams — staff 200, rosters 120 (active 120, archived 0), changes 1450"
+    },
+    {
+      "time": "12:26",
+      "message": "Added notifications — 1000 of 1000"
+    },
+    {
+      "time": "12:26",
+      "message": "Added applications — 200 of 200"
+    },
+    {
+      "time": "12:26",
+      "message": "Added drafts — 50 of 50"
+    },
+    {
+      "time": "12:26",
+      "message": "Stage 6 done — see result JSON for per-probe pass/fail"
     }
   ],
   "metrics": [
     {
-      "label": "Seed staff",
-      "value": "20000"
+      "label": "6a Loader guards under cap",
+      "value": "PASS"
     },
     {
-      "label": "IndexedDB bytes (after seed, in-memory)",
-      "value": "127"
+      "label": "6b Cap refusal (lowered cap)",
+      "value": "PASS"
     },
     {
-      "label": "Archive bodies write",
-      "value": "16115ms for 47000 bodies"
+      "label": "6c 900MB warning",
+      "value": "PASS"
     },
     {
-      "label": "Persist (DB.set + flush)",
-      "value": "2882ms, 156491306 bytes"
+      "label": "6d Archive boundary (12 stays, 13 moves, read-only)",
+      "value": "PASS"
     },
     {
-      "label": "Load time (reload)",
-      "value": "3799ms"
+      "label": "6d Calendar render with 200 archived",
+      "value": "3ms"
     },
     {
-      "label": "Calendar render",
-      "value": "10579ms"
+      "label": "6d Stats with 200 archived",
+      "value": "0ms"
     },
     {
-      "label": "Rosters list render",
-      "value": "3510ms"
+      "label": "6e Migration localStorage -> IndexedDB",
+      "value": "PASS"
     },
     {
-      "label": "Company Dashboard render",
-      "value": "2555ms"
+      "label": "6f Fallback (IndexedDB blocked -> local)",
+      "value": "PASS"
     },
     {
-      "label": "Rules engine",
-      "value": "ok ms=15 violDays=undefined"
+      "label": "6f localStorage quota banner",
+      "value": "NOT SHOWN (junk fill hit=true)"
     },
     {
-      "label": "Inbox render",
-      "value": "4818ms"
+      "label": "6g Export Excel (1000 staff, offline)",
+      "value": "19ms, 32619 bytes"
     },
     {
-      "label": "Stats MISS (bust, first view)",
-      "value": "2134ms total=310000"
+      "label": "6g Export PDF (1000 staff, offline)",
+      "value": "1755ms, 1898873 bytes"
     },
     {
-      "label": "Stats HIT (repeat view)",
-      "value": "102ms deep-equal=true"
+      "label": "6g Export PNG (1000 staff, offline)",
+      "value": "1591ms, 642030 bytes"
     },
     {
-      "label": "Stats fresh MISS == baseline",
-      "value": "fresh=2062ms equal=true"
+      "label": "6g Blocked external requests",
+      "value": "2"
     },
     {
-      "label": "Stats archived month total (Nov 2024)",
-      "value": "0"
+      "label": "6h Rapid actions (50+50+50+30)",
+      "value": "PASS — add 22ms, remove 25ms, decide 4ms, switches 418ms"
     },
     {
-      "label": "Export Excel",
-      "value": "ok ms=18 xlsxBytes=25251"
-    },
-    {
-      "label": "Export PDF",
-      "value": "ok ms=6667 pdfBytes=346726"
-    },
-    {
-      "label": "Export PNG",
-      "value": "ok ms=4855 pngBytes=191558"
+      "label": "6i Multi-tab (B sees A's draft after reload)",
+      "value": "PASS"
     }
   ],
   "progress": {
@@ -3037,12 +3175,12 @@
     "break": null
   },
   "totals": {
-    "companies": 5,
-    "staff": 20000,
-    "rosters": 60000,
-    "changes": 600800
+    "companies": 0,
+    "staff": 200,
+    "rosters": 120,
+    "changes": 1450
   },
-  "updatedAt": "2026-10-17T12:26:03.811+02:00",
+  "updatedAt": "2026-10-17T12:26:31.364+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
@@ -3266,6 +3404,18 @@
       "message": "CRITICAL (Fix C): S.base silently replaced by a STALE empty default on reload when the localStorage mirror base is stale; next persist() then WIPES the active workplace base from the company",
       "detail": "Stage 3: after reload S.base.vehicles=0 (teams 0) though company still held the real base (40 teams). Probe-base-poison reproduced exactly: mirror sfshift_base was 89 bytes (a defaultBase stub from the very first load) because the real base mirror write failed once 4600 archive-body mirror writes filled the ~10MB localStorage mirror; init loadBase read the stale 89-byte mirror default into S.base; reconcile fixed the CACHE from IndexedDB but never re-loaded S.base (re-load branch requires DB.appEntered, false during init); enterApp loadSaved heals S.company/S.rosters from reconciled cache but nothing ever re-calls loadBase, so S.base stays the stale default all session. Then ONE persist() -> companySyncActive overwrote the active workplace base in the company with the empty default, in-memory AND stored (companyActiveBaseVehicles 40->0, stored 0). Any save after such a reload destroys the active base (teams/staff/crews/quals/shifts). No persist happened post-reload in the Stage 3 test run itself, so the test company survived; the probe proved the destruction step.",
       "fix": "(1) Reconcile must re-run loadBase/loadSaved when it changes cache values, even when appEntered is false (or defer init loaders until after reconcile). (2) loadBase must not trust a mirror base that looks like a fresh default when IndexedDB may hold more. (3) companySyncActive must NEVER replace a non-empty company base with an empty S.base — same defensive guard already used for rosters (never wipe non-empty company copy with empty S.rosters)."
+    },
+    {
+      "time": "12:26",
+      "message": "Stage 6f: localStorage quota banner not shown",
+      "detail": "{\"mode\":\"local\",\"afterSave\":{\"unitsInLS\":true,\"baseInLS\":true,\"rosters\":1},\"junkChunks\":17,\"junkHitQuota\":true,\"afterQuotaPersist\":{\"bannerDisplay\":\"none\",\"storageFull\":false},\"afterCleanupPersist\":{\"bannerDisplay\":\"none\",\"storageFull\":false}}",
+      "fix": "Junk fill may not have reached quota, or persist path differs in local mode."
+    },
+    {
+      "time": "12:26",
+      "message": "Stage 6g: offline exports FAILED",
+      "detail": "{\"expDataMs\":3,\"expDataOk\":true,\"xlsxMs\":19,\"xlsxBytes\":32619,\"pdfMs\":1755,\"pdfBytes\":1898873,\"pngMs\":1591,\"pngBytes\":642030,\"txtMs\":1,\"txtChars\":11051,\"icsMs\":114,\"libsReady\":{\"xlsx\":true,\"jspdf\":true,\"html2canvas\":true}}",
+      "fix": "See result JSON."
     }
   ]
 }
