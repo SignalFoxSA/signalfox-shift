@@ -2949,6 +2949,10 @@
     {
       "time": "12:25",
       "message": "Stage 5 done — countsOk=true"
+    },
+    {
+      "time": "12:26",
+      "message": "Stage 6 — functional probes starting"
     }
   ],
   "metrics": [
@@ -3022,10 +3026,10 @@
     }
   ],
   "progress": {
-    "current": 5,
+    "current": 6,
     "total": 7
   },
-  "stage": "Stage 5 of 7 — 20000 staff, 60 months",
+  "stage": "Stage 6 of 7 — Functional probes (cap, warning, archive, migration, fallback, exports, rapid, multitab)",
   "status": "running",
   "thresholds": {
     "perfect": null,
@@ -3038,7 +3042,7 @@
     "rosters": 60000,
     "changes": 600800
   },
-  "updatedAt": "2026-10-17T12:25:51.511+02:00",
+  "updatedAt": "2026-10-17T12:26:03.811+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
