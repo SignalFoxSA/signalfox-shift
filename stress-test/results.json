@@ -1427,6 +1427,13 @@
       "staff": 20000,
       "rosters": 60000,
       "changes": 600800
+    },
+    {
+      "time": "13:15",
+      "companies": 5,
+      "staff": 20000,
+      "rosters": 60000,
+      "changes": 600800
     }
   ],
   "log": [
@@ -2541,6 +2548,10 @@
     {
       "time": "13:15",
       "message": "Reloaded — load 6033ms, active 13000, archived 47000, bytes 156491306"
+    },
+    {
+      "time": "13:15",
+      "message": "Stage 5 done — countsOk=true"
     }
   ],
   "metrics": [
@@ -2583,6 +2594,34 @@
     {
       "label": "Inbox render",
       "value": "4574ms"
+    },
+    {
+      "label": "Stats MISS (bust, first view)",
+      "value": "2234ms total=310000"
+    },
+    {
+      "label": "Stats HIT (repeat view)",
+      "value": "90ms deep-equal=true"
+    },
+    {
+      "label": "Stats fresh MISS == baseline",
+      "value": "fresh=2001ms equal=true"
+    },
+    {
+      "label": "Stats archived month total (Nov 2024)",
+      "value": "0"
+    },
+    {
+      "label": "Export Excel",
+      "value": "ok ms=22 xlsxBytes=25437"
+    },
+    {
+      "label": "Export PDF",
+      "value": "ok ms=6802 pdfBytes=371632"
+    },
+    {
+      "label": "Export PNG",
+      "value": "ok ms=5065 pngBytes=203089"
     }
   ],
   "progress": {
@@ -2597,12 +2636,12 @@
     "break": null
   },
   "totals": {
-    "companies": 0,
+    "companies": 5,
     "staff": 20000,
     "rosters": 60000,
     "changes": 600800
   },
-  "updatedAt": "2026-10-17T13:15:35.975+02:00",
+  "updatedAt": "2026-10-17T13:16:05.032+02:00",
   "storageHistory": [
     {
       "time": "13:12",
@@ -2669,6 +2708,12 @@
       "loadMs": 1798,
       "renderMs": 7287,
       "exportMs": 48
+    },
+    {
+      "staff": 20000,
+      "loadMs": 6033,
+      "renderMs": 10667,
+      "exportMs": 30
     }
   ],
   "speedPerLevel": [
@@ -2699,6 +2744,13 @@
       "loadMs": 1798,
       "renderMs": 7287,
       "exportMs": 48
+    },
+    {
+      "level": "High",
+      "staff": 20000,
+      "loadMs": 6033,
+      "renderMs": 10667,
+      "exportMs": 30
     }
   ],
   "problems": [],
@@ -2706,77 +2758,77 @@
     "staffPerWorkplace": [
       {
         "name": "Workplace 1",
-        "staff": 2000
+        "staff": 4000
       },
       {
         "name": "Workplace 2",
-        "staff": 2000
+        "staff": 4000
       },
       {
         "name": "Workplace 3",
-        "staff": 2000
+        "staff": 4000
       },
       {
         "name": "Workplace 4",
-        "staff": 2000
+        "staff": 4000
       },
       {
         "name": "Workplace 5",
-        "staff": 2000
+        "staff": 4000
       }
     ],
     "rostersPerMonth": [
       {
         "month": "2025-10",
-        "rosters": 500
+        "rosters": 1000
       },
       {
         "month": "2025-11",
-        "rosters": 500
+        "rosters": 1000
       },
       {
         "month": "2025-12",
-        "rosters": 500
+        "rosters": 1000
       },
       {
         "month": "2026-01",
-        "rosters": 500
+        "rosters": 1000
       },
       {
         "month": "2026-02",
-        "rosters": 500
+        "rosters": 1000
       },
       {
         "month": "2026-03",
-        "rosters": 500
+        "rosters": 1000
       },
       {
         "month": "2026-04",
-        "rosters": 500
+        "rosters": 1000
       },
       {
         "month": "2026-05",
-        "rosters": 500
+        "rosters": 1000
       },
       {
         "month": "2026-06",
-        "rosters": 500
+        "rosters": 1000
       },
       {
         "month": "2026-07",
-        "rosters": 500
+        "rosters": 1000
       },
       {
         "month": "2026-08",
-        "rosters": 500
+        "rosters": 1000
       },
       {
         "month": "2026-09",
-        "rosters": 500
+        "rosters": 1000
       },
       {
         "month": "2026-10",
-        "rosters": 500
+        "rosters": 1000
       }
     ]
   }
