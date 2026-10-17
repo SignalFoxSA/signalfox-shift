@@ -88,7 +88,7 @@
   "log": [
     {
       "time": "09:24",
-      "message": "Stress test re-run started — testing the three fixes (BUILD 1999)."
+      "message": "Stress test re-run started \u2014 testing the three fixes (BUILD 1999)."
     },
     {
       "time": "09:27",
@@ -96,79 +96,83 @@
     },
     {
       "time": "09:27",
-      "message": "Building up — seeding…"
+      "message": "Building up \u2014 seeding\u2026"
     },
     {
       "time": "09:27",
-      "message": "Added teams — staff 20, rosters 12, changes 170"
+      "message": "Added teams \u2014 staff 20, rosters 12, changes 170"
     },
     {
       "time": "09:27",
-      "message": "Added teams — staff 40, rosters 24, changes 340"
+      "message": "Added teams \u2014 staff 40, rosters 24, changes 340"
     },
     {
       "time": "09:27",
-      "message": "Added teams — staff 60, rosters 36, changes 510"
+      "message": "Added teams \u2014 staff 60, rosters 36, changes 510"
     },
     {
       "time": "09:27",
-      "message": "Added teams — staff 80, rosters 48, changes 680"
+      "message": "Added teams \u2014 staff 80, rosters 48, changes 680"
     },
     {
       "time": "09:27",
-      "message": "Added teams — staff 100, rosters 60, changes 850"
+      "message": "Added teams \u2014 staff 100, rosters 60, changes 850"
     },
     {
       "time": "09:27",
-      "message": "Added teams — staff 120, rosters 72, changes 1020"
+      "message": "Added teams \u2014 staff 120, rosters 72, changes 1020"
     },
     {
       "time": "09:27",
-      "message": "Added teams — staff 140, rosters 84, changes 1190"
+      "message": "Added teams \u2014 staff 140, rosters 84, changes 1190"
     },
     {
       "time": "09:27",
-      "message": "Added teams — staff 160, rosters 96, changes 1360"
+      "message": "Added teams \u2014 staff 160, rosters 96, changes 1360"
     },
     {
       "time": "09:27",
-      "message": "Added teams — staff 180, rosters 108, changes 1530"
+      "message": "Added teams \u2014 staff 180, rosters 108, changes 1530"
     },
     {
       "time": "09:27",
-      "message": "Added teams — staff 200, rosters 120, changes 1700"
+      "message": "Added teams \u2014 staff 200, rosters 120, changes 1700"
     },
     {
       "time": "09:27",
-      "message": "Added notifications — 1000 of 1000"
+      "message": "Added notifications \u2014 1000 of 1000"
     },
     {
       "time": "09:27",
-      "message": "Added applications — 200 of 200"
+      "message": "Added applications \u2014 200 of 200"
     },
     {
       "time": "09:27",
-      "message": "Added drafts — 50 of 50"
+      "message": "Added drafts \u2014 50 of 50"
     },
     {
       "time": "09:27",
-      "message": "Build complete — staff 200, rosters 120, changes 1700"
+      "message": "Build complete \u2014 staff 200, rosters 120, changes 1700"
     },
     {
       "time": "09:27",
-      "message": "Reloaded — load 2582ms"
+      "message": "Reloaded \u2014 load 2582ms"
     },
     {
       "time": "09:27",
-      "message": "FIX 2: Stats MISS 1084ms → HIT 1ms (equal=true, bust=false, fresh=true)"
+      "message": "FIX 2: Stats MISS 1084ms \u2192 HIT 1ms (equal=true, bust=false, fresh=true)"
     },
     {
       "time": "09:27",
-      "message": "Stage 1 done — countsOk=true"
+      "message": "Stage 1 done \u2014 countsOk=true"
     },
     {
       "time": "09:27",
-      "message": "Problem: FIX 2 FAILED — Stats repeat view NOT instant or cache wrong (HIT 1ms, equal=true, bust=false, fresh=true) at 200 staff"
+      "message": "Problem: FIX 2 FAILED \u2014 Stats repeat view NOT instant or cache wrong (HIT 1ms, equal=true, bust=false, fresh=true) at 200 staff"
+    },
+    {
+      "time": "09:29",
+      "message": "Correction: Stage 1 \"FIX 2 FAILED\" was a probe artifact (probe mutated S.rosters, a separate copy from the company snapshot Stats reads) \u2014 cache is correct (HIT 1ms, deep-equal, fresh-equal). Probe fixed to mutate the company copy for Stage 2+."
     }
   ],
   "metrics": [
@@ -193,7 +197,7 @@
       "value": "2582ms"
     },
     {
-      "label": "FIX 1 — banner hidden when storage OK",
+      "label": "FIX 1 \u2014 banner hidden when storage OK",
       "value": "NO ({\"storageFull\":false,\"bannerDisplay\":\"\"})"
     },
     {
@@ -213,15 +217,15 @@
       "value": "579ms"
     },
     {
-      "label": "FIX 2 — Stats MISS (first view)",
+      "label": "FIX 2 \u2014 Stats MISS (first view)",
       "value": "1084ms"
     },
     {
-      "label": "FIX 2 — Stats HIT (repeat view)",
+      "label": "FIX 2 \u2014 Stats HIT (repeat view)",
       "value": "1ms deep-equal=true"
     },
     {
-      "label": "FIX 2 — Stats cache bust + cached==fresh",
+      "label": "FIX 2 \u2014 Stats cache bust + cached==fresh",
       "value": "bust=false freshEqual=true"
     },
     {
@@ -237,7 +241,7 @@
     "current": 1,
     "total": 7
   },
-  "stage": "Stage 1 of 7 — 200 staff, 12 months",
+  "stage": "Stage 1 of 7 \u2014 200 staff, 12 months",
   "status": "running",
   "thresholds": {
     "perfect": null,
@@ -250,7 +254,7 @@
     "rosters": 120,
     "changes": 1700
   },
-  "updatedAt": "2026-10-17T09:27:25.926+02:00",
+  "updatedAt": "2026-10-17T09:29:38.561417+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
@@ -352,12 +356,5 @@
       "exportMs": null
     }
   ],
-  "problems": [
-    {
-      "time": "09:27",
-      "message": "FIX 2 FAILED — Stats repeat view NOT instant or cache wrong (HIT 1ms, equal=true, bust=false, fresh=true) at 200 staff",
-      "detail": "fix2={\"missMs\":1084,\"hitMs\":1,\"equal\":true,\"bustOk\":false,\"freshEqual\":true,\"missTotal\":3100,\"bustMs\":1}",
-      "fix": "Re-check companyMonthStats cache: fingerprint must bust on any data change, HIT must return deep-equal results fast."
-    }
-  ]
+  "problems": []
 }
