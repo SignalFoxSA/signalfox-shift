@@ -476,6 +476,10 @@
     {
       "time": "12:11",
       "message": "Added drafts — 100 of 100"
+    },
+    {
+      "time": "12:13",
+      "message": "Reloaded — load 1288ms, active 1090, archived 550, bytes 4846319"
     }
   ],
   "metrics": [
@@ -498,6 +502,14 @@
     {
       "label": "Archive sweep (real, full backlog)",
       "value": "75517ms, archived=550"
+    },
+    {
+      "label": "Calendar render",
+      "value": "1415ms"
+    },
+    {
+      "label": "Rosters list render",
+      "value": "88550ms"
     }
   ],
   "progress": {
@@ -517,7 +529,7 @@
     "rosters": 1200,
     "changes": 12500
   },
-  "updatedAt": "2026-10-17T12:13:13.789+02:00",
+  "updatedAt": "2026-10-17T12:14:46.103+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
@@ -612,6 +624,10 @@
     {
       "time": "12:11",
       "kb": 3881
+    },
+    {
+      "time": "12:13",
+      "kb": 4733
     }
   ],
   "perfHistory": [
