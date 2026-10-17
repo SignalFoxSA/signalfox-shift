@@ -154,13 +154,45 @@
     {
       "label": "Calendar render (s2b-10000staff)",
       "value": "4977ms"
+    },
+    {
+      "label": "Seed staff (s3a-20000staff)",
+      "value": "20000"
+    },
+    {
+      "label": "Load time (reload) s3a-20000staff",
+      "value": "1781ms"
+    },
+    {
+      "label": "Workplace switch (s3a-20000staff)",
+      "value": "13104ms, back 4279ms"
+    },
+    {
+      "label": "Stats MISS (s3a-20000staff)",
+      "value": "2567ms total=310000"
+    },
+    {
+      "label": "Stats HIT (s3a-20000staff)",
+      "value": "90ms deep-equal=true"
+    },
+    {
+      "label": "Export Excel (s3a-20000staff)",
+      "value": "ok ms=24 xlsxBytes=25428"
+    },
+    {
+      "label": "Export PDF (s3a-20000staff)",
+      "value": "ok ms=5052 pdfBytes=369115"
+    },
+    {
+      "label": "Export PNG (s3a-20000staff)",
+      "value": "ok ms=5132 pngBytes=202800"
     }
   ],
   "totals": {
-    "companies": 25,
-    "staff": 10000,
-    "rosters": 6000,
-    "changes": 61000
+    "companies": 0,
+    "staff": 20000,
+    "rosters": 12000,
+    "changes": 122000
   },
   "perfHistory": [
     {
@@ -236,6 +268,14 @@
     {
       "time": "13:57",
       "kb": 15771
+    },
+    {
+      "time": "13:58",
+      "kb": 31207
+    },
+    {
+      "time": "13:58",
+      "kb": 31207
     }
   ],
   "speedPerLevel": [
@@ -270,270 +310,6 @@
   ],
   "problems": [],
   "log": [
-    {
-      "time": "13:57",
-      "message": "Added applications — 100 of 100"
-    },
-    {
-      "time": "13:57",
-      "message": "Added drafts — 25 of 25"
-    },
-    {
-      "time": "13:57",
-      "message": "Point s1a-200staff done — countsOk=true, crashes=0"
-    },
-    {
-      "time": "13:57",
-      "message": "Building up — seeding…"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 1/10 seeded — staff 100, rosters 60"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 2/10 seeded — staff 200, rosters 120"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 3/10 seeded — staff 300, rosters 180"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 4/10 seeded — staff 400, rosters 240"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 5/10 seeded — staff 500, rosters 300"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 6/10 seeded — staff 600, rosters 360"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 7/10 seeded — staff 700, rosters 420"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 8/10 seeded — staff 800, rosters 480"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 9/10 seeded — staff 900, rosters 540"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 10/10 seeded — staff 1000, rosters 600"
-    },
-    {
-      "time": "13:57",
-      "message": "Added notifications — 1000 of 1000"
-    },
-    {
-      "time": "13:57",
-      "message": "Added applications — 200 of 200"
-    },
-    {
-      "time": "13:57",
-      "message": "Added drafts — 50 of 50"
-    },
-    {
-      "time": "13:57",
-      "message": "Point s1b-1000staff done — countsOk=true, crashes=0"
-    },
-    {
-      "time": "13:57",
-      "message": "Building up — seeding…"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 1/20 seeded — staff 200, rosters 120"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 2/20 seeded — staff 400, rosters 240"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 3/20 seeded — staff 600, rosters 360"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 4/20 seeded — staff 800, rosters 480"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 5/20 seeded — staff 1000, rosters 600"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 6/20 seeded — staff 1200, rosters 720"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 7/20 seeded — staff 1400, rosters 840"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 8/20 seeded — staff 1600, rosters 960"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 9/20 seeded — staff 1800, rosters 1080"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 10/20 seeded — staff 2000, rosters 1200"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 11/20 seeded — staff 2200, rosters 1320"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 12/20 seeded — staff 2400, rosters 1440"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 13/20 seeded — staff 2600, rosters 1560"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 14/20 seeded — staff 2800, rosters 1680"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 15/20 seeded — staff 3000, rosters 1800"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 16/20 seeded — staff 3200, rosters 1920"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 17/20 seeded — staff 3400, rosters 2040"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 18/20 seeded — staff 3600, rosters 2160"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 19/20 seeded — staff 3800, rosters 2280"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 20/20 seeded — staff 4000, rosters 2400"
-    },
-    {
-      "time": "13:57",
-      "message": "Added notifications — 1000 of 2000"
-    },
-    {
-      "time": "13:57",
-      "message": "Added notifications — 2000 of 2000"
-    },
-    {
-      "time": "13:57",
-      "message": "Added applications — 400 of 400"
-    },
-    {
-      "time": "13:57",
-      "message": "Added drafts — 100 of 100"
-    },
-    {
-      "time": "13:57",
-      "message": "Point s2a-4000staff done — countsOk=true, crashes=0"
-    },
-    {
-      "time": "13:57",
-      "message": "Building up — seeding…"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 1/25 seeded — staff 400, rosters 240"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 2/25 seeded — staff 800, rosters 480"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 3/25 seeded — staff 1200, rosters 720"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 4/25 seeded — staff 1600, rosters 960"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 5/25 seeded — staff 2000, rosters 1200"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 6/25 seeded — staff 2400, rosters 1440"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 7/25 seeded — staff 2800, rosters 1680"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 8/25 seeded — staff 3200, rosters 1920"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 9/25 seeded — staff 3600, rosters 2160"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 10/25 seeded — staff 4000, rosters 2400"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 11/25 seeded — staff 4400, rosters 2640"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 12/25 seeded — staff 4800, rosters 2880"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 13/25 seeded — staff 5200, rosters 3120"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 14/25 seeded — staff 5600, rosters 3360"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 15/25 seeded — staff 6000, rosters 3600"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 16/25 seeded — staff 6400, rosters 3840"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 17/25 seeded — staff 6800, rosters 4080"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 18/25 seeded — staff 7200, rosters 4320"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 19/25 seeded — staff 7600, rosters 4560"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 20/25 seeded — staff 8000, rosters 4800"
-    },
-    {
-      "time": "13:57",
-      "message": "Workplace 21/25 seeded — staff 8400, rosters 5040"
-    },
     {
       "time": "13:57",
       "message": "Workplace 22/25 seeded — staff 8800, rosters 5280"
@@ -589,8 +365,272 @@
     {
       "time": "13:58",
       "message": "Building up — seeding…"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 1/50 seeded — staff 400, rosters 240"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 2/50 seeded — staff 800, rosters 480"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 3/50 seeded — staff 1200, rosters 720"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 4/50 seeded — staff 1600, rosters 960"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 5/50 seeded — staff 2000, rosters 1200"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 6/50 seeded — staff 2400, rosters 1440"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 7/50 seeded — staff 2800, rosters 1680"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 8/50 seeded — staff 3200, rosters 1920"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 9/50 seeded — staff 3600, rosters 2160"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 10/50 seeded — staff 4000, rosters 2400"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 11/50 seeded — staff 4400, rosters 2640"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 12/50 seeded — staff 4800, rosters 2880"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 13/50 seeded — staff 5200, rosters 3120"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 14/50 seeded — staff 5600, rosters 3360"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 15/50 seeded — staff 6000, rosters 3600"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 16/50 seeded — staff 6400, rosters 3840"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 17/50 seeded — staff 6800, rosters 4080"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 18/50 seeded — staff 7200, rosters 4320"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 19/50 seeded — staff 7600, rosters 4560"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 20/50 seeded — staff 8000, rosters 4800"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 21/50 seeded — staff 8400, rosters 5040"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 22/50 seeded — staff 8800, rosters 5280"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 23/50 seeded — staff 9200, rosters 5520"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 24/50 seeded — staff 9600, rosters 5760"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 25/50 seeded — staff 10000, rosters 6000"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 26/50 seeded — staff 10400, rosters 6240"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 27/50 seeded — staff 10800, rosters 6480"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 28/50 seeded — staff 11200, rosters 6720"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 29/50 seeded — staff 11600, rosters 6960"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 30/50 seeded — staff 12000, rosters 7200"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 31/50 seeded — staff 12400, rosters 7440"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 32/50 seeded — staff 12800, rosters 7680"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 33/50 seeded — staff 13200, rosters 7920"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 34/50 seeded — staff 13600, rosters 8160"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 35/50 seeded — staff 14000, rosters 8400"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 36/50 seeded — staff 14400, rosters 8640"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 37/50 seeded — staff 14800, rosters 8880"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 38/50 seeded — staff 15200, rosters 9120"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 39/50 seeded — staff 15600, rosters 9360"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 40/50 seeded — staff 16000, rosters 9600"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 41/50 seeded — staff 16400, rosters 9840"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 42/50 seeded — staff 16800, rosters 10080"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 43/50 seeded — staff 17200, rosters 10320"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 44/50 seeded — staff 17600, rosters 10560"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 45/50 seeded — staff 18000, rosters 10800"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 46/50 seeded — staff 18400, rosters 11040"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 47/50 seeded — staff 18800, rosters 11280"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 48/50 seeded — staff 19200, rosters 11520"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 49/50 seeded — staff 19600, rosters 11760"
+    },
+    {
+      "time": "13:58",
+      "message": "Workplace 50/50 seeded — staff 20000, rosters 12000"
+    },
+    {
+      "time": "13:58",
+      "message": "Added notifications — 1000 of 8000"
+    },
+    {
+      "time": "13:58",
+      "message": "Added notifications — 2000 of 8000"
+    },
+    {
+      "time": "13:58",
+      "message": "Added notifications — 3000 of 8000"
+    },
+    {
+      "time": "13:58",
+      "message": "Added notifications — 4000 of 8000"
+    },
+    {
+      "time": "13:58",
+      "message": "Added notifications — 5000 of 8000"
+    },
+    {
+      "time": "13:58",
+      "message": "Added notifications — 6000 of 8000"
+    },
+    {
+      "time": "13:58",
+      "message": "Added notifications — 7000 of 8000"
+    },
+    {
+      "time": "13:58",
+      "message": "Added notifications — 8000 of 8000"
+    },
+    {
+      "time": "13:58",
+      "message": "Added applications — 400 of 1600"
+    },
+    {
+      "time": "13:58",
+      "message": "Added applications — 800 of 1600"
+    },
+    {
+      "time": "13:58",
+      "message": "Added applications — 1200 of 1600"
+    },
+    {
+      "time": "13:58",
+      "message": "Added applications — 1600 of 1600"
+    },
+    {
+      "time": "13:58",
+      "message": "Added drafts — 100 of 400"
+    },
+    {
+      "time": "13:58",
+      "message": "Added drafts — 200 of 400"
+    },
+    {
+      "time": "13:58",
+      "message": "Added drafts — 300 of 400"
+    },
+    {
+      "time": "13:58",
+      "message": "Added drafts — 400 of 400"
     }
   ],
-  "updatedAt": "2026-10-17T13:58:42.298+02:00",
+  "updatedAt": "2026-10-17T13:59:33.404+02:00",
   "history": []
 }
