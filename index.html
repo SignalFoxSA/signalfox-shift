@@ -1656,7 +1656,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261017-2005';
+var BUILD='20261017-2006';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -4638,7 +4638,44 @@ DB.boot();
 /* ---------- save / load (units) ---------- */
 function loadSaved(){
   loadDrafts();
-  try{ S.rosters=JSON.parse(DB.get('sfshift_units')||'[]'); }catch(e){ S.rosters=[]; }
+  /* ROSTERS LOADER GUARD (BUILD 20261017-2006): same guard pattern as
+     companyLoad() (Fix 1), loadShiftApps() / loadNotifications()
+     (Fix A), and the base heal (BUILD 2004). The old code re-read
+     S.rosters from storage UNCONDITIONALLY here — if storage read
+     back empty / missing / malformed (e.g. the save failed on quota,
+     or storage was temporarily unavailable) while in-memory
+     S.rosters was non-empty, the in-memory rosters were discarded
+     (replaced with []) — the SAME wipe pattern as the company wipe
+     (Fix 1), the apps/notifications wipe (Fix A), and the base wipe
+     (BUILD 2004). When storage has NO rosters value, is unreadable,
+     or malformed, a non-empty in-memory S.rosters is KEPT. Same when
+     a quota failure is already known (S._storageFull) and storage
+     reads back empty while in-memory still has rosters — the empty
+     stored value is stale (the save never landed); the in-memory
+     copy is the live data. When storage is healthy and holds a
+     value, loading from storage works exactly as before.
+     _rostersGuarded tracks whether the guard kept in-memory rosters
+     because storage was unusable — when it fired, the self-heal
+     persist() below is suppressed (never write a filtered list
+     back over untrusted storage; the next user-action persist,
+     when storage is healthy, writes the correct state). */
+  var _rostersGuarded=false;
+  var _rRaw=null, _rParsed=null, _rParseOk=false;
+  try{ _rRaw=DB.get('sfshift_units'); }catch(e){ _rRaw=null; }
+  if(_rRaw){
+    try{ _rParsed=JSON.parse(_rRaw); _rParseOk=true; }catch(e){ _rParsed=null; _rParseOk=false; }
+  }
+  var _rMem=(Array.isArray(S.rosters) && S.rosters.length)?S.rosters:null;
+  if(!_rRaw || !_rParseOk || !Array.isArray(_rParsed)){
+    /* storage missing / unreadable / malformed — keep in-memory if any */
+    if(_rMem){ S.rosters=_rMem; _rostersGuarded=true; if(S._storageFull) storageWarnShow(); }
+    else S.rosters=[];
+  }else if(!_rParsed.length && _rMem && S._storageFull){
+    /* storage reads back empty but a quota failure is known — stale */
+    S.rosters=_rMem; _rostersGuarded=true; storageWarnShow();
+  }else{
+    S.rosters=_rParsed;
+  }
   S._rostersLoaded=true; companyLoad();
   /* FIX (BUILD 20261017-2004): heal S.base from the company's active
      base. If S.base is empty (no teams/staff/crews) but the active
@@ -4682,7 +4719,14 @@ function loadSaved(){
     migrateCrewColors(u.roster.crews);
     if(!u.roster.memberOverrides) u.roster.memberOverrides={};
   });
-  if(S.rosters.length!==before) persist();
+  /* Never persist a filtered list over guarded in-memory rosters:
+     if the guard above kept in-memory rosters because storage was
+     unusable (empty / malformed / quota), storage is untrusted in
+     this call — writing back could overwrite good stored data with
+     a partial list, or write [] over rosters the save never landed
+     for. The in-memory rosters are kept; the next user-action
+     persist(), when storage is healthy, writes the correct state. */
+  if(S.rosters.length!==before && !_rostersGuarded) persist();
 }
 /* ---------- Storage-full (quota) warning ----------
    IndexedDB is capped at 1GB by the app (Fix C); localStorage (~5MB
