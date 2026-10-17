@@ -1721,6 +1721,41 @@
       "staff": 200,
       "rosters": 120,
       "changes": 1450
+    },
+    {
+      "time": "12:28",
+      "companies": 0,
+      "staff": 40,
+      "rosters": 24,
+      "changes": 290
+    },
+    {
+      "time": "12:28",
+      "companies": 0,
+      "staff": 80,
+      "rosters": 48,
+      "changes": 580
+    },
+    {
+      "time": "12:28",
+      "companies": 0,
+      "staff": 120,
+      "rosters": 72,
+      "changes": 870
+    },
+    {
+      "time": "12:28",
+      "companies": 0,
+      "staff": 160,
+      "rosters": 96,
+      "changes": 1160
+    },
+    {
+      "time": "12:28",
+      "companies": 0,
+      "staff": 200,
+      "rosters": 120,
+      "changes": 1450
     }
   ],
   "log": [
@@ -3111,88 +3146,88 @@
     {
       "time": "12:28",
       "message": "Building up — seeding…"
+    },
+    {
+      "time": "12:28",
+      "message": "Added teams — staff 40, rosters 24 (active 24, archived 0), changes 290"
+    },
+    {
+      "time": "12:28",
+      "message": "Added teams — staff 80, rosters 48 (active 48, archived 0), changes 580"
+    },
+    {
+      "time": "12:28",
+      "message": "Added teams — staff 120, rosters 72 (active 72, archived 0), changes 870"
+    },
+    {
+      "time": "12:28",
+      "message": "Added teams — staff 160, rosters 96 (active 96, archived 0), changes 1160"
+    },
+    {
+      "time": "12:28",
+      "message": "Added teams — staff 200, rosters 120 (active 120, archived 0), changes 1450"
+    },
+    {
+      "time": "12:28",
+      "message": "Added notifications — 1000 of 1000"
+    },
+    {
+      "time": "12:28",
+      "message": "Added applications — 200 of 200"
+    },
+    {
+      "time": "12:28",
+      "message": "Added drafts — 50 of 50"
+    },
+    {
+      "time": "12:28",
+      "message": "Stage 7 done"
+    },
+    {
+      "time": "12:28",
+      "message": "MAXIMUM ON 1GB: renders break first, not the cap. Storage: 156MB at 20k staff / 60k rosters (marginal ~2.6KB/roster) -> cap break ≈412k rosters / ≈137k staff. Interactive break at 20k staff (calendar 10.6s). Perfect ≤4k staff, glitch at 10k staff. 2 real bugs found (sweep race; stale-base wipe). Totals = peak (Stage 5)."
+    },
+    {
+      "time": "12:28",
+      "message": "All 7 stages complete — 0 JS errors, 0 data lost in-test. Four updates: loader guards HELD, cap refusal HELD, 900MB warning HELD, archiving boundary HELD (sweep itself correct; the race is in concurrent loadSaved, not the sweep logic)."
     }
   ],
   "metrics": [
     {
-      "label": "6a Loader guards under cap",
-      "value": "PASS"
+      "label": "Slow device load (4x CPU + Slow 3G)",
+      "value": "1943ms"
     },
     {
-      "label": "6b Cap refusal (lowered cap)",
-      "value": "PASS"
+      "label": "Slow device calendar render",
+      "value": "1240ms"
     },
     {
-      "label": "6c 900MB warning",
-      "value": "PASS"
+      "label": "Slow device Dashboard render",
+      "value": "904ms"
     },
     {
-      "label": "6d Archive boundary (12 stays, 13 moves, read-only)",
-      "value": "PASS"
-    },
-    {
-      "label": "6d Calendar render with 200 archived",
-      "value": "3ms"
-    },
-    {
-      "label": "6d Stats with 200 archived",
-      "value": "0ms"
-    },
-    {
-      "label": "6e Migration localStorage -> IndexedDB",
-      "value": "PASS"
-    },
-    {
-      "label": "6f Fallback (IndexedDB blocked -> local)",
-      "value": "PASS"
-    },
-    {
-      "label": "6f localStorage quota banner",
-      "value": "NOT SHOWN (junk fill hit=true)"
-    },
-    {
-      "label": "6g Export Excel (1000 staff, offline)",
-      "value": "19ms, 32619 bytes"
-    },
-    {
-      "label": "6g Export PDF (1000 staff, offline)",
-      "value": "1755ms, 1898873 bytes"
-    },
-    {
-      "label": "6g Export PNG (1000 staff, offline)",
-      "value": "1591ms, 642030 bytes"
-    },
-    {
-      "label": "6g Blocked external requests",
-      "value": "2"
-    },
-    {
-      "label": "6h Rapid actions (50+50+50+30)",
-      "value": "PASS — add 22ms, remove 25ms, decide 4ms, switches 418ms"
-    },
-    {
-      "label": "6i Multi-tab (B sees A's draft after reload)",
-      "value": "PASS"
+      "label": "Slow device Rosters list render",
+      "value": "654ms"
     }
   ],
   "progress": {
     "current": 7,
     "total": 7
   },
-  "stage": "Stage 7 of 7 — Slow device (4x CPU + Slow 3G), 200 staff",
-  "status": "running",
+  "stage": "Done — all 7 stages complete",
+  "status": "done",
   "thresholds": {
-    "perfect": null,
-    "glitch": null,
-    "break": null
+    "perfect": "≤4,000 staff / 7,200 rosters (Stage 3): every interaction ≤2.5s — load 1.2s, calendar 2.4s, Rosters 0.5s, Dashboard 0.8s, Stats MISS 0.40s / HIT 18ms, PDF 1.4s, PNG 0.9s",
+    "glitch": "10,000 staff / 24,000 rosters (Stage 4): calendar 5.8s, PDF 3.0s, PNG 2.1s, Stats MISS 1.0s / HIT 69ms, Inbox 2.0s — usable but clearly slow",
+    "break": "20,000 staff / 60,000 rosters (Stage 5): calendar open 10.6s, PDF 6.7s, PNG 4.9s, Inbox 4.8s, Stats MISS 2.1s — interactive use impractical. Storage cap NOT reached (156MB of 1GB); extrapolated cap break ≈412,000 rosters / ≈137,000 staff at this roster/staff mix (marginal ~2.6KB/roster). RENDERS break first, not the cap. 2 real bugs found (see problems)."
   },
   "totals": {
-    "companies": 0,
-    "staff": 200,
-    "rosters": 120,
-    "changes": 1450
+    "companies": 5,
+    "staff": 20000,
+    "rosters": 60000,
+    "changes": 600800
   },
-  "updatedAt": "2026-10-17T12:28:36.199+02:00",
+  "updatedAt": "2026-10-17T12:28:58.755+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
