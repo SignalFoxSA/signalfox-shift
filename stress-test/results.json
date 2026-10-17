@@ -1,8 +1,8 @@
 {
   "status": "running",
-  "stage": "Stage 4 of 7 — s4c-1000wp",
+  "stage": "Stage 5 of 7 — s5a-2000dense",
   "progress": {
-    "current": 4,
+    "current": 5,
     "total": 7
   },
   "thresholds": {
@@ -553,10 +553,6 @@
   "log": [
     {
       "time": "14:03",
-      "message": "Workplace 925/1000 seeded — staff 18500, rosters 11100"
-    },
-    {
-      "time": "14:03",
       "message": "Workplace 926/1000 seeded — staff 18520, rosters 11112"
     },
     {
@@ -870,8 +866,12 @@
     {
       "time": "14:03",
       "message": "Point s4c-1000wp done — countsOk=true, crashes=0"
+    },
+    {
+      "time": "14:04",
+      "message": "Building up — seeding…"
     }
   ],
-  "updatedAt": "2026-10-17T14:03:58.607+02:00",
+  "updatedAt": "2026-10-17T14:04:11.245+02:00",
   "history": []
 }
