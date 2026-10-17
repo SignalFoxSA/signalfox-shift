@@ -643,10 +643,6 @@
   "log": [
     {
       "time": "14:03",
-      "message": "Workplace 981/1000 seeded — staff 19620, rosters 11772"
-    },
-    {
-      "time": "14:03",
       "message": "Workplace 982/1000 seeded — staff 19640, rosters 11784"
     },
     {
@@ -960,8 +956,12 @@
     {
       "time": "16:13",
       "message": "Added drafts — 400 of 400"
+    },
+    {
+      "time": "17:57",
+      "message": "Resumed — 3rd coordinator picking up at s5d, then Stage 6 + 7."
     }
   ],
-  "updatedAt": "2026-10-17T16:15:39.437+02:00",
+  "updatedAt": "2026-10-17T17:57:18.181+02:00",
   "history": []
 }
