@@ -91,6 +91,10 @@
     {
       "time": "12:10",
       "message": "Stage 1 done — countsOk=true"
+    },
+    {
+      "time": "12:11",
+      "message": "Stage 1 first run discarded — seed did not persist apps/notifications/base (persist() covers units+drafts+company only); re-running Stage 1 with full persist."
     }
   ],
   "metrics": [
@@ -261,14 +265,7 @@
       "kb": 454
     }
   ],
-  "perfHistory": [
-    {
-      "staff": 200,
-      "loadMs": 1170,
-      "renderMs": 584,
-      "exportMs": 36
-    }
-  ],
+  "perfHistory": [],
   "speedPerLevel": [
     {
       "level": "Low",
