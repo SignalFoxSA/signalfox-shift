@@ -181,6 +181,10 @@
     {
       "time": "12:11",
       "message": "Stage 1 done — countsOk=true"
+    },
+    {
+      "time": "12:11",
+      "message": "Building up — seeding…"
     }
   ],
   "metrics": [
@@ -250,10 +254,10 @@
     }
   ],
   "progress": {
-    "current": 1,
+    "current": 2,
     "total": 7
   },
-  "stage": "Stage 1 of 7 — 200 staff, 12 months",
+  "stage": "Stage 2 of 7 — 1000 staff, 24 months",
   "status": "running",
   "thresholds": {
     "perfect": null,
@@ -266,7 +270,7 @@
     "rosters": 120,
     "changes": 1450
   },
-  "updatedAt": "2026-10-17T12:11:47.156+02:00",
+  "updatedAt": "2026-10-17T12:11:54.428+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
