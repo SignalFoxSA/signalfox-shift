@@ -4,6 +4,10 @@
     {
       "time": "09:24",
       "message": "Stress test re-run started \u2014 testing the three fixes (BUILD 1999)."
+    },
+    {
+      "time": "09:27",
+      "message": "Re-run: cleared first-run chart history so the charts show only re-run data."
     }
   ],
   "metrics": [],
@@ -24,123 +28,10 @@
     "rosters": null,
     "changes": null
   },
-  "updatedAt": "2026-10-16T21:50:21.952842+02:00",
-  "breakdown": {
-    "staffPerWorkplace": [
-      {
-        "name": "Workplace 1",
-        "staff": 40
-      },
-      {
-        "name": "Workplace 2",
-        "staff": 40
-      },
-      {
-        "name": "Workplace 3",
-        "staff": 40
-      },
-      {
-        "name": "Workplace 4",
-        "staff": 40
-      },
-      {
-        "name": "Workplace 5",
-        "staff": 40
-      }
-    ],
-    "rostersPerMonth": [
-      {
-        "month": "2026-01",
-        "rosters": 10
-      },
-      {
-        "month": "2026-02",
-        "rosters": 10
-      },
-      {
-        "month": "2026-03",
-        "rosters": 10
-      },
-      {
-        "month": "2026-04",
-        "rosters": 10
-      },
-      {
-        "month": "2026-05",
-        "rosters": 10
-      },
-      {
-        "month": "2026-06",
-        "rosters": 10
-      },
-      {
-        "month": "2026-07",
-        "rosters": 10
-      },
-      {
-        "month": "2026-08",
-        "rosters": 10
-      },
-      {
-        "month": "2026-09",
-        "rosters": 10
-      },
-      {
-        "month": "2026-10",
-        "rosters": 10
-      },
-      {
-        "month": "2026-11",
-        "rosters": 10
-      },
-      {
-        "month": "2026-12",
-        "rosters": 10
-      }
-    ]
-  },
-  "storageHistory": [
-    {
-      "time": "21:30",
-      "kb": 5394
-    },
-    {
-      "time": "21:40",
-      "kb": 8972
-    }
-  ],
-  "perfHistory": [
-    {
-      "staff": 2000,
-      "loadMs": null,
-      "renderMs": 1369,
-      "exportMs": null
-    },
-    {
-      "staff": 4000,
-      "loadMs": null,
-      "renderMs": 2220,
-      "exportMs": null
-    },
-    {
-      "staff": 200,
-      "loadMs": null,
-      "renderMs": null,
-      "exportMs": 6
-    },
-    {
-      "staff": 200,
-      "loadMs": null,
-      "renderMs": null,
-      "exportMs": 1115
-    },
-    {
-      "staff": 200,
-      "loadMs": null,
-      "renderMs": 1373,
-      "exportMs": null
-    }
-  ],
+  "updatedAt": "2026-10-17T09:27:02.385091+02:00",
+  "breakdown": null,
+  "storageHistory": [],
+  "perfHistory": [],
   "speedPerLevel": [],
   "problems": []
 }
