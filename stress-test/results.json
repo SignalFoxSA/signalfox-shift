@@ -1,8 +1,8 @@
 {
   "status": "running",
-  "stage": "Stage 1 \u2014 starting",
+  "stage": "Stage 1 of 7 — s1a-200staff",
   "progress": {
-    "current": 0,
+    "current": 1,
     "total": 7
   },
   "thresholds": {
@@ -24,8 +24,13 @@
   "log": [
     {
       "time": "13:52",
-      "message": "Hardcore stress test started \u2014 finding the maximums (BUILD 2007)."
+      "message": "Hardcore stress test started — finding the maximums (BUILD 2007)."
+    },
+    {
+      "time": "13:56",
+      "message": "Building up — seeding…"
     }
   ],
-  "updatedAt": "2026-10-17T13:52:31.065317+02:00"
+  "updatedAt": "2026-10-17T13:56:13.981+02:00",
+  "history": []
 }
