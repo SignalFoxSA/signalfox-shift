@@ -1,6 +1,6 @@
 {
   "status": "running",
-  "stage": "Stage 4 of 7 — s4a-200wp",
+  "stage": "Stage 4 of 7 — s4b-500wp",
   "progress": {
     "current": 4,
     "total": 7
@@ -262,13 +262,49 @@
     {
       "label": "Calendar render (s4a-200wp)",
       "value": "2054ms"
+    },
+    {
+      "label": "Seed staff (s4b-500wp)",
+      "value": "10000"
+    },
+    {
+      "label": "Load time (reload) s4b-500wp",
+      "value": "1456ms"
+    },
+    {
+      "label": "Workplace switch (s4b-500wp)",
+      "value": "5991ms, back 1427ms"
+    },
+    {
+      "label": "Stats MISS (s4b-500wp)",
+      "value": "1049ms total=155000"
+    },
+    {
+      "label": "Stats HIT (s4b-500wp)",
+      "value": "44ms deep-equal=true"
+    },
+    {
+      "label": "Export Excel (s4b-500wp)",
+      "value": "ok ms=22 xlsxBytes=25428"
+    },
+    {
+      "label": "Export PDF (s4b-500wp)",
+      "value": "ok ms=402 pdfBytes=369115"
+    },
+    {
+      "label": "Export PNG (s4b-500wp)",
+      "value": "ok ms=355 pngBytes=202800"
+    },
+    {
+      "label": "Calendar render (s4b-500wp)",
+      "value": "4775ms"
     }
   ],
   "totals": {
-    "companies": 200,
-    "staff": 4000,
-    "rosters": 2400,
-    "changes": 24600
+    "companies": 500,
+    "staff": 10000,
+    "rosters": 6000,
+    "changes": 61000
   },
   "perfHistory": [
     {
@@ -312,6 +348,12 @@
       "loadMs": 1186,
       "renderMs": 2054,
       "exportMs": 62
+    },
+    {
+      "staff": 10000,
+      "loadMs": 1456,
+      "renderMs": 4775,
+      "exportMs": 46
     }
   ],
   "storageHistory": [
@@ -386,6 +428,14 @@
     {
       "time": "14:02",
       "kb": 5974
+    },
+    {
+      "time": "14:02",
+      "kb": 14282
+    },
+    {
+      "time": "14:02",
+      "kb": 14282
     }
   ],
   "speedPerLevel": [
@@ -437,313 +487,320 @@
       "loadMs": 1186,
       "renderMs": 2054,
       "exportMs": 62
+    },
+    {
+      "level": "Companies",
+      "staff": 10000,
+      "loadMs": 1456,
+      "renderMs": 4775,
+      "exportMs": 46
     }
   ],
   "problems": [],
   "log": [
     {
       "time": "14:02",
-      "message": "Workplace 125/200 seeded — staff 2500, rosters 1500"
+      "message": "Workplace 425/500 seeded — staff 8500, rosters 5100"
     },
     {
       "time": "14:02",
-      "message": "Workplace 126/200 seeded — staff 2520, rosters 1512"
+      "message": "Workplace 426/500 seeded — staff 8520, rosters 5112"
     },
     {
       "time": "14:02",
-      "message": "Workplace 127/200 seeded — staff 2540, rosters 1524"
+      "message": "Workplace 427/500 seeded — staff 8540, rosters 5124"
     },
     {
       "time": "14:02",
-      "message": "Workplace 128/200 seeded — staff 2560, rosters 1536"
+      "message": "Workplace 428/500 seeded — staff 8560, rosters 5136"
     },
     {
       "time": "14:02",
-      "message": "Workplace 129/200 seeded — staff 2580, rosters 1548"
+      "message": "Workplace 429/500 seeded — staff 8580, rosters 5148"
     },
     {
       "time": "14:02",
-      "message": "Workplace 130/200 seeded — staff 2600, rosters 1560"
+      "message": "Workplace 430/500 seeded — staff 8600, rosters 5160"
     },
     {
       "time": "14:02",
-      "message": "Workplace 131/200 seeded — staff 2620, rosters 1572"
+      "message": "Workplace 431/500 seeded — staff 8620, rosters 5172"
     },
     {
       "time": "14:02",
-      "message": "Workplace 132/200 seeded — staff 2640, rosters 1584"
+      "message": "Workplace 432/500 seeded — staff 8640, rosters 5184"
     },
     {
       "time": "14:02",
-      "message": "Workplace 133/200 seeded — staff 2660, rosters 1596"
+      "message": "Workplace 433/500 seeded — staff 8660, rosters 5196"
     },
     {
       "time": "14:02",
-      "message": "Workplace 134/200 seeded — staff 2680, rosters 1608"
+      "message": "Workplace 434/500 seeded — staff 8680, rosters 5208"
     },
     {
       "time": "14:02",
-      "message": "Workplace 135/200 seeded — staff 2700, rosters 1620"
+      "message": "Workplace 435/500 seeded — staff 8700, rosters 5220"
     },
     {
       "time": "14:02",
-      "message": "Workplace 136/200 seeded — staff 2720, rosters 1632"
+      "message": "Workplace 436/500 seeded — staff 8720, rosters 5232"
     },
     {
       "time": "14:02",
-      "message": "Workplace 137/200 seeded — staff 2740, rosters 1644"
+      "message": "Workplace 437/500 seeded — staff 8740, rosters 5244"
     },
     {
       "time": "14:02",
-      "message": "Workplace 138/200 seeded — staff 2760, rosters 1656"
+      "message": "Workplace 438/500 seeded — staff 8760, rosters 5256"
     },
     {
       "time": "14:02",
-      "message": "Workplace 139/200 seeded — staff 2780, rosters 1668"
+      "message": "Workplace 439/500 seeded — staff 8780, rosters 5268"
     },
     {
       "time": "14:02",
-      "message": "Workplace 140/200 seeded — staff 2800, rosters 1680"
+      "message": "Workplace 440/500 seeded — staff 8800, rosters 5280"
     },
     {
       "time": "14:02",
-      "message": "Workplace 141/200 seeded — staff 2820, rosters 1692"
+      "message": "Workplace 441/500 seeded — staff 8820, rosters 5292"
     },
     {
       "time": "14:02",
-      "message": "Workplace 142/200 seeded — staff 2840, rosters 1704"
+      "message": "Workplace 442/500 seeded — staff 8840, rosters 5304"
     },
     {
       "time": "14:02",
-      "message": "Workplace 143/200 seeded — staff 2860, rosters 1716"
+      "message": "Workplace 443/500 seeded — staff 8860, rosters 5316"
     },
     {
       "time": "14:02",
-      "message": "Workplace 144/200 seeded — staff 2880, rosters 1728"
+      "message": "Workplace 444/500 seeded — staff 8880, rosters 5328"
     },
     {
       "time": "14:02",
-      "message": "Workplace 145/200 seeded — staff 2900, rosters 1740"
+      "message": "Workplace 445/500 seeded — staff 8900, rosters 5340"
     },
     {
       "time": "14:02",
-      "message": "Workplace 146/200 seeded — staff 2920, rosters 1752"
+      "message": "Workplace 446/500 seeded — staff 8920, rosters 5352"
     },
     {
       "time": "14:02",
-      "message": "Workplace 147/200 seeded — staff 2940, rosters 1764"
+      "message": "Workplace 447/500 seeded — staff 8940, rosters 5364"
     },
     {
       "time": "14:02",
-      "message": "Workplace 148/200 seeded — staff 2960, rosters 1776"
+      "message": "Workplace 448/500 seeded — staff 8960, rosters 5376"
     },
     {
       "time": "14:02",
-      "message": "Workplace 149/200 seeded — staff 2980, rosters 1788"
+      "message": "Workplace 449/500 seeded — staff 8980, rosters 5388"
     },
     {
       "time": "14:02",
-      "message": "Workplace 150/200 seeded — staff 3000, rosters 1800"
+      "message": "Workplace 450/500 seeded — staff 9000, rosters 5400"
     },
     {
       "time": "14:02",
-      "message": "Workplace 151/200 seeded — staff 3020, rosters 1812"
+      "message": "Workplace 451/500 seeded — staff 9020, rosters 5412"
     },
     {
       "time": "14:02",
-      "message": "Workplace 152/200 seeded — staff 3040, rosters 1824"
+      "message": "Workplace 452/500 seeded — staff 9040, rosters 5424"
     },
     {
       "time": "14:02",
-      "message": "Workplace 153/200 seeded — staff 3060, rosters 1836"
+      "message": "Workplace 453/500 seeded — staff 9060, rosters 5436"
     },
     {
       "time": "14:02",
-      "message": "Workplace 154/200 seeded — staff 3080, rosters 1848"
+      "message": "Workplace 454/500 seeded — staff 9080, rosters 5448"
     },
     {
       "time": "14:02",
-      "message": "Workplace 155/200 seeded — staff 3100, rosters 1860"
+      "message": "Workplace 455/500 seeded — staff 9100, rosters 5460"
     },
     {
       "time": "14:02",
-      "message": "Workplace 156/200 seeded — staff 3120, rosters 1872"
+      "message": "Workplace 456/500 seeded — staff 9120, rosters 5472"
     },
     {
       "time": "14:02",
-      "message": "Workplace 157/200 seeded — staff 3140, rosters 1884"
+      "message": "Workplace 457/500 seeded — staff 9140, rosters 5484"
     },
     {
       "time": "14:02",
-      "message": "Workplace 158/200 seeded — staff 3160, rosters 1896"
+      "message": "Workplace 458/500 seeded — staff 9160, rosters 5496"
     },
     {
       "time": "14:02",
-      "message": "Workplace 159/200 seeded — staff 3180, rosters 1908"
+      "message": "Workplace 459/500 seeded — staff 9180, rosters 5508"
     },
     {
       "time": "14:02",
-      "message": "Workplace 160/200 seeded — staff 3200, rosters 1920"
+      "message": "Workplace 460/500 seeded — staff 9200, rosters 5520"
     },
     {
       "time": "14:02",
-      "message": "Workplace 161/200 seeded — staff 3220, rosters 1932"
+      "message": "Workplace 461/500 seeded — staff 9220, rosters 5532"
     },
     {
       "time": "14:02",
-      "message": "Workplace 162/200 seeded — staff 3240, rosters 1944"
+      "message": "Workplace 462/500 seeded — staff 9240, rosters 5544"
     },
     {
       "time": "14:02",
-      "message": "Workplace 163/200 seeded — staff 3260, rosters 1956"
+      "message": "Workplace 463/500 seeded — staff 9260, rosters 5556"
     },
     {
       "time": "14:02",
-      "message": "Workplace 164/200 seeded — staff 3280, rosters 1968"
+      "message": "Workplace 464/500 seeded — staff 9280, rosters 5568"
     },
     {
       "time": "14:02",
-      "message": "Workplace 165/200 seeded — staff 3300, rosters 1980"
+      "message": "Workplace 465/500 seeded — staff 9300, rosters 5580"
     },
     {
       "time": "14:02",
-      "message": "Workplace 166/200 seeded — staff 3320, rosters 1992"
+      "message": "Workplace 466/500 seeded — staff 9320, rosters 5592"
     },
     {
       "time": "14:02",
-      "message": "Workplace 167/200 seeded — staff 3340, rosters 2004"
+      "message": "Workplace 467/500 seeded — staff 9340, rosters 5604"
     },
     {
       "time": "14:02",
-      "message": "Workplace 168/200 seeded — staff 3360, rosters 2016"
+      "message": "Workplace 468/500 seeded — staff 9360, rosters 5616"
     },
     {
       "time": "14:02",
-      "message": "Workplace 169/200 seeded — staff 3380, rosters 2028"
+      "message": "Workplace 469/500 seeded — staff 9380, rosters 5628"
     },
     {
       "time": "14:02",
-      "message": "Workplace 170/200 seeded — staff 3400, rosters 2040"
+      "message": "Workplace 470/500 seeded — staff 9400, rosters 5640"
     },
     {
       "time": "14:02",
-      "message": "Workplace 171/200 seeded — staff 3420, rosters 2052"
+      "message": "Workplace 471/500 seeded — staff 9420, rosters 5652"
     },
     {
       "time": "14:02",
-      "message": "Workplace 172/200 seeded — staff 3440, rosters 2064"
+      "message": "Workplace 472/500 seeded — staff 9440, rosters 5664"
     },
     {
       "time": "14:02",
-      "message": "Workplace 173/200 seeded — staff 3460, rosters 2076"
+      "message": "Workplace 473/500 seeded — staff 9460, rosters 5676"
     },
     {
       "time": "14:02",
-      "message": "Workplace 174/200 seeded — staff 3480, rosters 2088"
+      "message": "Workplace 474/500 seeded — staff 9480, rosters 5688"
     },
     {
       "time": "14:02",
-      "message": "Workplace 175/200 seeded — staff 3500, rosters 2100"
+      "message": "Workplace 475/500 seeded — staff 9500, rosters 5700"
     },
     {
       "time": "14:02",
-      "message": "Workplace 176/200 seeded — staff 3520, rosters 2112"
+      "message": "Workplace 476/500 seeded — staff 9520, rosters 5712"
     },
     {
       "time": "14:02",
-      "message": "Workplace 177/200 seeded — staff 3540, rosters 2124"
+      "message": "Workplace 477/500 seeded — staff 9540, rosters 5724"
     },
     {
       "time": "14:02",
-      "message": "Workplace 178/200 seeded — staff 3560, rosters 2136"
+      "message": "Workplace 478/500 seeded — staff 9560, rosters 5736"
     },
     {
       "time": "14:02",
-      "message": "Workplace 179/200 seeded — staff 3580, rosters 2148"
+      "message": "Workplace 479/500 seeded — staff 9580, rosters 5748"
     },
     {
       "time": "14:02",
-      "message": "Workplace 180/200 seeded — staff 3600, rosters 2160"
+      "message": "Workplace 480/500 seeded — staff 9600, rosters 5760"
     },
     {
       "time": "14:02",
-      "message": "Workplace 181/200 seeded — staff 3620, rosters 2172"
+      "message": "Workplace 481/500 seeded — staff 9620, rosters 5772"
     },
     {
       "time": "14:02",
-      "message": "Workplace 182/200 seeded — staff 3640, rosters 2184"
+      "message": "Workplace 482/500 seeded — staff 9640, rosters 5784"
     },
     {
       "time": "14:02",
-      "message": "Workplace 183/200 seeded — staff 3660, rosters 2196"
+      "message": "Workplace 483/500 seeded — staff 9660, rosters 5796"
     },
     {
       "time": "14:02",
-      "message": "Workplace 184/200 seeded — staff 3680, rosters 2208"
+      "message": "Workplace 484/500 seeded — staff 9680, rosters 5808"
     },
     {
       "time": "14:02",
-      "message": "Workplace 185/200 seeded — staff 3700, rosters 2220"
+      "message": "Workplace 485/500 seeded — staff 9700, rosters 5820"
     },
     {
       "time": "14:02",
-      "message": "Workplace 186/200 seeded — staff 3720, rosters 2232"
+      "message": "Workplace 486/500 seeded — staff 9720, rosters 5832"
     },
     {
       "time": "14:02",
-      "message": "Workplace 187/200 seeded — staff 3740, rosters 2244"
+      "message": "Workplace 487/500 seeded — staff 9740, rosters 5844"
     },
     {
       "time": "14:02",
-      "message": "Workplace 188/200 seeded — staff 3760, rosters 2256"
+      "message": "Workplace 488/500 seeded — staff 9760, rosters 5856"
     },
     {
       "time": "14:02",
-      "message": "Workplace 189/200 seeded — staff 3780, rosters 2268"
+      "message": "Workplace 489/500 seeded — staff 9780, rosters 5868"
     },
     {
       "time": "14:02",
-      "message": "Workplace 190/200 seeded — staff 3800, rosters 2280"
+      "message": "Workplace 490/500 seeded — staff 9800, rosters 5880"
     },
     {
       "time": "14:02",
-      "message": "Workplace 191/200 seeded — staff 3820, rosters 2292"
+      "message": "Workplace 491/500 seeded — staff 9820, rosters 5892"
     },
     {
       "time": "14:02",
-      "message": "Workplace 192/200 seeded — staff 3840, rosters 2304"
+      "message": "Workplace 492/500 seeded — staff 9840, rosters 5904"
     },
     {
       "time": "14:02",
-      "message": "Workplace 193/200 seeded — staff 3860, rosters 2316"
+      "message": "Workplace 493/500 seeded — staff 9860, rosters 5916"
     },
     {
       "time": "14:02",
-      "message": "Workplace 194/200 seeded — staff 3880, rosters 2328"
+      "message": "Workplace 494/500 seeded — staff 9880, rosters 5928"
     },
     {
       "time": "14:02",
-      "message": "Workplace 195/200 seeded — staff 3900, rosters 2340"
+      "message": "Workplace 495/500 seeded — staff 9900, rosters 5940"
     },
     {
       "time": "14:02",
-      "message": "Workplace 196/200 seeded — staff 3920, rosters 2352"
+      "message": "Workplace 496/500 seeded — staff 9920, rosters 5952"
     },
     {
       "time": "14:02",
-      "message": "Workplace 197/200 seeded — staff 3940, rosters 2364"
+      "message": "Workplace 497/500 seeded — staff 9940, rosters 5964"
     },
     {
       "time": "14:02",
-      "message": "Workplace 198/200 seeded — staff 3960, rosters 2376"
+      "message": "Workplace 498/500 seeded — staff 9960, rosters 5976"
     },
     {
       "time": "14:02",
-      "message": "Workplace 199/200 seeded — staff 3980, rosters 2388"
+      "message": "Workplace 499/500 seeded — staff 9980, rosters 5988"
     },
     {
       "time": "14:02",
-      "message": "Workplace 200/200 seeded — staff 4000, rosters 2400"
+      "message": "Workplace 500/500 seeded — staff 10000, rosters 6000"
     },
     {
       "time": "14:02",
@@ -759,9 +816,9 @@
     },
     {
       "time": "14:02",
-      "message": "Point s4a-200wp done — countsOk=true, crashes=0"
+      "message": "Point s4b-500wp done — countsOk=true, crashes=0"
     }
   ],
-  "updatedAt": "2026-10-17T14:02:22.691+02:00",
+  "updatedAt": "2026-10-17T14:02:55.523+02:00",
   "history": []
 }
