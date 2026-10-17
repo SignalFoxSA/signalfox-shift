@@ -2762,7 +2762,7 @@
   "log": [
     {
       "time": "09:24",
-      "message": "Stress test re-run started \u2014 testing the three fixes (BUILD 1999)."
+      "message": "Stress test re-run started — testing the three fixes (BUILD 1999)."
     },
     {
       "time": "09:27",
@@ -2770,963 +2770,963 @@
     },
     {
       "time": "09:27",
-      "message": "Building up \u2014 seeding\u2026"
+      "message": "Building up — seeding…"
     },
     {
       "time": "09:27",
-      "message": "Added teams \u2014 staff 20, rosters 12, changes 170"
+      "message": "Added teams — staff 20, rosters 12, changes 170"
     },
     {
       "time": "09:27",
-      "message": "Added teams \u2014 staff 40, rosters 24, changes 340"
+      "message": "Added teams — staff 40, rosters 24, changes 340"
     },
     {
       "time": "09:27",
-      "message": "Added teams \u2014 staff 60, rosters 36, changes 510"
+      "message": "Added teams — staff 60, rosters 36, changes 510"
     },
     {
       "time": "09:27",
-      "message": "Added teams \u2014 staff 80, rosters 48, changes 680"
+      "message": "Added teams — staff 80, rosters 48, changes 680"
     },
     {
       "time": "09:27",
-      "message": "Added teams \u2014 staff 100, rosters 60, changes 850"
+      "message": "Added teams — staff 100, rosters 60, changes 850"
     },
     {
       "time": "09:27",
-      "message": "Added teams \u2014 staff 120, rosters 72, changes 1020"
+      "message": "Added teams — staff 120, rosters 72, changes 1020"
     },
     {
       "time": "09:27",
-      "message": "Added teams \u2014 staff 140, rosters 84, changes 1190"
+      "message": "Added teams — staff 140, rosters 84, changes 1190"
     },
     {
       "time": "09:27",
-      "message": "Added teams \u2014 staff 160, rosters 96, changes 1360"
+      "message": "Added teams — staff 160, rosters 96, changes 1360"
     },
     {
       "time": "09:27",
-      "message": "Added teams \u2014 staff 180, rosters 108, changes 1530"
+      "message": "Added teams — staff 180, rosters 108, changes 1530"
     },
     {
       "time": "09:27",
-      "message": "Added teams \u2014 staff 200, rosters 120, changes 1700"
+      "message": "Added teams — staff 200, rosters 120, changes 1700"
     },
     {
       "time": "09:27",
-      "message": "Added notifications \u2014 1000 of 1000"
+      "message": "Added notifications — 1000 of 1000"
     },
     {
       "time": "09:27",
-      "message": "Added applications \u2014 200 of 200"
+      "message": "Added applications — 200 of 200"
     },
     {
       "time": "09:27",
-      "message": "Added drafts \u2014 50 of 50"
+      "message": "Added drafts — 50 of 50"
     },
     {
       "time": "09:27",
-      "message": "Build complete \u2014 staff 200, rosters 120, changes 1700"
+      "message": "Build complete — staff 200, rosters 120, changes 1700"
     },
     {
       "time": "09:27",
-      "message": "Reloaded \u2014 load 2582ms"
+      "message": "Reloaded — load 2582ms"
     },
     {
       "time": "09:27",
-      "message": "FIX 2: Stats MISS 1084ms \u2192 HIT 1ms (equal=true, bust=false, fresh=true)"
+      "message": "FIX 2: Stats MISS 1084ms → HIT 1ms (equal=true, bust=false, fresh=true)"
     },
     {
       "time": "09:27",
-      "message": "Stage 1 done \u2014 countsOk=true"
+      "message": "Stage 1 done — countsOk=true"
     },
     {
       "time": "09:27",
-      "message": "Problem: FIX 2 FAILED \u2014 Stats repeat view NOT instant or cache wrong (HIT 1ms, equal=true, bust=false, fresh=true) at 200 staff"
+      "message": "Problem: FIX 2 FAILED — Stats repeat view NOT instant or cache wrong (HIT 1ms, equal=true, bust=false, fresh=true) at 200 staff"
     },
     {
       "time": "09:29",
-      "message": "Correction: Stage 1 \"FIX 2 FAILED\" was a probe artifact (probe mutated S.rosters, a separate copy from the company snapshot Stats reads) \u2014 cache is correct (HIT 1ms, deep-equal, fresh-equal). Probe fixed to mutate the company copy for Stage 2+."
+      "message": "Correction: Stage 1 \"FIX 2 FAILED\" was a probe artifact (probe mutated S.rosters, a separate copy from the company snapshot Stats reads) — cache is correct (HIT 1ms, deep-equal, fresh-equal). Probe fixed to mutate the company copy for Stage 2+."
     },
     {
       "time": "09:29",
-      "message": "Building up \u2014 seeding\u2026"
+      "message": "Building up — seeding…"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 20, rosters 24, changes 280"
+      "message": "Added teams — staff 20, rosters 24, changes 280"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 40, rosters 48, changes 560"
+      "message": "Added teams — staff 40, rosters 48, changes 560"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 60, rosters 72, changes 840"
+      "message": "Added teams — staff 60, rosters 72, changes 840"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 80, rosters 96, changes 1120"
+      "message": "Added teams — staff 80, rosters 96, changes 1120"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 100, rosters 120, changes 1400"
+      "message": "Added teams — staff 100, rosters 120, changes 1400"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 120, rosters 144, changes 1680"
+      "message": "Added teams — staff 120, rosters 144, changes 1680"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 140, rosters 168, changes 1960"
+      "message": "Added teams — staff 140, rosters 168, changes 1960"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 160, rosters 192, changes 2240"
+      "message": "Added teams — staff 160, rosters 192, changes 2240"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 180, rosters 216, changes 2520"
+      "message": "Added teams — staff 180, rosters 216, changes 2520"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 200, rosters 240, changes 2800"
+      "message": "Added teams — staff 200, rosters 240, changes 2800"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 220, rosters 264, changes 3080"
+      "message": "Added teams — staff 220, rosters 264, changes 3080"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 240, rosters 288, changes 3360"
+      "message": "Added teams — staff 240, rosters 288, changes 3360"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 260, rosters 312, changes 3640"
+      "message": "Added teams — staff 260, rosters 312, changes 3640"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 280, rosters 336, changes 3920"
+      "message": "Added teams — staff 280, rosters 336, changes 3920"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 300, rosters 360, changes 4200"
+      "message": "Added teams — staff 300, rosters 360, changes 4200"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 320, rosters 384, changes 4480"
+      "message": "Added teams — staff 320, rosters 384, changes 4480"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 340, rosters 408, changes 4760"
+      "message": "Added teams — staff 340, rosters 408, changes 4760"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 360, rosters 432, changes 5040"
+      "message": "Added teams — staff 360, rosters 432, changes 5040"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 380, rosters 456, changes 5320"
+      "message": "Added teams — staff 380, rosters 456, changes 5320"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 400, rosters 480, changes 5600"
+      "message": "Added teams — staff 400, rosters 480, changes 5600"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 420, rosters 504, changes 5880"
+      "message": "Added teams — staff 420, rosters 504, changes 5880"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 440, rosters 528, changes 6160"
+      "message": "Added teams — staff 440, rosters 528, changes 6160"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 460, rosters 552, changes 6440"
+      "message": "Added teams — staff 460, rosters 552, changes 6440"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 480, rosters 576, changes 6720"
+      "message": "Added teams — staff 480, rosters 576, changes 6720"
     },
     {
       "time": "09:29",
-      "message": "Added teams \u2014 staff 500, rosters 600, changes 7000"
+      "message": "Added teams — staff 500, rosters 600, changes 7000"
     },
     {
       "time": "09:29",
-      "message": "Added notifications \u2014 1000 of 2000"
+      "message": "Added notifications — 1000 of 2000"
     },
     {
       "time": "09:29",
-      "message": "Added notifications \u2014 2000 of 2000"
+      "message": "Added notifications — 2000 of 2000"
     },
     {
       "time": "09:29",
-      "message": "Added applications \u2014 400 of 400"
+      "message": "Added applications — 400 of 400"
     },
     {
       "time": "09:29",
-      "message": "Added drafts \u2014 100 of 100"
+      "message": "Added drafts — 100 of 100"
     },
     {
       "time": "09:29",
-      "message": "Build complete \u2014 staff 500, rosters 600, changes 7000"
+      "message": "Build complete — staff 500, rosters 600, changes 7000"
     },
     {
       "time": "09:29",
-      "message": "Reloaded \u2014 load 2236ms"
+      "message": "Reloaded — load 2236ms"
     },
     {
       "time": "09:30",
-      "message": "FIX 2: Stats MISS 12398ms \u2192 HIT 4ms (equal=true, bust=true, fresh=true)"
+      "message": "FIX 2: Stats MISS 12398ms → HIT 4ms (equal=true, bust=true, fresh=true)"
     },
     {
       "time": "09:30",
-      "message": "Stage 2 done \u2014 countsOk=true"
+      "message": "Stage 2 done — countsOk=true"
     },
     {
       "time": "09:30",
-      "message": "Problem: Company Stats FIRST compute still slow (12398ms at 500 staff) \u2014 KNOWN REMAINING LIMIT; repeat views instant (Fix 2 held, HIT 4ms)"
+      "message": "Problem: Company Stats FIRST compute still slow (12398ms at 500 staff) — KNOWN REMAINING LIMIT; repeat views instant (Fix 2 held, HIT 4ms)"
     },
     {
       "time": "09:30",
-      "message": "Problem: Render/measure exceeded 10s (break): FIX 2 \u2014 Stats cache bust + cached==fresh = 11827ms"
+      "message": "Problem: Render/measure exceeded 10s (break): FIX 2 — Stats cache bust + cached==fresh = 11827ms"
     },
     {
       "time": "09:30",
-      "message": "Correction: removed duplicate 'Render/measure exceeded 10s (bust)' problem \u2014 the bust measure is a deliberate full recompute (same known limit as the FIRST-compute entry), not a separate break."
+      "message": "Correction: removed duplicate 'Render/measure exceeded 10s (bust)' problem — the bust measure is a deliberate full recompute (same known limit as the FIRST-compute entry), not a separate break."
     },
     {
       "time": "09:30",
-      "message": "Building up \u2014 seeding\u2026"
+      "message": "Building up — seeding…"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 20, rosters 24, changes 280"
+      "message": "Added teams — staff 20, rosters 24, changes 280"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 40, rosters 48, changes 560"
+      "message": "Added teams — staff 40, rosters 48, changes 560"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 60, rosters 72, changes 840"
+      "message": "Added teams — staff 60, rosters 72, changes 840"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 80, rosters 96, changes 1120"
+      "message": "Added teams — staff 80, rosters 96, changes 1120"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 100, rosters 120, changes 1400"
+      "message": "Added teams — staff 100, rosters 120, changes 1400"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 120, rosters 144, changes 1680"
+      "message": "Added teams — staff 120, rosters 144, changes 1680"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 140, rosters 168, changes 1960"
+      "message": "Added teams — staff 140, rosters 168, changes 1960"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 160, rosters 192, changes 2240"
+      "message": "Added teams — staff 160, rosters 192, changes 2240"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 180, rosters 216, changes 2520"
+      "message": "Added teams — staff 180, rosters 216, changes 2520"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 200, rosters 240, changes 2800"
+      "message": "Added teams — staff 200, rosters 240, changes 2800"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 220, rosters 264, changes 3080"
+      "message": "Added teams — staff 220, rosters 264, changes 3080"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 240, rosters 288, changes 3360"
+      "message": "Added teams — staff 240, rosters 288, changes 3360"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 260, rosters 312, changes 3640"
+      "message": "Added teams — staff 260, rosters 312, changes 3640"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 280, rosters 336, changes 3920"
+      "message": "Added teams — staff 280, rosters 336, changes 3920"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 300, rosters 360, changes 4200"
+      "message": "Added teams — staff 300, rosters 360, changes 4200"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 320, rosters 384, changes 4480"
+      "message": "Added teams — staff 320, rosters 384, changes 4480"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 340, rosters 408, changes 4760"
+      "message": "Added teams — staff 340, rosters 408, changes 4760"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 360, rosters 432, changes 5040"
+      "message": "Added teams — staff 360, rosters 432, changes 5040"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 380, rosters 456, changes 5320"
+      "message": "Added teams — staff 380, rosters 456, changes 5320"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 400, rosters 480, changes 5600"
+      "message": "Added teams — staff 400, rosters 480, changes 5600"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 420, rosters 504, changes 5880"
+      "message": "Added teams — staff 420, rosters 504, changes 5880"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 440, rosters 528, changes 6160"
+      "message": "Added teams — staff 440, rosters 528, changes 6160"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 460, rosters 552, changes 6440"
+      "message": "Added teams — staff 460, rosters 552, changes 6440"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 480, rosters 576, changes 6720"
+      "message": "Added teams — staff 480, rosters 576, changes 6720"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 500, rosters 600, changes 7000"
+      "message": "Added teams — staff 500, rosters 600, changes 7000"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 520, rosters 624, changes 7280"
+      "message": "Added teams — staff 520, rosters 624, changes 7280"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 540, rosters 648, changes 7560"
+      "message": "Added teams — staff 540, rosters 648, changes 7560"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 560, rosters 672, changes 7840"
+      "message": "Added teams — staff 560, rosters 672, changes 7840"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 580, rosters 696, changes 8120"
+      "message": "Added teams — staff 580, rosters 696, changes 8120"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 600, rosters 720, changes 8400"
+      "message": "Added teams — staff 600, rosters 720, changes 8400"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 620, rosters 744, changes 8680"
+      "message": "Added teams — staff 620, rosters 744, changes 8680"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 640, rosters 768, changes 8960"
+      "message": "Added teams — staff 640, rosters 768, changes 8960"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 660, rosters 792, changes 9240"
+      "message": "Added teams — staff 660, rosters 792, changes 9240"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 680, rosters 816, changes 9520"
+      "message": "Added teams — staff 680, rosters 816, changes 9520"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 700, rosters 840, changes 9800"
+      "message": "Added teams — staff 700, rosters 840, changes 9800"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 720, rosters 864, changes 10080"
+      "message": "Added teams — staff 720, rosters 864, changes 10080"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 740, rosters 888, changes 10360"
+      "message": "Added teams — staff 740, rosters 888, changes 10360"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 760, rosters 912, changes 10640"
+      "message": "Added teams — staff 760, rosters 912, changes 10640"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 780, rosters 936, changes 10920"
+      "message": "Added teams — staff 780, rosters 936, changes 10920"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 800, rosters 960, changes 11200"
+      "message": "Added teams — staff 800, rosters 960, changes 11200"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 820, rosters 984, changes 11480"
+      "message": "Added teams — staff 820, rosters 984, changes 11480"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 840, rosters 1008, changes 11760"
+      "message": "Added teams — staff 840, rosters 1008, changes 11760"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 860, rosters 1032, changes 12040"
+      "message": "Added teams — staff 860, rosters 1032, changes 12040"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 880, rosters 1056, changes 12320"
+      "message": "Added teams — staff 880, rosters 1056, changes 12320"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 900, rosters 1080, changes 12600"
+      "message": "Added teams — staff 900, rosters 1080, changes 12600"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 920, rosters 1104, changes 12880"
+      "message": "Added teams — staff 920, rosters 1104, changes 12880"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 940, rosters 1128, changes 13160"
+      "message": "Added teams — staff 940, rosters 1128, changes 13160"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 960, rosters 1152, changes 13440"
+      "message": "Added teams — staff 960, rosters 1152, changes 13440"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 980, rosters 1176, changes 13720"
+      "message": "Added teams — staff 980, rosters 1176, changes 13720"
     },
     {
       "time": "09:30",
-      "message": "Added teams \u2014 staff 1000, rosters 1200, changes 14000"
+      "message": "Added teams — staff 1000, rosters 1200, changes 14000"
     },
     {
       "time": "09:30",
-      "message": "Added notifications \u2014 1000 of 4000"
+      "message": "Added notifications — 1000 of 4000"
     },
     {
       "time": "09:30",
-      "message": "Added notifications \u2014 2000 of 4000"
+      "message": "Added notifications — 2000 of 4000"
     },
     {
       "time": "09:30",
-      "message": "Added notifications \u2014 3000 of 4000"
+      "message": "Added notifications — 3000 of 4000"
     },
     {
       "time": "09:30",
-      "message": "Added notifications \u2014 4000 of 4000"
+      "message": "Added notifications — 4000 of 4000"
     },
     {
       "time": "09:30",
-      "message": "Added applications \u2014 400 of 800"
+      "message": "Added applications — 400 of 800"
     },
     {
       "time": "09:30",
-      "message": "Added applications \u2014 800 of 800"
+      "message": "Added applications — 800 of 800"
     },
     {
       "time": "09:30",
-      "message": "Added drafts \u2014 100 of 200"
+      "message": "Added drafts — 100 of 200"
     },
     {
       "time": "09:30",
-      "message": "Added drafts \u2014 200 of 200"
+      "message": "Added drafts — 200 of 200"
     },
     {
       "time": "09:30",
-      "message": "Build complete \u2014 staff 1000, rosters 1200, changes 14000"
+      "message": "Build complete — staff 1000, rosters 1200, changes 14000"
     },
     {
       "time": "09:31",
-      "message": "Reloaded \u2014 load 2302ms"
+      "message": "Reloaded — load 2302ms"
     },
     {
       "time": "09:33",
-      "message": "FIX 2: Stats MISS 45689ms \u2192 HIT 9ms (equal=true, bust=true, fresh=true)"
+      "message": "FIX 2: Stats MISS 45689ms → HIT 9ms (equal=true, bust=true, fresh=true)"
     },
     {
       "time": "09:33",
-      "message": "Stage 3 done \u2014 countsOk=true"
+      "message": "Stage 3 done — countsOk=true"
     },
     {
       "time": "09:33",
-      "message": "Problem: Company Stats FIRST compute still slow (45689ms at 1000 staff) \u2014 KNOWN REMAINING LIMIT; repeat views instant (Fix 2 held, HIT 9ms)"
+      "message": "Problem: Company Stats FIRST compute still slow (45689ms at 1000 staff) — KNOWN REMAINING LIMIT; repeat views instant (Fix 2 held, HIT 9ms)"
     },
     {
       "time": "09:33",
-      "message": "Building up \u2014 seeding\u2026"
+      "message": "Building up — seeding…"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 20, rosters 36, changes 400"
+      "message": "Added teams — staff 20, rosters 36, changes 400"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 40, rosters 72, changes 800"
+      "message": "Added teams — staff 40, rosters 72, changes 800"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 60, rosters 108, changes 1200"
+      "message": "Added teams — staff 60, rosters 108, changes 1200"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 80, rosters 144, changes 1600"
+      "message": "Added teams — staff 80, rosters 144, changes 1600"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 100, rosters 180, changes 2000"
+      "message": "Added teams — staff 100, rosters 180, changes 2000"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 120, rosters 216, changes 2400"
+      "message": "Added teams — staff 120, rosters 216, changes 2400"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 140, rosters 252, changes 2800"
+      "message": "Added teams — staff 140, rosters 252, changes 2800"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 160, rosters 288, changes 3200"
+      "message": "Added teams — staff 160, rosters 288, changes 3200"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 180, rosters 324, changes 3600"
+      "message": "Added teams — staff 180, rosters 324, changes 3600"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 200, rosters 360, changes 4000"
+      "message": "Added teams — staff 200, rosters 360, changes 4000"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 220, rosters 396, changes 4400"
+      "message": "Added teams — staff 220, rosters 396, changes 4400"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 240, rosters 432, changes 4800"
+      "message": "Added teams — staff 240, rosters 432, changes 4800"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 260, rosters 468, changes 5200"
+      "message": "Added teams — staff 260, rosters 468, changes 5200"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 280, rosters 504, changes 5600"
+      "message": "Added teams — staff 280, rosters 504, changes 5600"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 300, rosters 540, changes 6000"
+      "message": "Added teams — staff 300, rosters 540, changes 6000"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 320, rosters 576, changes 6400"
+      "message": "Added teams — staff 320, rosters 576, changes 6400"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 340, rosters 612, changes 6800"
+      "message": "Added teams — staff 340, rosters 612, changes 6800"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 360, rosters 648, changes 7200"
+      "message": "Added teams — staff 360, rosters 648, changes 7200"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 380, rosters 684, changes 7600"
+      "message": "Added teams — staff 380, rosters 684, changes 7600"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 400, rosters 720, changes 8000"
+      "message": "Added teams — staff 400, rosters 720, changes 8000"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 420, rosters 756, changes 8400"
+      "message": "Added teams — staff 420, rosters 756, changes 8400"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 440, rosters 792, changes 8800"
+      "message": "Added teams — staff 440, rosters 792, changes 8800"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 460, rosters 828, changes 9200"
+      "message": "Added teams — staff 460, rosters 828, changes 9200"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 480, rosters 864, changes 9600"
+      "message": "Added teams — staff 480, rosters 864, changes 9600"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 500, rosters 900, changes 10000"
+      "message": "Added teams — staff 500, rosters 900, changes 10000"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 520, rosters 936, changes 10400"
+      "message": "Added teams — staff 520, rosters 936, changes 10400"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 540, rosters 972, changes 10800"
+      "message": "Added teams — staff 540, rosters 972, changes 10800"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 560, rosters 1008, changes 11200"
+      "message": "Added teams — staff 560, rosters 1008, changes 11200"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 580, rosters 1044, changes 11600"
+      "message": "Added teams — staff 580, rosters 1044, changes 11600"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 600, rosters 1080, changes 12000"
+      "message": "Added teams — staff 600, rosters 1080, changes 12000"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 620, rosters 1116, changes 12400"
+      "message": "Added teams — staff 620, rosters 1116, changes 12400"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 640, rosters 1152, changes 12800"
+      "message": "Added teams — staff 640, rosters 1152, changes 12800"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 660, rosters 1188, changes 13200"
+      "message": "Added teams — staff 660, rosters 1188, changes 13200"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 680, rosters 1224, changes 13600"
+      "message": "Added teams — staff 680, rosters 1224, changes 13600"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 700, rosters 1260, changes 14000"
+      "message": "Added teams — staff 700, rosters 1260, changes 14000"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 720, rosters 1296, changes 14400"
+      "message": "Added teams — staff 720, rosters 1296, changes 14400"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 740, rosters 1332, changes 14800"
+      "message": "Added teams — staff 740, rosters 1332, changes 14800"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 760, rosters 1368, changes 15200"
+      "message": "Added teams — staff 760, rosters 1368, changes 15200"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 780, rosters 1404, changes 15600"
+      "message": "Added teams — staff 780, rosters 1404, changes 15600"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 800, rosters 1440, changes 16000"
+      "message": "Added teams — staff 800, rosters 1440, changes 16000"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 820, rosters 1476, changes 16400"
+      "message": "Added teams — staff 820, rosters 1476, changes 16400"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 840, rosters 1512, changes 16800"
+      "message": "Added teams — staff 840, rosters 1512, changes 16800"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 860, rosters 1548, changes 17200"
+      "message": "Added teams — staff 860, rosters 1548, changes 17200"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 880, rosters 1584, changes 17600"
+      "message": "Added teams — staff 880, rosters 1584, changes 17600"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 900, rosters 1620, changes 18000"
+      "message": "Added teams — staff 900, rosters 1620, changes 18000"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 920, rosters 1656, changes 18400"
+      "message": "Added teams — staff 920, rosters 1656, changes 18400"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 940, rosters 1692, changes 18800"
+      "message": "Added teams — staff 940, rosters 1692, changes 18800"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 960, rosters 1728, changes 19200"
+      "message": "Added teams — staff 960, rosters 1728, changes 19200"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 980, rosters 1764, changes 19600"
+      "message": "Added teams — staff 980, rosters 1764, changes 19600"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1000, rosters 1800, changes 20000"
+      "message": "Added teams — staff 1000, rosters 1800, changes 20000"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1020, rosters 1836, changes 20400"
+      "message": "Added teams — staff 1020, rosters 1836, changes 20400"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1040, rosters 1872, changes 20800"
+      "message": "Added teams — staff 1040, rosters 1872, changes 20800"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1060, rosters 1908, changes 21200"
+      "message": "Added teams — staff 1060, rosters 1908, changes 21200"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1080, rosters 1944, changes 21600"
+      "message": "Added teams — staff 1080, rosters 1944, changes 21600"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1100, rosters 1980, changes 22000"
+      "message": "Added teams — staff 1100, rosters 1980, changes 22000"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1120, rosters 2016, changes 22400"
+      "message": "Added teams — staff 1120, rosters 2016, changes 22400"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1140, rosters 2052, changes 22800"
+      "message": "Added teams — staff 1140, rosters 2052, changes 22800"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1160, rosters 2088, changes 23200"
+      "message": "Added teams — staff 1160, rosters 2088, changes 23200"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1180, rosters 2124, changes 23600"
+      "message": "Added teams — staff 1180, rosters 2124, changes 23600"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1200, rosters 2160, changes 24000"
+      "message": "Added teams — staff 1200, rosters 2160, changes 24000"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1220, rosters 2196, changes 24400"
+      "message": "Added teams — staff 1220, rosters 2196, changes 24400"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1240, rosters 2232, changes 24800"
+      "message": "Added teams — staff 1240, rosters 2232, changes 24800"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1260, rosters 2268, changes 25200"
+      "message": "Added teams — staff 1260, rosters 2268, changes 25200"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1280, rosters 2304, changes 25600"
+      "message": "Added teams — staff 1280, rosters 2304, changes 25600"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1300, rosters 2340, changes 26000"
+      "message": "Added teams — staff 1300, rosters 2340, changes 26000"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1320, rosters 2376, changes 26400"
+      "message": "Added teams — staff 1320, rosters 2376, changes 26400"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1340, rosters 2412, changes 26800"
+      "message": "Added teams — staff 1340, rosters 2412, changes 26800"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1360, rosters 2448, changes 27200"
+      "message": "Added teams — staff 1360, rosters 2448, changes 27200"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1380, rosters 2484, changes 27600"
+      "message": "Added teams — staff 1380, rosters 2484, changes 27600"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1400, rosters 2520, changes 28000"
+      "message": "Added teams — staff 1400, rosters 2520, changes 28000"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1420, rosters 2556, changes 28400"
+      "message": "Added teams — staff 1420, rosters 2556, changes 28400"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1440, rosters 2592, changes 28800"
+      "message": "Added teams — staff 1440, rosters 2592, changes 28800"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1460, rosters 2628, changes 29200"
+      "message": "Added teams — staff 1460, rosters 2628, changes 29200"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1480, rosters 2664, changes 29600"
+      "message": "Added teams — staff 1480, rosters 2664, changes 29600"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1500, rosters 2700, changes 30000"
+      "message": "Added teams — staff 1500, rosters 2700, changes 30000"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1520, rosters 2736, changes 30400"
+      "message": "Added teams — staff 1520, rosters 2736, changes 30400"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1540, rosters 2772, changes 30800"
+      "message": "Added teams — staff 1540, rosters 2772, changes 30800"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1560, rosters 2808, changes 31200"
+      "message": "Added teams — staff 1560, rosters 2808, changes 31200"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1580, rosters 2844, changes 31600"
+      "message": "Added teams — staff 1580, rosters 2844, changes 31600"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1600, rosters 2880, changes 32000"
+      "message": "Added teams — staff 1600, rosters 2880, changes 32000"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1620, rosters 2916, changes 32400"
+      "message": "Added teams — staff 1620, rosters 2916, changes 32400"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1640, rosters 2952, changes 32800"
+      "message": "Added teams — staff 1640, rosters 2952, changes 32800"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1660, rosters 2988, changes 33200"
+      "message": "Added teams — staff 1660, rosters 2988, changes 33200"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1680, rosters 3024, changes 33600"
+      "message": "Added teams — staff 1680, rosters 3024, changes 33600"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1700, rosters 3060, changes 34000"
+      "message": "Added teams — staff 1700, rosters 3060, changes 34000"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1720, rosters 3096, changes 34400"
+      "message": "Added teams — staff 1720, rosters 3096, changes 34400"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1740, rosters 3132, changes 34800"
+      "message": "Added teams — staff 1740, rosters 3132, changes 34800"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1760, rosters 3168, changes 35200"
+      "message": "Added teams — staff 1760, rosters 3168, changes 35200"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1780, rosters 3204, changes 35600"
+      "message": "Added teams — staff 1780, rosters 3204, changes 35600"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1800, rosters 3240, changes 36000"
+      "message": "Added teams — staff 1800, rosters 3240, changes 36000"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1820, rosters 3276, changes 36400"
+      "message": "Added teams — staff 1820, rosters 3276, changes 36400"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1840, rosters 3312, changes 36800"
+      "message": "Added teams — staff 1840, rosters 3312, changes 36800"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1860, rosters 3348, changes 37200"
+      "message": "Added teams — staff 1860, rosters 3348, changes 37200"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1880, rosters 3384, changes 37600"
+      "message": "Added teams — staff 1880, rosters 3384, changes 37600"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1900, rosters 3420, changes 38000"
+      "message": "Added teams — staff 1900, rosters 3420, changes 38000"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1920, rosters 3456, changes 38400"
+      "message": "Added teams — staff 1920, rosters 3456, changes 38400"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1940, rosters 3492, changes 38800"
+      "message": "Added teams — staff 1940, rosters 3492, changes 38800"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1960, rosters 3528, changes 39200"
+      "message": "Added teams — staff 1960, rosters 3528, changes 39200"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 1980, rosters 3564, changes 39600"
+      "message": "Added teams — staff 1980, rosters 3564, changes 39600"
     },
     {
       "time": "09:33",
-      "message": "Added teams \u2014 staff 2000, rosters 3600, changes 40000"
+      "message": "Added teams — staff 2000, rosters 3600, changes 40000"
     },
     {
       "time": "09:33",
-      "message": "Added notifications \u2014 1000 of 8000"
+      "message": "Added notifications — 1000 of 8000"
     },
     {
       "time": "09:33",
-      "message": "Added notifications \u2014 2000 of 8000"
+      "message": "Added notifications — 2000 of 8000"
     },
     {
       "time": "09:33",
-      "message": "Added notifications \u2014 3000 of 8000"
+      "message": "Added notifications — 3000 of 8000"
     },
     {
       "time": "09:33",
-      "message": "Added notifications \u2014 4000 of 8000"
+      "message": "Added notifications — 4000 of 8000"
     },
     {
       "time": "09:33",
-      "message": "Added notifications \u2014 5000 of 8000"
+      "message": "Added notifications — 5000 of 8000"
     },
     {
       "time": "09:33",
-      "message": "Added notifications \u2014 6000 of 8000"
+      "message": "Added notifications — 6000 of 8000"
     },
     {
       "time": "09:33",
-      "message": "Added notifications \u2014 7000 of 8000"
+      "message": "Added notifications — 7000 of 8000"
     },
     {
       "time": "09:33",
-      "message": "Added notifications \u2014 8000 of 8000"
+      "message": "Added notifications — 8000 of 8000"
     },
     {
       "time": "09:33",
-      "message": "Added applications \u2014 400 of 1600"
+      "message": "Added applications — 400 of 1600"
     },
     {
       "time": "09:33",
-      "message": "Added applications \u2014 800 of 1600"
+      "message": "Added applications — 800 of 1600"
     },
     {
       "time": "09:33",
-      "message": "Added applications \u2014 1200 of 1600"
+      "message": "Added applications — 1200 of 1600"
     },
     {
       "time": "09:33",
-      "message": "Added applications \u2014 1600 of 1600"
+      "message": "Added applications — 1600 of 1600"
     },
     {
       "time": "09:33",
-      "message": "Added drafts \u2014 100 of 400"
+      "message": "Added drafts — 100 of 400"
     },
     {
       "time": "09:33",
-      "message": "Added drafts \u2014 200 of 400"
+      "message": "Added drafts — 200 of 400"
     },
     {
       "time": "09:33",
-      "message": "Added drafts \u2014 300 of 400"
+      "message": "Added drafts — 300 of 400"
     },
     {
       "time": "09:33",
-      "message": "Added drafts \u2014 400 of 400"
+      "message": "Added drafts — 400 of 400"
     },
     {
       "time": "09:33",
-      "message": "Build complete \u2014 staff 2000, rosters 3600, changes 40000"
+      "message": "Build complete — staff 2000, rosters 3600, changes 40000"
     },
     {
       "time": "09:33",
-      "message": "Persist FAILED (quota) \u2014 reload would lose data"
+      "message": "Persist FAILED (quota) — reload would lose data"
     },
     {
       "time": "09:33",
@@ -3742,7 +3742,7 @@
     },
     {
       "time": "09:47",
-      "message": "FIX 2: Stats MISS 270004ms \u2192 HIT 47ms (equal=true, bust=true, fresh=true)"
+      "message": "FIX 2: Stats MISS 270004ms → HIT 47ms (equal=true, bust=true, fresh=true)"
     },
     {
       "time": "09:47",
@@ -3750,955 +3750,955 @@
     },
     {
       "time": "09:47",
-      "message": "Stage 4 done \u2014 countsOk=true"
+      "message": "Stage 4 done — countsOk=true"
     },
     {
       "time": "09:47",
-      "message": "Problem: localStorage quota exceeded \u2014 persist FAILED (sfshift_company:Failed to execute 'setItem' on 'Storage': Setting the value of 'sfshift_company' exceeded the quota.), BUT the storage-full banner SHOWED and NO data was lost (Fix 1 HELD)"
+      "message": "Problem: localStorage quota exceeded — persist FAILED (sfshift_company:Failed to execute 'setItem' on 'Storage': Setting the value of 'sfshift_company' exceeded the quota.), BUT the storage-full banner SHOWED and NO data was lost (Fix 1 HELD)"
     },
     {
       "time": "09:47",
-      "message": "Problem: Company Stats FIRST compute still slow (270004ms at 2000 staff) \u2014 KNOWN REMAINING LIMIT; repeat views instant (Fix 2 held, HIT 47ms)"
+      "message": "Problem: Company Stats FIRST compute still slow (270004ms at 2000 staff) — KNOWN REMAINING LIMIT; repeat views instant (Fix 2 held, HIT 47ms)"
     },
     {
       "time": "09:48",
-      "message": "Building up \u2014 seeding\u2026"
+      "message": "Building up — seeding…"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 20, rosters 48, changes 520"
+      "message": "Added teams — staff 20, rosters 48, changes 520"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 40, rosters 96, changes 1040"
+      "message": "Added teams — staff 40, rosters 96, changes 1040"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 60, rosters 144, changes 1560"
+      "message": "Added teams — staff 60, rosters 144, changes 1560"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 80, rosters 192, changes 2080"
+      "message": "Added teams — staff 80, rosters 192, changes 2080"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 100, rosters 240, changes 2600"
+      "message": "Added teams — staff 100, rosters 240, changes 2600"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 120, rosters 288, changes 3120"
+      "message": "Added teams — staff 120, rosters 288, changes 3120"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 140, rosters 336, changes 3640"
+      "message": "Added teams — staff 140, rosters 336, changes 3640"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 160, rosters 384, changes 4160"
+      "message": "Added teams — staff 160, rosters 384, changes 4160"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 180, rosters 432, changes 4680"
+      "message": "Added teams — staff 180, rosters 432, changes 4680"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 200, rosters 480, changes 5200"
+      "message": "Added teams — staff 200, rosters 480, changes 5200"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 220, rosters 528, changes 5720"
+      "message": "Added teams — staff 220, rosters 528, changes 5720"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 240, rosters 576, changes 6240"
+      "message": "Added teams — staff 240, rosters 576, changes 6240"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 260, rosters 624, changes 6760"
+      "message": "Added teams — staff 260, rosters 624, changes 6760"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 280, rosters 672, changes 7280"
+      "message": "Added teams — staff 280, rosters 672, changes 7280"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 300, rosters 720, changes 7800"
+      "message": "Added teams — staff 300, rosters 720, changes 7800"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 320, rosters 768, changes 8320"
+      "message": "Added teams — staff 320, rosters 768, changes 8320"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 340, rosters 816, changes 8840"
+      "message": "Added teams — staff 340, rosters 816, changes 8840"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 360, rosters 864, changes 9360"
+      "message": "Added teams — staff 360, rosters 864, changes 9360"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 380, rosters 912, changes 9880"
+      "message": "Added teams — staff 380, rosters 912, changes 9880"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 400, rosters 960, changes 10400"
+      "message": "Added teams — staff 400, rosters 960, changes 10400"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 420, rosters 1008, changes 10920"
+      "message": "Added teams — staff 420, rosters 1008, changes 10920"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 440, rosters 1056, changes 11440"
+      "message": "Added teams — staff 440, rosters 1056, changes 11440"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 460, rosters 1104, changes 11960"
+      "message": "Added teams — staff 460, rosters 1104, changes 11960"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 480, rosters 1152, changes 12480"
+      "message": "Added teams — staff 480, rosters 1152, changes 12480"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 500, rosters 1200, changes 13000"
+      "message": "Added teams — staff 500, rosters 1200, changes 13000"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 520, rosters 1248, changes 13520"
+      "message": "Added teams — staff 520, rosters 1248, changes 13520"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 540, rosters 1296, changes 14040"
+      "message": "Added teams — staff 540, rosters 1296, changes 14040"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 560, rosters 1344, changes 14560"
+      "message": "Added teams — staff 560, rosters 1344, changes 14560"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 580, rosters 1392, changes 15080"
+      "message": "Added teams — staff 580, rosters 1392, changes 15080"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 600, rosters 1440, changes 15600"
+      "message": "Added teams — staff 600, rosters 1440, changes 15600"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 620, rosters 1488, changes 16120"
+      "message": "Added teams — staff 620, rosters 1488, changes 16120"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 640, rosters 1536, changes 16640"
+      "message": "Added teams — staff 640, rosters 1536, changes 16640"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 660, rosters 1584, changes 17160"
+      "message": "Added teams — staff 660, rosters 1584, changes 17160"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 680, rosters 1632, changes 17680"
+      "message": "Added teams — staff 680, rosters 1632, changes 17680"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 700, rosters 1680, changes 18200"
+      "message": "Added teams — staff 700, rosters 1680, changes 18200"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 720, rosters 1728, changes 18720"
+      "message": "Added teams — staff 720, rosters 1728, changes 18720"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 740, rosters 1776, changes 19240"
+      "message": "Added teams — staff 740, rosters 1776, changes 19240"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 760, rosters 1824, changes 19760"
+      "message": "Added teams — staff 760, rosters 1824, changes 19760"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 780, rosters 1872, changes 20280"
+      "message": "Added teams — staff 780, rosters 1872, changes 20280"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 800, rosters 1920, changes 20800"
+      "message": "Added teams — staff 800, rosters 1920, changes 20800"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 820, rosters 1968, changes 21320"
+      "message": "Added teams — staff 820, rosters 1968, changes 21320"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 840, rosters 2016, changes 21840"
+      "message": "Added teams — staff 840, rosters 2016, changes 21840"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 860, rosters 2064, changes 22360"
+      "message": "Added teams — staff 860, rosters 2064, changes 22360"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 880, rosters 2112, changes 22880"
+      "message": "Added teams — staff 880, rosters 2112, changes 22880"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 900, rosters 2160, changes 23400"
+      "message": "Added teams — staff 900, rosters 2160, changes 23400"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 920, rosters 2208, changes 23920"
+      "message": "Added teams — staff 920, rosters 2208, changes 23920"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 940, rosters 2256, changes 24440"
+      "message": "Added teams — staff 940, rosters 2256, changes 24440"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 960, rosters 2304, changes 24960"
+      "message": "Added teams — staff 960, rosters 2304, changes 24960"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 980, rosters 2352, changes 25480"
+      "message": "Added teams — staff 980, rosters 2352, changes 25480"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1000, rosters 2400, changes 26000"
+      "message": "Added teams — staff 1000, rosters 2400, changes 26000"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1020, rosters 2448, changes 26520"
+      "message": "Added teams — staff 1020, rosters 2448, changes 26520"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1040, rosters 2496, changes 27040"
+      "message": "Added teams — staff 1040, rosters 2496, changes 27040"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1060, rosters 2544, changes 27560"
+      "message": "Added teams — staff 1060, rosters 2544, changes 27560"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1080, rosters 2592, changes 28080"
+      "message": "Added teams — staff 1080, rosters 2592, changes 28080"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1100, rosters 2640, changes 28600"
+      "message": "Added teams — staff 1100, rosters 2640, changes 28600"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1120, rosters 2688, changes 29120"
+      "message": "Added teams — staff 1120, rosters 2688, changes 29120"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1140, rosters 2736, changes 29640"
+      "message": "Added teams — staff 1140, rosters 2736, changes 29640"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1160, rosters 2784, changes 30160"
+      "message": "Added teams — staff 1160, rosters 2784, changes 30160"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1180, rosters 2832, changes 30680"
+      "message": "Added teams — staff 1180, rosters 2832, changes 30680"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1200, rosters 2880, changes 31200"
+      "message": "Added teams — staff 1200, rosters 2880, changes 31200"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1220, rosters 2928, changes 31720"
+      "message": "Added teams — staff 1220, rosters 2928, changes 31720"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1240, rosters 2976, changes 32240"
+      "message": "Added teams — staff 1240, rosters 2976, changes 32240"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1260, rosters 3024, changes 32760"
+      "message": "Added teams — staff 1260, rosters 3024, changes 32760"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1280, rosters 3072, changes 33280"
+      "message": "Added teams — staff 1280, rosters 3072, changes 33280"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1300, rosters 3120, changes 33800"
+      "message": "Added teams — staff 1300, rosters 3120, changes 33800"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1320, rosters 3168, changes 34320"
+      "message": "Added teams — staff 1320, rosters 3168, changes 34320"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1340, rosters 3216, changes 34840"
+      "message": "Added teams — staff 1340, rosters 3216, changes 34840"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1360, rosters 3264, changes 35360"
+      "message": "Added teams — staff 1360, rosters 3264, changes 35360"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1380, rosters 3312, changes 35880"
+      "message": "Added teams — staff 1380, rosters 3312, changes 35880"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1400, rosters 3360, changes 36400"
+      "message": "Added teams — staff 1400, rosters 3360, changes 36400"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1420, rosters 3408, changes 36920"
+      "message": "Added teams — staff 1420, rosters 3408, changes 36920"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1440, rosters 3456, changes 37440"
+      "message": "Added teams — staff 1440, rosters 3456, changes 37440"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1460, rosters 3504, changes 37960"
+      "message": "Added teams — staff 1460, rosters 3504, changes 37960"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1480, rosters 3552, changes 38480"
+      "message": "Added teams — staff 1480, rosters 3552, changes 38480"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1500, rosters 3600, changes 39000"
+      "message": "Added teams — staff 1500, rosters 3600, changes 39000"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1520, rosters 3648, changes 39520"
+      "message": "Added teams — staff 1520, rosters 3648, changes 39520"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1540, rosters 3696, changes 40040"
+      "message": "Added teams — staff 1540, rosters 3696, changes 40040"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1560, rosters 3744, changes 40560"
+      "message": "Added teams — staff 1560, rosters 3744, changes 40560"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1580, rosters 3792, changes 41080"
+      "message": "Added teams — staff 1580, rosters 3792, changes 41080"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1600, rosters 3840, changes 41600"
+      "message": "Added teams — staff 1600, rosters 3840, changes 41600"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1620, rosters 3888, changes 42120"
+      "message": "Added teams — staff 1620, rosters 3888, changes 42120"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1640, rosters 3936, changes 42640"
+      "message": "Added teams — staff 1640, rosters 3936, changes 42640"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1660, rosters 3984, changes 43160"
+      "message": "Added teams — staff 1660, rosters 3984, changes 43160"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1680, rosters 4032, changes 43680"
+      "message": "Added teams — staff 1680, rosters 4032, changes 43680"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1700, rosters 4080, changes 44200"
+      "message": "Added teams — staff 1700, rosters 4080, changes 44200"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1720, rosters 4128, changes 44720"
+      "message": "Added teams — staff 1720, rosters 4128, changes 44720"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1740, rosters 4176, changes 45240"
+      "message": "Added teams — staff 1740, rosters 4176, changes 45240"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1760, rosters 4224, changes 45760"
+      "message": "Added teams — staff 1760, rosters 4224, changes 45760"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1780, rosters 4272, changes 46280"
+      "message": "Added teams — staff 1780, rosters 4272, changes 46280"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1800, rosters 4320, changes 46800"
+      "message": "Added teams — staff 1800, rosters 4320, changes 46800"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1820, rosters 4368, changes 47320"
+      "message": "Added teams — staff 1820, rosters 4368, changes 47320"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1840, rosters 4416, changes 47840"
+      "message": "Added teams — staff 1840, rosters 4416, changes 47840"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1860, rosters 4464, changes 48360"
+      "message": "Added teams — staff 1860, rosters 4464, changes 48360"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1880, rosters 4512, changes 48880"
+      "message": "Added teams — staff 1880, rosters 4512, changes 48880"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1900, rosters 4560, changes 49400"
+      "message": "Added teams — staff 1900, rosters 4560, changes 49400"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1920, rosters 4608, changes 49920"
+      "message": "Added teams — staff 1920, rosters 4608, changes 49920"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1940, rosters 4656, changes 50440"
+      "message": "Added teams — staff 1940, rosters 4656, changes 50440"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1960, rosters 4704, changes 50960"
+      "message": "Added teams — staff 1960, rosters 4704, changes 50960"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 1980, rosters 4752, changes 51480"
+      "message": "Added teams — staff 1980, rosters 4752, changes 51480"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2000, rosters 4800, changes 52000"
+      "message": "Added teams — staff 2000, rosters 4800, changes 52000"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2020, rosters 4848, changes 52520"
+      "message": "Added teams — staff 2020, rosters 4848, changes 52520"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2040, rosters 4896, changes 53040"
+      "message": "Added teams — staff 2040, rosters 4896, changes 53040"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2060, rosters 4944, changes 53560"
+      "message": "Added teams — staff 2060, rosters 4944, changes 53560"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2080, rosters 4992, changes 54080"
+      "message": "Added teams — staff 2080, rosters 4992, changes 54080"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2100, rosters 5040, changes 54600"
+      "message": "Added teams — staff 2100, rosters 5040, changes 54600"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2120, rosters 5088, changes 55120"
+      "message": "Added teams — staff 2120, rosters 5088, changes 55120"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2140, rosters 5136, changes 55640"
+      "message": "Added teams — staff 2140, rosters 5136, changes 55640"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2160, rosters 5184, changes 56160"
+      "message": "Added teams — staff 2160, rosters 5184, changes 56160"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2180, rosters 5232, changes 56680"
+      "message": "Added teams — staff 2180, rosters 5232, changes 56680"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2200, rosters 5280, changes 57200"
+      "message": "Added teams — staff 2200, rosters 5280, changes 57200"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2220, rosters 5328, changes 57720"
+      "message": "Added teams — staff 2220, rosters 5328, changes 57720"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2240, rosters 5376, changes 58240"
+      "message": "Added teams — staff 2240, rosters 5376, changes 58240"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2260, rosters 5424, changes 58760"
+      "message": "Added teams — staff 2260, rosters 5424, changes 58760"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2280, rosters 5472, changes 59280"
+      "message": "Added teams — staff 2280, rosters 5472, changes 59280"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2300, rosters 5520, changes 59800"
+      "message": "Added teams — staff 2300, rosters 5520, changes 59800"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2320, rosters 5568, changes 60320"
+      "message": "Added teams — staff 2320, rosters 5568, changes 60320"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2340, rosters 5616, changes 60840"
+      "message": "Added teams — staff 2340, rosters 5616, changes 60840"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2360, rosters 5664, changes 61360"
+      "message": "Added teams — staff 2360, rosters 5664, changes 61360"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2380, rosters 5712, changes 61880"
+      "message": "Added teams — staff 2380, rosters 5712, changes 61880"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2400, rosters 5760, changes 62400"
+      "message": "Added teams — staff 2400, rosters 5760, changes 62400"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2420, rosters 5808, changes 62920"
+      "message": "Added teams — staff 2420, rosters 5808, changes 62920"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2440, rosters 5856, changes 63440"
+      "message": "Added teams — staff 2440, rosters 5856, changes 63440"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2460, rosters 5904, changes 63960"
+      "message": "Added teams — staff 2460, rosters 5904, changes 63960"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2480, rosters 5952, changes 64480"
+      "message": "Added teams — staff 2480, rosters 5952, changes 64480"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2500, rosters 6000, changes 65000"
+      "message": "Added teams — staff 2500, rosters 6000, changes 65000"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2520, rosters 6048, changes 65520"
+      "message": "Added teams — staff 2520, rosters 6048, changes 65520"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2540, rosters 6096, changes 66040"
+      "message": "Added teams — staff 2540, rosters 6096, changes 66040"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2560, rosters 6144, changes 66560"
+      "message": "Added teams — staff 2560, rosters 6144, changes 66560"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2580, rosters 6192, changes 67080"
+      "message": "Added teams — staff 2580, rosters 6192, changes 67080"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2600, rosters 6240, changes 67600"
+      "message": "Added teams — staff 2600, rosters 6240, changes 67600"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2620, rosters 6288, changes 68120"
+      "message": "Added teams — staff 2620, rosters 6288, changes 68120"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2640, rosters 6336, changes 68640"
+      "message": "Added teams — staff 2640, rosters 6336, changes 68640"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2660, rosters 6384, changes 69160"
+      "message": "Added teams — staff 2660, rosters 6384, changes 69160"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2680, rosters 6432, changes 69680"
+      "message": "Added teams — staff 2680, rosters 6432, changes 69680"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2700, rosters 6480, changes 70200"
+      "message": "Added teams — staff 2700, rosters 6480, changes 70200"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2720, rosters 6528, changes 70720"
+      "message": "Added teams — staff 2720, rosters 6528, changes 70720"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2740, rosters 6576, changes 71240"
+      "message": "Added teams — staff 2740, rosters 6576, changes 71240"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2760, rosters 6624, changes 71760"
+      "message": "Added teams — staff 2760, rosters 6624, changes 71760"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2780, rosters 6672, changes 72280"
+      "message": "Added teams — staff 2780, rosters 6672, changes 72280"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2800, rosters 6720, changes 72800"
+      "message": "Added teams — staff 2800, rosters 6720, changes 72800"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2820, rosters 6768, changes 73320"
+      "message": "Added teams — staff 2820, rosters 6768, changes 73320"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2840, rosters 6816, changes 73840"
+      "message": "Added teams — staff 2840, rosters 6816, changes 73840"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2860, rosters 6864, changes 74360"
+      "message": "Added teams — staff 2860, rosters 6864, changes 74360"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2880, rosters 6912, changes 74880"
+      "message": "Added teams — staff 2880, rosters 6912, changes 74880"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2900, rosters 6960, changes 75400"
+      "message": "Added teams — staff 2900, rosters 6960, changes 75400"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2920, rosters 7008, changes 75920"
+      "message": "Added teams — staff 2920, rosters 7008, changes 75920"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2940, rosters 7056, changes 76440"
+      "message": "Added teams — staff 2940, rosters 7056, changes 76440"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2960, rosters 7104, changes 76960"
+      "message": "Added teams — staff 2960, rosters 7104, changes 76960"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 2980, rosters 7152, changes 77480"
+      "message": "Added teams — staff 2980, rosters 7152, changes 77480"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3000, rosters 7200, changes 78000"
+      "message": "Added teams — staff 3000, rosters 7200, changes 78000"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3020, rosters 7248, changes 78520"
+      "message": "Added teams — staff 3020, rosters 7248, changes 78520"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3040, rosters 7296, changes 79040"
+      "message": "Added teams — staff 3040, rosters 7296, changes 79040"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3060, rosters 7344, changes 79560"
+      "message": "Added teams — staff 3060, rosters 7344, changes 79560"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3080, rosters 7392, changes 80080"
+      "message": "Added teams — staff 3080, rosters 7392, changes 80080"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3100, rosters 7440, changes 80600"
+      "message": "Added teams — staff 3100, rosters 7440, changes 80600"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3120, rosters 7488, changes 81120"
+      "message": "Added teams — staff 3120, rosters 7488, changes 81120"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3140, rosters 7536, changes 81640"
+      "message": "Added teams — staff 3140, rosters 7536, changes 81640"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3160, rosters 7584, changes 82160"
+      "message": "Added teams — staff 3160, rosters 7584, changes 82160"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3180, rosters 7632, changes 82680"
+      "message": "Added teams — staff 3180, rosters 7632, changes 82680"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3200, rosters 7680, changes 83200"
+      "message": "Added teams — staff 3200, rosters 7680, changes 83200"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3220, rosters 7728, changes 83720"
+      "message": "Added teams — staff 3220, rosters 7728, changes 83720"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3240, rosters 7776, changes 84240"
+      "message": "Added teams — staff 3240, rosters 7776, changes 84240"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3260, rosters 7824, changes 84760"
+      "message": "Added teams — staff 3260, rosters 7824, changes 84760"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3280, rosters 7872, changes 85280"
+      "message": "Added teams — staff 3280, rosters 7872, changes 85280"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3300, rosters 7920, changes 85800"
+      "message": "Added teams — staff 3300, rosters 7920, changes 85800"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3320, rosters 7968, changes 86320"
+      "message": "Added teams — staff 3320, rosters 7968, changes 86320"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3340, rosters 8016, changes 86840"
+      "message": "Added teams — staff 3340, rosters 8016, changes 86840"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3360, rosters 8064, changes 87360"
+      "message": "Added teams — staff 3360, rosters 8064, changes 87360"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3380, rosters 8112, changes 87880"
+      "message": "Added teams — staff 3380, rosters 8112, changes 87880"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3400, rosters 8160, changes 88400"
+      "message": "Added teams — staff 3400, rosters 8160, changes 88400"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3420, rosters 8208, changes 88920"
+      "message": "Added teams — staff 3420, rosters 8208, changes 88920"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3440, rosters 8256, changes 89440"
+      "message": "Added teams — staff 3440, rosters 8256, changes 89440"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3460, rosters 8304, changes 89960"
+      "message": "Added teams — staff 3460, rosters 8304, changes 89960"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3480, rosters 8352, changes 90480"
+      "message": "Added teams — staff 3480, rosters 8352, changes 90480"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3500, rosters 8400, changes 91000"
+      "message": "Added teams — staff 3500, rosters 8400, changes 91000"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3520, rosters 8448, changes 91520"
+      "message": "Added teams — staff 3520, rosters 8448, changes 91520"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3540, rosters 8496, changes 92040"
+      "message": "Added teams — staff 3540, rosters 8496, changes 92040"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3560, rosters 8544, changes 92560"
+      "message": "Added teams — staff 3560, rosters 8544, changes 92560"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3580, rosters 8592, changes 93080"
+      "message": "Added teams — staff 3580, rosters 8592, changes 93080"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3600, rosters 8640, changes 93600"
+      "message": "Added teams — staff 3600, rosters 8640, changes 93600"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3620, rosters 8688, changes 94120"
+      "message": "Added teams — staff 3620, rosters 8688, changes 94120"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3640, rosters 8736, changes 94640"
+      "message": "Added teams — staff 3640, rosters 8736, changes 94640"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3660, rosters 8784, changes 95160"
+      "message": "Added teams — staff 3660, rosters 8784, changes 95160"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3680, rosters 8832, changes 95680"
+      "message": "Added teams — staff 3680, rosters 8832, changes 95680"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3700, rosters 8880, changes 96200"
+      "message": "Added teams — staff 3700, rosters 8880, changes 96200"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3720, rosters 8928, changes 96720"
+      "message": "Added teams — staff 3720, rosters 8928, changes 96720"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3740, rosters 8976, changes 97240"
+      "message": "Added teams — staff 3740, rosters 8976, changes 97240"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3760, rosters 9024, changes 97760"
+      "message": "Added teams — staff 3760, rosters 9024, changes 97760"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3780, rosters 9072, changes 98280"
+      "message": "Added teams — staff 3780, rosters 9072, changes 98280"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3800, rosters 9120, changes 98800"
+      "message": "Added teams — staff 3800, rosters 9120, changes 98800"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3820, rosters 9168, changes 99320"
+      "message": "Added teams — staff 3820, rosters 9168, changes 99320"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3840, rosters 9216, changes 99840"
+      "message": "Added teams — staff 3840, rosters 9216, changes 99840"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3860, rosters 9264, changes 100360"
+      "message": "Added teams — staff 3860, rosters 9264, changes 100360"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3880, rosters 9312, changes 100880"
+      "message": "Added teams — staff 3880, rosters 9312, changes 100880"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3900, rosters 9360, changes 101400"
+      "message": "Added teams — staff 3900, rosters 9360, changes 101400"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3920, rosters 9408, changes 101920"
+      "message": "Added teams — staff 3920, rosters 9408, changes 101920"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3940, rosters 9456, changes 102440"
+      "message": "Added teams — staff 3940, rosters 9456, changes 102440"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3960, rosters 9504, changes 102960"
+      "message": "Added teams — staff 3960, rosters 9504, changes 102960"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 3980, rosters 9552, changes 103480"
+      "message": "Added teams — staff 3980, rosters 9552, changes 103480"
     },
     {
       "time": "09:48",
-      "message": "Added teams \u2014 staff 4000, rosters 9600, changes 104000"
+      "message": "Added teams — staff 4000, rosters 9600, changes 104000"
     },
     {
       "time": "09:48",
-      "message": "Added notifications \u2014 1000 of 16000"
+      "message": "Added notifications — 1000 of 16000"
     },
     {
       "time": "09:48",
-      "message": "Added notifications \u2014 2000 of 16000"
+      "message": "Added notifications — 2000 of 16000"
     },
     {
       "time": "09:48",
-      "message": "Added notifications \u2014 3000 of 16000"
+      "message": "Added notifications — 3000 of 16000"
     },
     {
       "time": "09:48",
-      "message": "Added notifications \u2014 4000 of 16000"
+      "message": "Added notifications — 4000 of 16000"
     },
     {
       "time": "09:48",
-      "message": "Added notifications \u2014 5000 of 16000"
+      "message": "Added notifications — 5000 of 16000"
     },
     {
       "time": "09:48",
-      "message": "Added notifications \u2014 6000 of 16000"
+      "message": "Added notifications — 6000 of 16000"
     },
     {
       "time": "09:48",
-      "message": "Added notifications \u2014 7000 of 16000"
+      "message": "Added notifications — 7000 of 16000"
     },
     {
       "time": "09:48",
-      "message": "Added notifications \u2014 8000 of 16000"
+      "message": "Added notifications — 8000 of 16000"
     },
     {
       "time": "09:48",
-      "message": "Added notifications \u2014 9000 of 16000"
+      "message": "Added notifications — 9000 of 16000"
     },
     {
       "time": "09:48",
-      "message": "Added notifications \u2014 10000 of 16000"
+      "message": "Added notifications — 10000 of 16000"
     },
     {
       "time": "09:48",
-      "message": "Added notifications \u2014 11000 of 16000"
+      "message": "Added notifications — 11000 of 16000"
     },
     {
       "time": "09:48",
-      "message": "Added notifications \u2014 12000 of 16000"
+      "message": "Added notifications — 12000 of 16000"
     },
     {
       "time": "09:48",
-      "message": "Added notifications \u2014 13000 of 16000"
+      "message": "Added notifications — 13000 of 16000"
     },
     {
       "time": "09:48",
-      "message": "Added notifications \u2014 14000 of 16000"
+      "message": "Added notifications — 14000 of 16000"
     },
     {
       "time": "09:48",
-      "message": "Added notifications \u2014 15000 of 16000"
+      "message": "Added notifications — 15000 of 16000"
     },
     {
       "time": "09:48",
-      "message": "Added notifications \u2014 16000 of 16000"
+      "message": "Added notifications — 16000 of 16000"
     },
     {
       "time": "09:48",
-      "message": "Added applications \u2014 400 of 3200"
+      "message": "Added applications — 400 of 3200"
     },
     {
       "time": "09:48",
-      "message": "Added applications \u2014 800 of 3200"
+      "message": "Added applications — 800 of 3200"
     },
     {
       "time": "09:48",
-      "message": "Added applications \u2014 1200 of 3200"
+      "message": "Added applications — 1200 of 3200"
     },
     {
       "time": "09:48",
-      "message": "Added applications \u2014 1600 of 3200"
+      "message": "Added applications — 1600 of 3200"
     },
     {
       "time": "09:48",
-      "message": "Added applications \u2014 2000 of 3200"
+      "message": "Added applications — 2000 of 3200"
     },
     {
       "time": "09:48",
-      "message": "Added applications \u2014 2400 of 3200"
+      "message": "Added applications — 2400 of 3200"
     },
     {
       "time": "09:48",
-      "message": "Added applications \u2014 2800 of 3200"
+      "message": "Added applications — 2800 of 3200"
     },
     {
       "time": "09:48",
-      "message": "Added applications \u2014 3200 of 3200"
+      "message": "Added applications — 3200 of 3200"
     },
     {
       "time": "09:48",
-      "message": "Added drafts \u2014 100 of 800"
+      "message": "Added drafts — 100 of 800"
     },
     {
       "time": "09:48",
-      "message": "Added drafts \u2014 200 of 800"
+      "message": "Added drafts — 200 of 800"
     },
     {
       "time": "09:48",
-      "message": "Added drafts \u2014 300 of 800"
+      "message": "Added drafts — 300 of 800"
     },
     {
       "time": "09:48",
-      "message": "Added drafts \u2014 400 of 800"
+      "message": "Added drafts — 400 of 800"
     },
     {
       "time": "09:48",
-      "message": "Added drafts \u2014 500 of 800"
+      "message": "Added drafts — 500 of 800"
     },
     {
       "time": "09:48",
-      "message": "Added drafts \u2014 600 of 800"
+      "message": "Added drafts — 600 of 800"
     },
     {
       "time": "09:48",
-      "message": "Added drafts \u2014 700 of 800"
+      "message": "Added drafts — 700 of 800"
     },
     {
       "time": "09:48",
-      "message": "Added drafts \u2014 800 of 800"
+      "message": "Added drafts — 800 of 800"
     },
     {
       "time": "09:48",
-      "message": "Build complete \u2014 staff 4000, rosters 9600, changes 104000"
+      "message": "Build complete — staff 4000, rosters 9600, changes 104000"
     },
     {
       "time": "09:48",
-      "message": "Persist FAILED (quota) \u2014 reload would lose data"
+      "message": "Persist FAILED (quota) — reload would lose data"
     },
     {
       "time": "09:48",
@@ -4714,11 +4714,15 @@
     },
     {
       "time": "09:48",
-      "message": "FIX 2: Stats probe starting \u2014 first view may take minutes at this scale (known limit); repeat views instant"
+      "message": "FIX 2: Stats probe starting — first view may take minutes at this scale (known limit); repeat views instant"
     },
     {
       "time": "09:55",
-      "message": "Stage 5 first attempt killed by a runtime restart (no 5.json) \u2014 re-running Stage 5 from scratch. First attempt: Fix 1 banner OK + company intact (5/9600/w0), but apps 3,200 \u2192 0 (apps loader reloaded empty storage \u2014 to be confirmed on re-run). Stats probe never completed."
+      "message": "Stage 5 first attempt killed by a runtime restart (no 5.json) — re-running Stage 5 from scratch. First attempt: Fix 1 banner OK + company intact (5/9600/w0), but apps 3,200 → 0 (apps loader reloaded empty storage — to be confirmed on re-run). Stats probe never completed."
+    },
+    {
+      "time": "09:55",
+      "message": "Building up — seeding…"
     }
   ],
   "metrics": [
@@ -4739,20 +4743,20 @@
       "value": "FAILED (sfshift_notifications:Failed to execute 'setItem' on 'Storage': Setting the value of 'sfshift_notifications' exceeded the quota.)"
     },
     {
-      "label": "FIX 1 \u2014 quota banner shown",
+      "label": "FIX 1 — quota banner shown",
       "value": "YES (banner flex + flag set)"
     },
     {
-      "label": "FIX 1 \u2014 calendar view under quota (company survives)",
-      "value": "NO \u2014 FIX 1 FAILED (before={\"wps\":5,\"rosters\":9600,\"activeId\":\"w0\",\"apps\":3200} after={\"wps\":5,\"rosters\":9600,\"activeId\":\"w0\",\"apps\":0})"
+      "label": "FIX 1 — calendar view under quota (company survives)",
+      "value": "NO — FIX 1 FAILED (before={\"wps\":5,\"rosters\":9600,\"activeId\":\"w0\",\"apps\":3200} after={\"wps\":5,\"rosters\":9600,\"activeId\":\"w0\",\"apps\":0})"
     },
     {
-      "label": "FIX 1 \u2014 loadSaved() under quota (company survives)",
-      "value": "NO \u2014 FIX 1 FAILED (before={\"wps\":5,\"rosters\":9600,\"activeId\":\"w0\",\"apps\":3200} after={\"wps\":5,\"rosters\":9600,\"activeId\":\"w0\",\"apps\":0})"
+      "label": "FIX 1 — loadSaved() under quota (company survives)",
+      "value": "NO — FIX 1 FAILED (before={\"wps\":5,\"rosters\":9600,\"activeId\":\"w0\",\"apps\":3200} after={\"wps\":5,\"rosters\":9600,\"activeId\":\"w0\",\"apps\":0})"
     },
     {
-      "label": "FIX 1 \u2014 save under quota (banner + company intact)",
-      "value": "NO \u2014 FIX 1 FAILED (after={\"wps\":5,\"rosters\":9600,\"activeId\":\"w0\",\"apps\":0} banner={\"storageFull\":true,\"bannerDisplay\":\"flex\"})"
+      "label": "FIX 1 — save under quota (banner + company intact)",
+      "value": "NO — FIX 1 FAILED (after={\"wps\":5,\"rosters\":9600,\"activeId\":\"w0\",\"apps\":0} banner={\"storageFull\":true,\"bannerDisplay\":\"flex\"})"
     },
     {
       "label": "Calendar render",
@@ -4775,7 +4779,7 @@
     "current": 5,
     "total": 7
   },
-  "stage": "Stage 5 of 7 \u2014 4000 staff, 48 months",
+  "stage": "Stage 5 of 7 — 4000 staff, 48 months",
   "status": "running",
   "thresholds": {
     "perfect": null,
@@ -4788,7 +4792,7 @@
     "rosters": 9600,
     "changes": 104000
   },
-  "updatedAt": "2026-10-17T09:55:48.071266+02:00",
+  "updatedAt": "2026-10-17T09:55:57.832+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
@@ -5100,25 +5104,25 @@
   "problems": [
     {
       "time": "09:30",
-      "message": "Company Stats FIRST compute still slow (12398ms at 500 staff) \u2014 KNOWN REMAINING LIMIT; repeat views instant (Fix 2 held, HIT 4ms)",
+      "message": "Company Stats FIRST compute still slow (12398ms at 500 staff) — KNOWN REMAINING LIMIT; repeat views instant (Fix 2 held, HIT 4ms)",
       "detail": "fix2={\"missMs\":12398,\"hitMs\":4,\"equal\":true,\"bustOk\":true,\"freshEqual\":true,\"missTotal\":7750,\"bustMs\":11827}",
       "fix": "Speeding up the FIRST computation (e.g. incremental per-roster aggregates) is a future optimization, not part of Fix 2. Repeat views are instant via the cache."
     },
     {
       "time": "09:33",
-      "message": "Company Stats FIRST compute still slow (45689ms at 1000 staff) \u2014 KNOWN REMAINING LIMIT; repeat views instant (Fix 2 held, HIT 9ms)",
+      "message": "Company Stats FIRST compute still slow (45689ms at 1000 staff) — KNOWN REMAINING LIMIT; repeat views instant (Fix 2 held, HIT 9ms)",
       "detail": "fix2={\"missMs\":45689,\"hitMs\":9,\"equal\":true,\"bustOk\":true,\"freshEqual\":true,\"missTotal\":15500,\"bustMs\":45317}",
       "fix": "Speeding up the FIRST computation (e.g. incremental per-roster aggregates) is a future optimization, not part of Fix 2. Repeat views are instant via the cache."
     },
     {
       "time": "09:47",
-      "message": "localStorage quota exceeded \u2014 persist FAILED (sfshift_company:Failed to execute 'setItem' on 'Storage': Setting the value of 'sfshift_company' exceeded the quota.), BUT the storage-full banner SHOWED and NO data was lost (Fix 1 HELD)",
+      "message": "localStorage quota exceeded — persist FAILED (sfshift_company:Failed to execute 'setItem' on 'Storage': Setting the value of 'sfshift_company' exceeded the quota.), BUT the storage-full banner SHOWED and NO data was lost (Fix 1 HELD)",
       "detail": "persist={\"ok\":false,\"ms\":126,\"bytes\":12429591,\"failed\":\"sfshift_company:Failed to execute 'setItem' on 'Storage': Setting the value of 'sfshift_company' exceeded the quota.\"} fix1={\"persistOk\":false,\"bannerChecked\":true,\"bannerShown\":true,\"flagSet\":true,\"calSurvived\":true,\"loadSavedSurvived\":true,\"saveSurvived\":true}",
       "fix": "Known limit: localStorage ~5MB cap remains. Raising the cap needs an IndexedDB migration (bigger job, not done). The app now warns instead of losing data."
     },
     {
       "time": "09:47",
-      "message": "Company Stats FIRST compute still slow (270004ms at 2000 staff) \u2014 KNOWN REMAINING LIMIT; repeat views instant (Fix 2 held, HIT 47ms)",
+      "message": "Company Stats FIRST compute still slow (270004ms at 2000 staff) — KNOWN REMAINING LIMIT; repeat views instant (Fix 2 held, HIT 47ms)",
       "detail": "fix2={\"missMs\":270004,\"hitMs\":47,\"equal\":true,\"bustOk\":true,\"freshEqual\":true,\"missTotal\":31000,\"bustMs\":269015}",
       "fix": "Speeding up the FIRST computation (e.g. incremental per-roster aggregates) is a future optimization, not part of Fix 2. Repeat views are instant via the cache."
     }
