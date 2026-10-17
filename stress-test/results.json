@@ -618,6 +618,12 @@
       "message": "Point s5c-8000dense: Staff list unusable (60s cap / crash)",
       "detail": "MEASURE-TIMEOUT-60s: renderStaffTab did not finish in 60s (unusable)",
       "fix": "renderStaffTab does not scale to this staff-per-workplace density; it needs virtualisation/pagination."
+    },
+    {
+      "time": "16:10",
+      "message": "Point s5c-8000dense fatal",
+      "detail": "browser.newContext: Target page, context or browser has been closed",
+      "fix": "See result JSON + screenshot."
     }
   ],
   "log": [
@@ -942,6 +948,6 @@
       "message": "Added drafts — 200 of 200"
     }
   ],
-  "updatedAt": "2026-10-17T15:17:56.734+02:00",
+  "updatedAt": "2026-10-17T16:10:13.977+02:00",
   "history": []
 }
