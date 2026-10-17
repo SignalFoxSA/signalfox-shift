@@ -1,6 +1,6 @@
 {
   "status": "running",
-  "stage": "Stage 5 of 7 — s5d-40000dense (resumed)",
+  "stage": "Stage 5 of 7 — s5d-40000dense",
   "progress": {
     "current": 5,
     "total": 7
@@ -629,14 +629,6 @@
   "log": [
     {
       "time": "14:03",
-      "message": "Workplace 958/1000 seeded — staff 19160, rosters 11496"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 959/1000 seeded — staff 19180, rosters 11508"
-    },
-    {
-      "time": "14:03",
       "message": "Workplace 960/1000 seeded — staff 19200, rosters 11520"
     },
     {
@@ -950,8 +942,12 @@
     {
       "time": "16:13",
       "message": "Resumed — s5a/s5b/s5c done, running s5d-40000dense (Stage 5 remainder), then Stages 6–7."
+    },
+    {
+      "time": "16:13",
+      "message": "Building up — seeding…"
     }
   ],
-  "updatedAt": "2026-10-17T16:13:13.934+02:00",
+  "updatedAt": "2026-10-17T16:13:25.387+02:00",
   "history": []
 }
