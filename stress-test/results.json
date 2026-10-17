@@ -1,8 +1,8 @@
 {
   "status": "running",
-  "stage": "Stage 2 of 7 — 4000 staff, 200 workplaces, 12 months",
+  "stage": "Stage 3 of 7 — 40000 staff, 5 workplaces, 12 months",
   "progress": {
-    "current": 2,
+    "current": 3,
     "total": 7
   },
   "thresholds": {
@@ -1195,9 +1195,13 @@
     {
       "time": "13:35",
       "message": "Stage 2 done — countsOk=true"
+    },
+    {
+      "time": "13:35",
+      "message": "Building up — seeding…"
     }
   ],
-  "updatedAt": "2026-10-17T13:35:18.860+02:00",
+  "updatedAt": "2026-10-17T13:35:25.817+02:00",
   "history": [
     {
       "time": "13:34",
