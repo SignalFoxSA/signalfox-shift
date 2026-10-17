@@ -10,16 +10,65 @@
     "glitch": null,
     "break": null
   },
-  "metrics": [],
+  "metrics": [
+    {
+      "label": "Seed staff (s1a-200staff)",
+      "value": "200"
+    },
+    {
+      "label": "Load time (reload) s1a-200staff",
+      "value": "1113ms"
+    },
+    {
+      "label": "Workplace switch (s1a-200staff)",
+      "value": "260ms, back 51ms"
+    },
+    {
+      "label": "Stats MISS (s1a-200staff)",
+      "value": "24ms total=3100"
+    },
+    {
+      "label": "Stats HIT (s1a-200staff)",
+      "value": "1ms deep-equal=true"
+    },
+    {
+      "label": "Calendar render (s1a-200staff)",
+      "value": "432ms"
+    }
+  ],
   "totals": {
-    "companies": null,
-    "staff": null,
-    "rosters": null,
-    "changes": null
+    "companies": 5,
+    "staff": 200,
+    "rosters": 120,
+    "changes": 1300
   },
-  "perfHistory": [],
-  "storageHistory": [],
-  "speedPerLevel": [],
+  "perfHistory": [
+    {
+      "staff": 200,
+      "loadMs": 1113,
+      "renderMs": 432,
+      "exportMs": 3
+    }
+  ],
+  "storageHistory": [
+    {
+      "time": "13:56",
+      "kb": 536
+    },
+    {
+      "time": "13:56",
+      "kb": 536
+    }
+  ],
+  "speedPerLevel": [
+    {
+      "level": "Low",
+      "staff": 200,
+      "loadMs": 1113,
+      "renderMs": 432,
+      "exportMs": 3
+    }
+  ],
   "problems": [],
   "log": [
     {
@@ -29,8 +78,44 @@
     {
       "time": "13:56",
       "message": "Building up — seeding…"
+    },
+    {
+      "time": "13:56",
+      "message": "Workplace 1/5 seeded — staff 40, rosters 24"
+    },
+    {
+      "time": "13:56",
+      "message": "Workplace 2/5 seeded — staff 80, rosters 48"
+    },
+    {
+      "time": "13:56",
+      "message": "Workplace 3/5 seeded — staff 120, rosters 72"
+    },
+    {
+      "time": "13:56",
+      "message": "Workplace 4/5 seeded — staff 160, rosters 96"
+    },
+    {
+      "time": "13:56",
+      "message": "Workplace 5/5 seeded — staff 200, rosters 120"
+    },
+    {
+      "time": "13:56",
+      "message": "Added notifications — 500 of 500"
+    },
+    {
+      "time": "13:56",
+      "message": "Added applications — 100 of 100"
+    },
+    {
+      "time": "13:56",
+      "message": "Added drafts — 25 of 25"
+    },
+    {
+      "time": "13:56",
+      "message": "Point s1a-200staff done — countsOk=true, crashes=0"
     }
   ],
-  "updatedAt": "2026-10-17T13:56:13.981+02:00",
+  "updatedAt": "2026-10-17T13:56:19.866+02:00",
   "history": []
 }
