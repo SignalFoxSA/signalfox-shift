@@ -1,6 +1,6 @@
 {
   "status": "running",
-  "stage": "Stage 1 of 7 \u2014 s1b-1000staff",
+  "stage": "Stage 1 of 7 — s1a-200staff",
   "progress": {
     "current": 1,
     "total": 7
@@ -41,101 +41,105 @@
   "log": [
     {
       "time": "13:52",
-      "message": "Hardcore stress test started \u2014 finding the maximums (BUILD 2007)."
+      "message": "Hardcore stress test started — finding the maximums (BUILD 2007)."
     },
     {
       "time": "13:56",
-      "message": "Building up \u2014 seeding\u2026"
+      "message": "Building up — seeding…"
     },
     {
       "time": "13:56",
-      "message": "Workplace 1/5 seeded \u2014 staff 40, rosters 24"
+      "message": "Workplace 1/5 seeded — staff 40, rosters 24"
     },
     {
       "time": "13:56",
-      "message": "Workplace 2/5 seeded \u2014 staff 80, rosters 48"
+      "message": "Workplace 2/5 seeded — staff 80, rosters 48"
     },
     {
       "time": "13:56",
-      "message": "Workplace 3/5 seeded \u2014 staff 120, rosters 72"
+      "message": "Workplace 3/5 seeded — staff 120, rosters 72"
     },
     {
       "time": "13:56",
-      "message": "Workplace 4/5 seeded \u2014 staff 160, rosters 96"
+      "message": "Workplace 4/5 seeded — staff 160, rosters 96"
     },
     {
       "time": "13:56",
-      "message": "Workplace 5/5 seeded \u2014 staff 200, rosters 120"
+      "message": "Workplace 5/5 seeded — staff 200, rosters 120"
     },
     {
       "time": "13:56",
-      "message": "Added notifications \u2014 500 of 500"
+      "message": "Added notifications — 500 of 500"
     },
     {
       "time": "13:56",
-      "message": "Added applications \u2014 100 of 100"
+      "message": "Added applications — 100 of 100"
     },
     {
       "time": "13:56",
-      "message": "Added drafts \u2014 25 of 25"
+      "message": "Added drafts — 25 of 25"
     },
     {
       "time": "13:56",
-      "message": "Building up \u2014 seeding\u2026"
+      "message": "Building up — seeding…"
     },
     {
       "time": "13:56",
-      "message": "Workplace 1/10 seeded \u2014 staff 100, rosters 60"
+      "message": "Workplace 1/10 seeded — staff 100, rosters 60"
     },
     {
       "time": "13:56",
-      "message": "Workplace 2/10 seeded \u2014 staff 200, rosters 120"
+      "message": "Workplace 2/10 seeded — staff 200, rosters 120"
     },
     {
       "time": "13:56",
-      "message": "Workplace 3/10 seeded \u2014 staff 300, rosters 180"
+      "message": "Workplace 3/10 seeded — staff 300, rosters 180"
     },
     {
       "time": "13:56",
-      "message": "Workplace 4/10 seeded \u2014 staff 400, rosters 240"
+      "message": "Workplace 4/10 seeded — staff 400, rosters 240"
     },
     {
       "time": "13:56",
-      "message": "Workplace 5/10 seeded \u2014 staff 500, rosters 300"
+      "message": "Workplace 5/10 seeded — staff 500, rosters 300"
     },
     {
       "time": "13:56",
-      "message": "Workplace 6/10 seeded \u2014 staff 600, rosters 360"
+      "message": "Workplace 6/10 seeded — staff 600, rosters 360"
     },
     {
       "time": "13:56",
-      "message": "Workplace 7/10 seeded \u2014 staff 700, rosters 420"
+      "message": "Workplace 7/10 seeded — staff 700, rosters 420"
     },
     {
       "time": "13:56",
-      "message": "Workplace 8/10 seeded \u2014 staff 800, rosters 480"
+      "message": "Workplace 8/10 seeded — staff 800, rosters 480"
     },
     {
       "time": "13:56",
-      "message": "Workplace 9/10 seeded \u2014 staff 900, rosters 540"
+      "message": "Workplace 9/10 seeded — staff 900, rosters 540"
     },
     {
       "time": "13:56",
-      "message": "Workplace 10/10 seeded \u2014 staff 1000, rosters 600"
+      "message": "Workplace 10/10 seeded — staff 1000, rosters 600"
     },
     {
       "time": "13:56",
-      "message": "Added notifications \u2014 1000 of 1000"
+      "message": "Added notifications — 1000 of 1000"
     },
     {
       "time": "13:56",
-      "message": "Added applications \u2014 200 of 200"
+      "message": "Added applications — 200 of 200"
     },
     {
       "time": "13:56",
-      "message": "Added drafts \u2014 50 of 50"
+      "message": "Added drafts — 50 of 50"
+    },
+    {
+      "time": "13:57",
+      "message": "Building up — seeding…"
     }
   ],
-  "updatedAt": "2026-10-17T13:56:29.198+02:00",
+  "updatedAt": "2026-10-17T13:57:02.545+02:00",
   "history": []
 }
