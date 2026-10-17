@@ -4241,6 +4241,83 @@
       "staff": 200,
       "rosters": 120,
       "changes": 1700
+    },
+    {
+      "time": "10:22",
+      "companies": 0,
+      "staff": 20,
+      "rosters": 12,
+      "changes": 170
+    },
+    {
+      "time": "10:22",
+      "companies": 0,
+      "staff": 40,
+      "rosters": 24,
+      "changes": 340
+    },
+    {
+      "time": "10:22",
+      "companies": 0,
+      "staff": 60,
+      "rosters": 36,
+      "changes": 510
+    },
+    {
+      "time": "10:22",
+      "companies": 0,
+      "staff": 80,
+      "rosters": 48,
+      "changes": 680
+    },
+    {
+      "time": "10:22",
+      "companies": 0,
+      "staff": 100,
+      "rosters": 60,
+      "changes": 850
+    },
+    {
+      "time": "10:22",
+      "companies": 0,
+      "staff": 120,
+      "rosters": 72,
+      "changes": 1020
+    },
+    {
+      "time": "10:22",
+      "companies": 0,
+      "staff": 140,
+      "rosters": 84,
+      "changes": 1190
+    },
+    {
+      "time": "10:22",
+      "companies": 0,
+      "staff": 160,
+      "rosters": 96,
+      "changes": 1360
+    },
+    {
+      "time": "10:22",
+      "companies": 0,
+      "staff": 180,
+      "rosters": 108,
+      "changes": 1530
+    },
+    {
+      "time": "10:22",
+      "companies": 0,
+      "staff": 200,
+      "rosters": 120,
+      "changes": 1700
+    },
+    {
+      "time": "10:22",
+      "companies": 5,
+      "staff": 200,
+      "rosters": 120,
+      "changes": 1700
     }
   ],
   "log": [
@@ -7267,40 +7344,76 @@
     {
       "time": "10:22",
       "message": "Building up — seeding…"
+    },
+    {
+      "time": "10:22",
+      "message": "Added teams — staff 20, rosters 12, changes 170"
+    },
+    {
+      "time": "10:22",
+      "message": "Added teams — staff 40, rosters 24, changes 340"
+    },
+    {
+      "time": "10:22",
+      "message": "Added teams — staff 60, rosters 36, changes 510"
+    },
+    {
+      "time": "10:22",
+      "message": "Added teams — staff 80, rosters 48, changes 680"
+    },
+    {
+      "time": "10:22",
+      "message": "Added teams — staff 100, rosters 60, changes 850"
+    },
+    {
+      "time": "10:22",
+      "message": "Added teams — staff 120, rosters 72, changes 1020"
+    },
+    {
+      "time": "10:22",
+      "message": "Added teams — staff 140, rosters 84, changes 1190"
+    },
+    {
+      "time": "10:22",
+      "message": "Added teams — staff 160, rosters 96, changes 1360"
+    },
+    {
+      "time": "10:22",
+      "message": "Added teams — staff 180, rosters 108, changes 1530"
+    },
+    {
+      "time": "10:22",
+      "message": "Added teams — staff 200, rosters 120, changes 1700"
+    },
+    {
+      "time": "10:22",
+      "message": "Added notifications — 1000 of 1000"
+    },
+    {
+      "time": "10:22",
+      "message": "Added applications — 200 of 200"
+    },
+    {
+      "time": "10:22",
+      "message": "Added drafts — 50 of 50"
+    },
+    {
+      "time": "10:22",
+      "message": "Build complete — staff 200, rosters 120, changes 1700"
     }
   ],
   "metrics": [
     {
-      "label": "Export Excel (mega 200 staff)",
-      "value": "ok ms=991 xlsxBytes=24630"
+      "label": "Throttled calendar",
+      "value": "opened calLen=4638"
     },
     {
-      "label": "Export PNG (mega 200 staff)",
-      "value": "ok ms=958 out=[object Blob]"
+      "label": "Throttled Company Dashboard",
+      "value": "bodyLen=606653"
     },
     {
-      "label": "Export PDF (mega 200 staff)",
-      "value": "ok ms=963 out=[object Blob]"
-    },
-    {
-      "label": "FIX 3 — Export libs from bundle (offline)",
-      "value": "xlsx=true html2canvas=true jspdf=true"
-    },
-    {
-      "label": "FIX 3 — Export-CDN requests",
-      "value": "0 (external attempted 0)"
-    },
-    {
-      "label": "Storage persist+reload",
-      "value": "persist ok 6ms, reload 1989ms, staffAfter=40 rostersAfter=25 draftsAfter=50"
-    },
-    {
-      "label": "Rapid actions",
-      "value": "added ms=1 draftsNow=100 | removed+decided ms=270 draftsNow=50 pendAfter=16"
-    },
-    {
-      "label": "Multi-tab",
-      "value": "draftsBefore=50 pageBseesMarker=true"
+      "label": "Throttled Rosters list",
+      "value": "rostersLen=5867"
     }
   ],
   "progress": {
@@ -7316,11 +7429,11 @@
   },
   "totals": {
     "companies": 5,
-    "staff": 0,
-    "rosters": 0,
-    "changes": 0
+    "staff": 200,
+    "rosters": 120,
+    "changes": 1700
   },
-  "updatedAt": "2026-10-17T10:22:10.501+02:00",
+  "updatedAt": "2026-10-17T10:22:16.734+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
@@ -7469,6 +7582,12 @@
       "loadMs": null,
       "renderMs": null,
       "exportMs": 998
+    },
+    {
+      "staff": 200,
+      "loadMs": null,
+      "renderMs": 1361,
+      "exportMs": null
     }
   ],
   "speedPerLevel": [
@@ -7476,8 +7595,8 @@
       "level": "Low",
       "staff": 200,
       "loadMs": null,
-      "renderMs": null,
-      "exportMs": 998
+      "renderMs": 1361,
+      "exportMs": null
     },
     {
       "level": "Low",
