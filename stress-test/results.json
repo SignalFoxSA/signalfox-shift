@@ -95,6 +95,10 @@
     {
       "time": "12:11",
       "message": "Stage 1 first run discarded — seed did not persist apps/notifications/base (persist() covers units+drafts+company only); re-running Stage 1 with full persist."
+    },
+    {
+      "time": "12:11",
+      "message": "Building up — seeding…"
     }
   ],
   "metrics": [
@@ -180,7 +184,7 @@
     "rosters": 120,
     "changes": 1450
   },
-  "updatedAt": "2026-10-17T12:10:46.179+02:00",
+  "updatedAt": "2026-10-17T12:11:40.056+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
