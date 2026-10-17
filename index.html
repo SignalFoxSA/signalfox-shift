@@ -1647,7 +1647,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261017-2000';
+var BUILD='20261017-2001';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -8264,20 +8264,28 @@ function companyStatsThisMonth(){
   var n=new Date(); c.statsYm=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
   companyPersist(); renderCompany();
 }
-/* ---------- Company Stats cache ----------
-   companyMonthStats() recomputes over every roster on every view
-   (stress test: 1s at 200 staff, 11.6s at 500, 48s at 1,000 — and the
-   Stats view calls it up to 13 times per render: once for the current
-   month + twice per other recent month for the trend). The result for
-   a month depends ONLY on the company data + the effective rules, so
-   cache per (month, withViol) keyed on a fingerprint of those inputs.
-   The fingerprint is recomputed from the live data on every call, so
-   ANY data change (by ANY path — no manual invalidation to forget)
-   busts the cache. The last serialized inputs are kept so a cache hit
-   costs one stringify + string compare, not a re-hash. Cached results
-   are returned as a deep copy so callers can never mutate the cache.
-   What Stats shows is unchanged — only how fast it computes it. */
-var _statsCache={fp:'', entries:{}, lastC:'\0', lastR:'\0'};
+/* ---------- Company Stats aggregate (Fix B, BUILD 20261017-2001) ----------
+   Profiling (500 staff, 600 rosters) showed the FIRST Stats view spent
+   ~99% of its time in ONE place: companyMonthStats(withViol=true) called
+   companyPersonShifts() once per person, and companyPersonShifts() re-scans
+   EVERY roster day for that person — O(people x all roster days). The
+   plain counts scan was 42ms; the violations rescan was 13,506ms.
+   Fix: never rescan per person, and never rescan per month.
+   (1) _statsAggBuild(): ONE pass over every roster day, bucketed by month
+       (counts, overtime, sick/leave sets, people, per-base, per-qual).
+       companyMonthStats() then just combines one month's bucket — O(month).
+   (2) _statsViolBuild(): for the ONE month asked withViol=true, ONE targeted
+       pass collecting that month's shifts per person (days outside the month
+       are skipped before any slot work), building the SAME shift objects
+       rulesPersonShiftsFor() builds (same fields, same per-roster
+       (person|date|slot) dedupe, same iteration order + stable sort), then
+       the SAME rulesCheckShifts() per person in the SAME sorted order.
+       Cached per (fingerprint, month); the drill-down reuses it.
+   The fingerprint is unchanged (Fix 2): ANY data change busts everything,
+   so the aggregate can never go stale. What Stats shows is unchanged —
+   only how fast it computes it. */
+var _statsAgg={fp:'', lastC:'\0', lastR:'\0', byMonth:null, qualByName:null};
+var _statsViol={fp:'', ym:'', violations:null, violItems:null};
 function _statsHashStr(str){
   /* FNV-1a rolling hash — a collision would only return a stale Stats
      view, and the fingerprint also covers the full serialized data,
@@ -8290,94 +8298,186 @@ function _statsFingerprint(){
   var c='', r='';
   try{ c=JSON.stringify(S.company||null); }catch(e){ c=''; }
   try{ r=JSON.stringify(rulesEffectiveObj()); }catch(e){ r=''; }
-  if(c===_statsCache.lastC && r===_statsCache.lastR) return _statsCache.fp;
-  _statsCache.lastC=c; _statsCache.lastR=r;
-  _statsCache.fp=_statsHashStr(c)+'|'+_statsHashStr(r);
-  _statsCache.entries={}; /* data changed — drop all cached months */
-  return _statsCache.fp;
+  if(c===_statsAgg.lastC && r===_statsAgg.lastR) return _statsAgg.fp;
+  _statsAgg.lastC=c; _statsAgg.lastR=r;
+  _statsAgg.fp=_statsHashStr(c)+'|'+_statsHashStr(r);
+  _statsAgg.byMonth=null; _statsAgg.qualByName=null; /* data changed — drop aggregates */
+  _statsViol={fp:'', ym:'', violations:null, violItems:null};
+  return _statsAgg.fp;
 }
-function companyMonthStats(y, m, withViol){
-  var ym=y+'-'+String(m+1).padStart(2,'0');
-  companyEnsure(); /* ensure/heal side effect (as before, via companyWorkplaces) */
-  var _fp=_statsFingerprint();
-  var _ck=ym+'|'+(withViol?1:0);
-  if(_statsCache.entries[_ck]) return JSON.parse(JSON.stringify(_statsCache.entries[_ck]));
-  var st={ym:ym, label:MN[m]+' '+y, total:0, filled:0, open:0, sickDays:0, leaveDays:0,
-    overtime:0, crossBaseOT:0, people:0, violations:[], violItems:[], perBase:[], perQual:[]};
-  var sickSet={}, leaveSet={}, peopleSet={};
+function _statsAggBuild(){
+  /* One pass, bucketed by month. Every count below mirrors the old
+     per-month full scan exactly: same calSlotCrewsFor / effShiftMembers
+     calls, same OPEN / overtime test, same person|date sick/leave sets,
+     same qualByName (first staff record wins per name). */
+  var byMonth={};
   var qualByName={};
   companyAllPeople().forEach(function(p){ if(p.name && !qualByName[p.name]) qualByName[p.name]=p.qual||''; });
-  var qualOn={}, qualSick={}, qualLeave={};
+  function bucket(ym){
+    if(!byMonth[ym]) byMonth[ym]={total:0, filled:0, open:0, overtime:0, crossBaseOT:0,
+      sick:{}, leave:{}, people:{}, perBase:{}, qualOn:{}, qualSick:{}, qualLeave:{}};
+    return byMonth[ym];
+  }
+  function baseBucket(b, wpId){
+    var pb=b.perBase[wpId];
+    if(!pb){ pb={total:0, filled:0, open:0, ot:0, sick:{}, leave:{}}; b.perBase[wpId]=pb; }
+    return pb;
+  }
   companyWorkplaces().forEach(function(wp){
-    var pb={name:wp.name||'Workplace', total:0, filled:0, open:0, sick:{}, leave:{}, ot:0};
     (wp.rosters||[]).forEach(function(u){
       var R=u.roster;
       rulesRosterDays(R).forEach(function(dd){
-        if(dd.dateISO.slice(0,7)!==ym) return;
+        var b=bucket(dd.dateISO.slice(0,7));
+        var pb=baseBucket(b, wp.id);
         calSlotCrewsFor(wp.base, R, dd.dayIdx).forEach(function(ps){
           ps.list.forEach(function(x){
             var orig=x.c.members||[];
             effShiftMembers(R, dd.dateISO, ps.sl.id, x.c).forEach(function(nm){
-              st.total++; pb.total++;
-              if(nm===OPEN_MARK){ st.open++; pb.open++; }
+              b.total++; pb.total++;
+              if(nm===OPEN_MARK){ b.open++; pb.open++; }
               else{
-                st.filled++; pb.filled++; peopleSet[nm]=1;
+                b.filled++; pb.filled++; b.people[nm]=1;
                 var q0=qualByName[nm];
-                if(q0){ if(!qualOn[q0]) qualOn[q0]={}; qualOn[q0][nm]=1; }
-                if(orig.indexOf(nm)<0){ st.overtime++; pb.ot++; }
+                if(q0){ if(!b.qualOn[q0]) b.qualOn[q0]={}; b.qualOn[q0][nm]=1; }
+                if(orig.indexOf(nm)<0){ b.overtime++; pb.ot++; }
               }
             });
           });
         });
       });
       (R.leaveLog||[]).forEach(function(lg){
-        if(!lg.date || lg.date.slice(0,7)!==ym || !lg.person) return;
+        if(!lg.date || !lg.person) return;
+        var b2=bucket(lg.date.slice(0,7));
+        var pb2=baseBucket(b2, wp.id);
         var t=(lg.type||'').toLowerCase();
         var key=lg.person+'|'+lg.date;
         var qq=qualByName[lg.person];
         if(t.indexOf('sick')>=0){
-          if(!sickSet[key]){ sickSet[key]=1; st.sickDays++; }
-          if(!pb.sick[key]) pb.sick[key]=1;
-          if(qq){ if(!qualSick[qq]) qualSick[qq]={}; qualSick[qq][lg.person]=1; }
+          b2.sick[key]=1; pb2.sick[key]=1;
+          if(qq){ if(!b2.qualSick[qq]) b2.qualSick[qq]={}; b2.qualSick[qq][lg.person]=1; }
         }else if(t!=='swap' && t!=='cover'){
-          if(!leaveSet[key]){ leaveSet[key]=1; st.leaveDays++; }
-          if(!pb.leave[key]) pb.leave[key]=1;
-          if(qq){ if(!qualLeave[qq]) qualLeave[qq]={}; qualLeave[qq][lg.person]=1; }
+          b2.leave[key]=1; pb2.leave[key]=1;
+          if(qq){ if(!b2.qualLeave[qq]) b2.qualLeave[qq]={}; b2.qualLeave[qq][lg.person]=1; }
         }
       });
     });
-    st.perBase.push({name:pb.name, total:pb.total, filled:pb.filled, open:pb.open,
-      sick:Object.keys(pb.sick).length, leave:Object.keys(pb.leave).length, ot:pb.ot});
   });
   (S.company.crossBaseLog||[]).forEach(function(l){
-    if(l.dateISO && l.dateISO.slice(0,7)===ym) st.crossBaseOT++;
+    if(l.dateISO) bucket(l.dateISO.slice(0,7)).crossBaseOT++;
   });
-  var qualKeys={};
-  Object.keys(qualOn).forEach(function(k){ qualKeys[k]=1; });
-  Object.keys(qualSick).forEach(function(k){ qualKeys[k]=1; });
-  Object.keys(qualLeave).forEach(function(k){ qualKeys[k]=1; });
-  Object.keys(qualKeys).sort().forEach(function(q){
-    st.perQual.push({qual:q,
-      on:qualOn[q]?Object.keys(qualOn[q]).length:0,
-      sick:qualSick[q]?Object.keys(qualSick[q]).length:0,
-      leave:qualLeave[q]?Object.keys(qualLeave[q]).length:0});
-  });
-  st.people=Object.keys(peopleSet).length;
-  if(withViol){
-    var byLabel={}, items=[];
-    Object.keys(peopleSet).sort().forEach(function(nm){
-      var shifts=companyPersonShifts(nm).filter(function(s){ return s.dateISO.slice(0,7)===ym; });
-      if(!shifts.length) return;
-      rulesCheckShifts(shifts, nm, rulesEffectiveObj()).forEach(function(v){
-        var lab=v.split(':')[0]||'Rule';
-        byLabel[lab]=(byLabel[lab]||0)+1;
-        items.push(v);
+  _statsAgg.byMonth=byMonth;
+  _statsAgg.qualByName=qualByName;
+}
+function _statsViolBuild(ym, peopleSet){
+  /* Violations for ONE month, without the per-person rescan. Collects the
+     month's shifts per person in a single targeted pass, then runs the
+     same rulesCheckShifts() per person in the same sorted-people order
+     the old code used (peopleSet keys sorted, rulesEffectiveObj once —
+     the engine only reads the rules object, so one copy is identical). */
+  var byLabel={}, items=[];
+  if(!peopleSet || !Object.keys(peopleSet).length) return {violations:[], violItems:[]};
+  var byPerson={};
+  companyWorkplaces().forEach(function(wp){
+    var b=wp.base;
+    var defFn=function(id){ return slotDefFor(b, id); };
+    var hFn=function(y){ return holMapForBase(b, y); };
+    (wp.rosters||[]).forEach(function(u){
+      var R=u.roster;
+      var seen={}; /* (person|date|slot) dedupe within THIS roster, as in rulesPersonShiftsFor */
+      rulesRosterDays(R).forEach(function(dd){
+        if(dd.dateISO.slice(0,7)!==ym) return;
+        calSlotCrewsFor(b, R, dd.dayIdx).forEach(function(ps){
+          ps.list.forEach(function(x){
+            var eff=effShiftMembers(R, dd.dateISO, ps.sl.id, x.c);
+            eff.forEach(function(nm){
+              if(nm===OPEN_MARK) return;
+              var k=nm+'|'+dd.dateISO+'|'+ps.sl.id;
+              if(seen[k]) return; seen[k]=1;
+              /* Same shift object rulesPersonShiftsFor() builds. */
+              var def=defFn(ps.sl.id);
+              var rs=def?rulesMins(def.start):0, re=def?rulesMins(def.end):0;
+              var eAdj=re;
+              if(def && def.start===def.end) eAdj=rs+1440;
+              else if(eAdj<=rs) eAdj+=1440;
+              var orig=x.c.members||[];
+              var holName='';
+              try{ var hm=hFn(parseInt(dd.dateISO.slice(0,4),10)); if(hm) holName=hm[dd.dateISO]||''; }catch(e){}
+              var dayMs=parseISO(dd.dateISO).getTime();
+              (byPerson[nm]=byPerson[nm]||[]).push({dateISO:dd.dateISO, dayIdx:dd.dayIdx, slotId:ps.sl.id, slotName:(def&&def.name)||ps.sl.id,
+                rawStart:rs, rawEnd:re, startAbs:dd.dayIdx*1440+rs, endAbs:dd.dayIdx*1440+eAdj,
+                absStart:dayMs/60000+rs, absEnd:dayMs/60000+eAdj,
+                isOvertime:orig.indexOf(nm)<0, crewId:x.c.id, holName:holName,
+                workplaceId:wp.id, workplaceName:wp.name||(wp.base&&wp.base.name)||''});
+            });
+          });
+        });
       });
     });
-    st.violations=Object.keys(byLabel).sort().map(function(l){ return {label:l, count:byLabel[l]}; });
-    st.violItems=items;
+  });
+  var r=rulesEffectiveObj();
+  Object.keys(peopleSet).sort().forEach(function(nm){
+    var shifts=byPerson[nm]||[];
+    if(!shifts.length) return;
+    shifts.sort(function(a,b){ return a.absStart-b.absStart; });
+    rulesCheckShifts(shifts, nm, r).forEach(function(v){
+      var lab=v.split(':')[0]||'Rule';
+      byLabel[lab]=(byLabel[lab]||0)+1;
+      items.push(v);
+    });
+  });
+  return {violations:Object.keys(byLabel).sort().map(function(l){ return {label:l, count:byLabel[l]}; }), violItems:items};
+}
+function companyMonthStats(y, m, withViol){
+  var ym=y+'-'+String(m+1).padStart(2,'0');
+  companyEnsure(); /* ensure/heal side effect (as before, via companyWorkplaces) */
+  var _fp=_statsFingerprint();
+  if(!_statsAgg.byMonth) _statsAggBuild();
+  var b=_statsAgg.byMonth[ym];
+  var st={ym:ym, label:MN[m]+' '+y, total:0, filled:0, open:0, sickDays:0, leaveDays:0,
+    overtime:0, crossBaseOT:0, people:0, violations:[], violItems:[], perBase:[], perQual:[]};
+  if(b){
+    st.total=b.total; st.filled=b.filled; st.open=b.open; st.overtime=b.overtime;
+    st.crossBaseOT=b.crossBaseOT;
+    st.sickDays=Object.keys(b.sick).length;
+    st.leaveDays=Object.keys(b.leave).length;
+    st.people=Object.keys(b.people).length;
+    var qualKeys={};
+    Object.keys(b.qualOn).forEach(function(k){ qualKeys[k]=1; });
+    Object.keys(b.qualSick).forEach(function(k){ qualKeys[k]=1; });
+    Object.keys(b.qualLeave).forEach(function(k){ qualKeys[k]=1; });
+    Object.keys(qualKeys).sort().forEach(function(q){
+      st.perQual.push({qual:q,
+        on:b.qualOn[q]?Object.keys(b.qualOn[q]).length:0,
+        sick:b.qualSick[q]?Object.keys(b.qualSick[q]).length:0,
+        leave:b.qualLeave[q]?Object.keys(b.qualLeave[q]).length:0});
+    });
+    if(withViol){
+      if(_statsViol.fp!==_fp || _statsViol.ym!==ym || !_statsViol.violations){
+        var vb=_statsViolBuild(ym, b.people);
+        _statsViol={fp:_fp, ym:ym, violations:vb.violations, violItems:vb.violItems};
+      }
+      st.violations=_statsViol.violations;
+      st.violItems=_statsViol.violItems;
+    }
+  } else if(withViol){
+    /* Month with no bucket at all (no roster days, no leave, no cross-base
+       OT): the old code returned empty violations for it too. Keep the
+       viol cache coherent for this month so a later call reuses it. */
+    if(_statsViol.fp!==_fp || _statsViol.ym!==ym || !_statsViol.violations){
+      _statsViol={fp:_fp, ym:ym, violations:[], violItems:[]};
+    }
+    st.violations=_statsViol.violations;
+    st.violItems=_statsViol.violItems;
   }
-  _statsCache.entries[_ck]=st;
+  /* One entry per workplace in company order (zeros when the month has
+     nothing for that base) — same shape as the old per-month scan. */
+  companyWorkplaces().forEach(function(wp){
+    var pb=(b && b.perBase[wp.id]) || null;
+    st.perBase.push({name:wp.name||'Workplace',
+      total:pb?pb.total:0, filled:pb?pb.filled:0, open:pb?pb.open:0,
+      sick:pb?Object.keys(pb.sick).length:0, leave:pb?Object.keys(pb.leave).length:0,
+      ot:pb?pb.ot:0});
+  });
   return JSON.parse(JSON.stringify(st)); /* copy: callers must never mutate the cache */
 }
 /* months that have any roster days (for the trend), newest first, capped */
