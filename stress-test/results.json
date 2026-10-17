@@ -1,5 +1,48 @@
 {
-  "history": [],
+  "history": [
+    {
+      "time": "12:10",
+      "companies": 0,
+      "staff": 40,
+      "rosters": 24,
+      "changes": 290
+    },
+    {
+      "time": "12:10",
+      "companies": 0,
+      "staff": 80,
+      "rosters": 48,
+      "changes": 580
+    },
+    {
+      "time": "12:10",
+      "companies": 0,
+      "staff": 120,
+      "rosters": 72,
+      "changes": 870
+    },
+    {
+      "time": "12:10",
+      "companies": 0,
+      "staff": 160,
+      "rosters": 96,
+      "changes": 1160
+    },
+    {
+      "time": "12:10",
+      "companies": 0,
+      "staff": 200,
+      "rosters": 120,
+      "changes": 1450
+    },
+    {
+      "time": "12:10",
+      "companies": 5,
+      "staff": 200,
+      "rosters": 120,
+      "changes": 1450
+    }
+  ],
   "log": [
     {
       "time": "10:04",
@@ -8,9 +51,114 @@
     {
       "time": "12:10",
       "message": "Building up — seeding…"
+    },
+    {
+      "time": "12:10",
+      "message": "Added teams — staff 40, rosters 24 (active 24, archived 0), changes 290"
+    },
+    {
+      "time": "12:10",
+      "message": "Added teams — staff 80, rosters 48 (active 48, archived 0), changes 580"
+    },
+    {
+      "time": "12:10",
+      "message": "Added teams — staff 120, rosters 72 (active 72, archived 0), changes 870"
+    },
+    {
+      "time": "12:10",
+      "message": "Added teams — staff 160, rosters 96 (active 96, archived 0), changes 1160"
+    },
+    {
+      "time": "12:10",
+      "message": "Added teams — staff 200, rosters 120 (active 120, archived 0), changes 1450"
+    },
+    {
+      "time": "12:10",
+      "message": "Added notifications — 1000 of 1000"
+    },
+    {
+      "time": "12:10",
+      "message": "Added applications — 200 of 200"
+    },
+    {
+      "time": "12:10",
+      "message": "Added drafts — 50 of 50"
+    },
+    {
+      "time": "12:10",
+      "message": "Reloaded — load 1170ms, active 120, archived 0, bytes 464986"
+    },
+    {
+      "time": "12:10",
+      "message": "Stage 1 done — countsOk=true"
     }
   ],
-  "metrics": [],
+  "metrics": [
+    {
+      "label": "Seed staff",
+      "value": "200"
+    },
+    {
+      "label": "IndexedDB bytes (after seed, in-memory)",
+      "value": "127"
+    },
+    {
+      "label": "Persist (DB.set + flush)",
+      "value": "23ms, 464986 bytes"
+    },
+    {
+      "label": "Load time (reload)",
+      "value": "1170ms"
+    },
+    {
+      "label": "Calendar render",
+      "value": "584ms"
+    },
+    {
+      "label": "Rosters list render",
+      "value": "433ms"
+    },
+    {
+      "label": "Company Dashboard render",
+      "value": "551ms"
+    },
+    {
+      "label": "Rules engine",
+      "value": "ok ms=7 violDays=undefined"
+    },
+    {
+      "label": "Inbox render",
+      "value": "417ms"
+    },
+    {
+      "label": "Stats MISS (bust, first view)",
+      "value": "21ms total=3100"
+    },
+    {
+      "label": "Stats HIT (repeat view)",
+      "value": "1ms deep-equal=true"
+    },
+    {
+      "label": "Stats fresh MISS == baseline",
+      "value": "fresh=22ms equal=true"
+    },
+    {
+      "label": "Stats archived month total (Nov 2024)",
+      "value": "0"
+    },
+    {
+      "label": "Export Excel",
+      "value": "ok ms=31 xlsxBytes=25242"
+    },
+    {
+      "label": "Export PDF",
+      "value": "ok ms=526 pdfBytes=344786"
+    },
+    {
+      "label": "Export PNG",
+      "value": "ok ms=267 pngBytes=190331"
+    }
+  ],
   "progress": {
     "current": 1,
     "total": 7
@@ -23,12 +171,12 @@
     "break": null
   },
   "totals": {
-    "companies": null,
-    "staff": null,
-    "rosters": null,
-    "changes": null
+    "companies": 5,
+    "staff": 200,
+    "rosters": 120,
+    "changes": 1450
   },
-  "updatedAt": "2026-10-17T12:10:38.363+02:00",
+  "updatedAt": "2026-10-17T12:10:46.179+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
@@ -53,6 +201,14 @@
       }
     ],
     "rostersPerMonth": [
+      {
+        "month": "2025-11",
+        "rosters": 10
+      },
+      {
+        "month": "2025-12",
+        "rosters": 10
+      },
       {
         "month": "2026-01",
         "rosters": 10
@@ -92,19 +248,35 @@
       {
         "month": "2026-10",
         "rosters": 10
-      },
-      {
-        "month": "2026-11",
-        "rosters": 10
-      },
-      {
-        "month": "2026-12",
-        "rosters": 10
       }
     ]
   },
-  "storageHistory": [],
-  "perfHistory": [],
-  "speedPerLevel": [],
+  "storageHistory": [
+    {
+      "time": "12:10",
+      "kb": 454
+    },
+    {
+      "time": "12:10",
+      "kb": 454
+    }
+  ],
+  "perfHistory": [
+    {
+      "staff": 200,
+      "loadMs": 1170,
+      "renderMs": 584,
+      "exportMs": 36
+    }
+  ],
+  "speedPerLevel": [
+    {
+      "level": "Low",
+      "staff": 200,
+      "loadMs": 1170,
+      "renderMs": 584,
+      "exportMs": 36
+    }
+  ],
   "problems": []
 }
