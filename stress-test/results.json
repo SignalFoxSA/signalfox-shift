@@ -4164,6 +4164,83 @@
       "staff": 4000,
       "rosters": 9600,
       "changes": 104000
+    },
+    {
+      "time": "10:21",
+      "companies": 0,
+      "staff": 20,
+      "rosters": 12,
+      "changes": 170
+    },
+    {
+      "time": "10:21",
+      "companies": 0,
+      "staff": 40,
+      "rosters": 24,
+      "changes": 340
+    },
+    {
+      "time": "10:21",
+      "companies": 0,
+      "staff": 60,
+      "rosters": 36,
+      "changes": 510
+    },
+    {
+      "time": "10:21",
+      "companies": 0,
+      "staff": 80,
+      "rosters": 48,
+      "changes": 680
+    },
+    {
+      "time": "10:21",
+      "companies": 0,
+      "staff": 100,
+      "rosters": 60,
+      "changes": 850
+    },
+    {
+      "time": "10:21",
+      "companies": 0,
+      "staff": 120,
+      "rosters": 72,
+      "changes": 1020
+    },
+    {
+      "time": "10:21",
+      "companies": 0,
+      "staff": 140,
+      "rosters": 84,
+      "changes": 1190
+    },
+    {
+      "time": "10:21",
+      "companies": 0,
+      "staff": 160,
+      "rosters": 96,
+      "changes": 1360
+    },
+    {
+      "time": "10:21",
+      "companies": 0,
+      "staff": 180,
+      "rosters": 108,
+      "changes": 1530
+    },
+    {
+      "time": "10:21",
+      "companies": 0,
+      "staff": 200,
+      "rosters": 120,
+      "changes": 1700
+    },
+    {
+      "time": "10:21",
+      "companies": 5,
+      "staff": 200,
+      "rosters": 120,
+      "changes": 1700
     }
   ],
   "log": [
@@ -7118,68 +7195,108 @@
     {
       "time": "10:21",
       "message": "Building up — seeding…"
+    },
+    {
+      "time": "10:21",
+      "message": "Added teams — staff 20, rosters 12, changes 170"
+    },
+    {
+      "time": "10:21",
+      "message": "Added teams — staff 40, rosters 24, changes 340"
+    },
+    {
+      "time": "10:21",
+      "message": "Added teams — staff 60, rosters 36, changes 510"
+    },
+    {
+      "time": "10:21",
+      "message": "Added teams — staff 80, rosters 48, changes 680"
+    },
+    {
+      "time": "10:21",
+      "message": "Added teams — staff 100, rosters 60, changes 850"
+    },
+    {
+      "time": "10:21",
+      "message": "Added teams — staff 120, rosters 72, changes 1020"
+    },
+    {
+      "time": "10:21",
+      "message": "Added teams — staff 140, rosters 84, changes 1190"
+    },
+    {
+      "time": "10:21",
+      "message": "Added teams — staff 160, rosters 96, changes 1360"
+    },
+    {
+      "time": "10:21",
+      "message": "Added teams — staff 180, rosters 108, changes 1530"
+    },
+    {
+      "time": "10:21",
+      "message": "Added teams — staff 200, rosters 120, changes 1700"
+    },
+    {
+      "time": "10:21",
+      "message": "Added notifications — 1000 of 1000"
+    },
+    {
+      "time": "10:21",
+      "message": "Added applications — 200 of 200"
+    },
+    {
+      "time": "10:21",
+      "message": "Added drafts — 50 of 50"
+    },
+    {
+      "time": "10:21",
+      "message": "Build complete — staff 200, rosters 120, changes 1700"
+    },
+    {
+      "time": "10:21",
+      "message": "FIX 3: libs from bundle (xlsx=true html2canvas=true jspdf=true), export-CDN requests=0"
+    },
+    {
+      "time": "10:21",
+      "message": "Rapid: +50 drafts (drafts 100)"
+    },
+    {
+      "time": "10:21",
+      "message": "Rapid: -50 drafts (tear-down) + 50 decisions + 30 tab switches"
     }
   ],
   "metrics": [
     {
-      "label": "Seed time",
-      "value": "n/a"
+      "label": "Export Excel (mega 200 staff)",
+      "value": "ok ms=991 xlsxBytes=24630"
     },
     {
-      "label": "Storage (JSON bytes)",
-      "value": "30797276"
+      "label": "Export PNG (mega 200 staff)",
+      "value": "ok ms=958 out=[object Blob]"
     },
     {
-      "label": "Heap used",
-      "value": "61 MB"
+      "label": "Export PDF (mega 200 staff)",
+      "value": "ok ms=963 out=[object Blob]"
     },
     {
-      "label": "Persist",
-      "value": "FAILED (sfshift_notifications:Failed to execute 'setItem' on 'Storage': Setting the value of 'sfshift_notifications' exceeded the quota.)"
+      "label": "FIX 3 — Export libs from bundle (offline)",
+      "value": "xlsx=true html2canvas=true jspdf=true"
     },
     {
-      "label": "FIX 1 — quota banner shown",
-      "value": "YES (banner flex + flag set)"
+      "label": "FIX 3 — Export-CDN requests",
+      "value": "0 (external attempted 0)"
     },
     {
-      "label": "FIX 1 — calendar view under quota (company survives)",
-      "value": "YES — company {\"wps\":5,\"rosters\":9600,\"activeId\":\"w0\"} | apps LOST (3200→0 — loader gap)"
+      "label": "Storage persist+reload",
+      "value": "persist ok 6ms, reload 1989ms, staffAfter=40 rostersAfter=25 draftsAfter=50"
     },
     {
-      "label": "FIX 1 — loadSaved() under quota (company survives)",
-      "value": "YES — company intact | apps LOST (3200→0 — loader gap)"
+      "label": "Rapid actions",
+      "value": "added ms=1 draftsNow=100 | removed+decided ms=270 draftsNow=50 pendAfter=16"
     },
     {
-      "label": "FIX 1 — save under quota (banner + company intact)",
-      "value": "YES — company intact, banner showing | apps LOST (3200→0 — loader gap)"
-    },
-    {
-      "label": "Calendar render",
-      "value": "7668ms"
-    },
-    {
-      "label": "Rosters list render",
-      "value": "526ms"
-    },
-    {
-      "label": "Company Dashboard render",
-      "value": "1462ms"
-    },
-    {
-      "label": "FIX 2 — Stats MISS (first view)",
-      "value": "1444572ms"
-    },
-    {
-      "label": "FIX 2 — Stats HIT (repeat view)",
-      "value": "159ms deep-equal=true"
-    },
-    {
-      "label": "FIX 2 — Stats cache bust + cached==fresh",
-      "value": "bust=skipped freshEqual=skipped"
-    },
-    {
-      "label": "Rules engine",
-      "value": "ok ms=69 violDays=undefined"
+      "label": "Multi-tab",
+      "value": "draftsBefore=50 pageBseesMarker=true"
     }
   ],
   "progress": {
@@ -7195,226 +7312,82 @@
   },
   "totals": {
     "companies": 5,
-    "staff": 4000,
-    "rosters": 9600,
-    "changes": 104000
+    "staff": 0,
+    "rosters": 0,
+    "changes": 0
   },
-  "updatedAt": "2026-10-17T10:21:45.084+02:00",
+  "updatedAt": "2026-10-17T10:21:55.817+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
         "name": "Workplace 1",
-        "staff": 800
+        "staff": 40
       },
       {
         "name": "Workplace 2",
-        "staff": 800
+        "staff": 40
       },
       {
         "name": "Workplace 3",
-        "staff": 800
+        "staff": 40
       },
       {
         "name": "Workplace 4",
-        "staff": 800
+        "staff": 40
       },
       {
         "name": "Workplace 5",
-        "staff": 800
+        "staff": 40
       }
     ],
     "rostersPerMonth": [
       {
         "month": "2026-01",
-        "rosters": 200
+        "rosters": 10
       },
       {
         "month": "2026-02",
-        "rosters": 200
+        "rosters": 10
       },
       {
         "month": "2026-03",
-        "rosters": 200
+        "rosters": 10
       },
       {
         "month": "2026-04",
-        "rosters": 200
+        "rosters": 10
       },
       {
         "month": "2026-05",
-        "rosters": 200
+        "rosters": 10
       },
       {
         "month": "2026-06",
-        "rosters": 200
+        "rosters": 10
       },
       {
         "month": "2026-07",
-        "rosters": 200
+        "rosters": 10
       },
       {
         "month": "2026-08",
-        "rosters": 200
+        "rosters": 10
       },
       {
         "month": "2026-09",
-        "rosters": 200
+        "rosters": 10
       },
       {
         "month": "2026-10",
-        "rosters": 200
+        "rosters": 10
       },
       {
         "month": "2026-11",
-        "rosters": 200
+        "rosters": 10
       },
       {
         "month": "2026-12",
-        "rosters": 200
-      },
-      {
-        "month": "2027-01",
-        "rosters": 200
-      },
-      {
-        "month": "2027-02",
-        "rosters": 200
-      },
-      {
-        "month": "2027-03",
-        "rosters": 200
-      },
-      {
-        "month": "2027-04",
-        "rosters": 200
-      },
-      {
-        "month": "2027-05",
-        "rosters": 200
-      },
-      {
-        "month": "2027-06",
-        "rosters": 200
-      },
-      {
-        "month": "2027-07",
-        "rosters": 200
-      },
-      {
-        "month": "2027-08",
-        "rosters": 200
-      },
-      {
-        "month": "2027-09",
-        "rosters": 200
-      },
-      {
-        "month": "2027-10",
-        "rosters": 200
-      },
-      {
-        "month": "2027-11",
-        "rosters": 200
-      },
-      {
-        "month": "2027-12",
-        "rosters": 200
-      },
-      {
-        "month": "2028-01",
-        "rosters": 200
-      },
-      {
-        "month": "2028-02",
-        "rosters": 200
-      },
-      {
-        "month": "2028-03",
-        "rosters": 200
-      },
-      {
-        "month": "2028-04",
-        "rosters": 200
-      },
-      {
-        "month": "2028-05",
-        "rosters": 200
-      },
-      {
-        "month": "2028-06",
-        "rosters": 200
-      },
-      {
-        "month": "2028-07",
-        "rosters": 200
-      },
-      {
-        "month": "2028-08",
-        "rosters": 200
-      },
-      {
-        "month": "2028-09",
-        "rosters": 200
-      },
-      {
-        "month": "2028-10",
-        "rosters": 200
-      },
-      {
-        "month": "2028-11",
-        "rosters": 200
-      },
-      {
-        "month": "2028-12",
-        "rosters": 200
-      },
-      {
-        "month": "2029-01",
-        "rosters": 200
-      },
-      {
-        "month": "2029-02",
-        "rosters": 200
-      },
-      {
-        "month": "2029-03",
-        "rosters": 200
-      },
-      {
-        "month": "2029-04",
-        "rosters": 200
-      },
-      {
-        "month": "2029-05",
-        "rosters": 200
-      },
-      {
-        "month": "2029-06",
-        "rosters": 200
-      },
-      {
-        "month": "2029-07",
-        "rosters": 200
-      },
-      {
-        "month": "2029-08",
-        "rosters": 200
-      },
-      {
-        "month": "2029-09",
-        "rosters": 200
-      },
-      {
-        "month": "2029-10",
-        "rosters": 200
-      },
-      {
-        "month": "2029-11",
-        "rosters": 200
-      },
-      {
-        "month": "2029-12",
-        "rosters": 200
+        "rosters": 10
       }
     ]
   },
@@ -7486,15 +7459,21 @@
       "loadMs": null,
       "renderMs": 7668,
       "exportMs": null
+    },
+    {
+      "staff": 200,
+      "loadMs": null,
+      "renderMs": null,
+      "exportMs": 998
     }
   ],
   "speedPerLevel": [
     {
       "level": "Low",
       "staff": 200,
-      "loadMs": 2582,
-      "renderMs": 728,
-      "exportMs": null
+      "loadMs": null,
+      "renderMs": null,
+      "exportMs": 998
     },
     {
       "level": "Low",
