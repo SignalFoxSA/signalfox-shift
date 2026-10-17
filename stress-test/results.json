@@ -1069,6 +1069,10 @@
     {
       "time": "12:23",
       "message": "Stage 3 done — CRITICAL BUG FOUND: stale-mirror S.base wipe (see problems). Counts intact in-test because no post-reload persist ran."
+    },
+    {
+      "time": "12:23",
+      "message": "Building up — seeding…"
     }
   ],
   "metrics": [
@@ -1142,10 +1146,10 @@
     }
   ],
   "progress": {
-    "current": 3,
+    "current": 4,
     "total": 7
   },
-  "stage": "Stage 3 of 7 — 4000 staff, 36 months",
+  "stage": "Stage 4 of 7 — 10000 staff, 48 months",
   "status": "running",
   "thresholds": {
     "perfect": null,
@@ -1158,7 +1162,7 @@
     "rosters": 7200,
     "changes": 72200
   },
-  "updatedAt": "2026-10-17T12:23:41.838+02:00",
+  "updatedAt": "2026-10-17T12:23:48.461+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
