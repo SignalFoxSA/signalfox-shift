@@ -790,6 +790,10 @@
     {
       "time": "12:17",
       "message": "Stage 2 done — countsOk=false"
+    },
+    {
+      "time": "12:21",
+      "message": "Stage 2 done — REAL BUG FOUND: sweep + loadSaved race (see problems). Sweep 75s for 550 rosters (~137ms/roster). Final counts correct after Rosters-tab cleanup sweep."
     }
   ],
   "metrics": [
@@ -879,7 +883,7 @@
     "rosters": 1200,
     "changes": 12500
   },
-  "updatedAt": "2026-10-17T12:17:06.691+02:00",
+  "updatedAt": "2026-10-17T12:21:09.058+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
@@ -1028,6 +1032,12 @@
       "message": "Stage 2: counts changed during measurements",
       "detail": "afterReload={\"staff\":1000,\"teams\":10,\"rostersActiveMem\":130,\"companyWorkplaces\":5,\"companyRosters\":1090,\"drafts\":100,\"notif\":2000,\"apps\":400,\"archived\":550,\"dbBytes\":4846319,\"dbMode\":\"idb\",\"dbKeys\":558,\"opensActiveWp\":45,\"changesActiveWp\":1345,\"heapUsedMB\":23.4,\"heapLimitMB\":3586} final={\"staff\":1000,\"teams\":10,\"rostersActiveMem\":130,\"companyWorkplaces\":5,\"companyRosters\":650,\"drafts\":100,\"notif\":2000,\"apps\":400,\"archived\":550,\"dbBytes\":3944783,\"dbMode\":\"idb\",\"dbKeys\":558,\"opensActiveWp\":45,\"cha",
       "fix": "Investigate which loader/render mutated state."
+    },
+    {
+      "time": "12:21",
+      "message": "BUG (Fix D): archiveSweep removals for NON-ACTIVE workplaces are silently lost when loadSaved() runs mid-sweep",
+      "detail": "Stage 2: init sweep archived all 550 old rosters (bodies+index landed) but active only fell 1200->1090 (w0 240->130, w1-w4 still 240 each). Mechanism: enterApp -> switchTab(home) -> renderHome -> renderToday -> loadSaved -> companyLoad REPLACES S.company with a fresh parse, detaching the sweep workplace objects. removeFromActive then filters detached wp.rosters for w1-w4 (lost); only the active workplace re-syncs via live S.rosters + companySyncActive. A later Rosters-tab visit runs a second sweep (alreadyArchived path) which removed the other 440 -> final 650 active + 550 archived, consistent. Stats/active views double-count the stale rosters until the Rosters tab is visited. Repro: Stage 2 run (enterApp during sweep) vs probe-sweep-mirror (no enterApp until sweep settled -> clean 130x5). No data loss: archive held all copies; cleanup sweep fixed active.",
+      "fix": "Sweep should re-resolve workplace objects from live S.company on each chain step (or companyLoad must not replace S.company while a sweep is running / sweep should hold a lock that loadSaved respects). Also consider: archiveSweep should not rely on captured wp references across awaits."
     }
   ]
 }
