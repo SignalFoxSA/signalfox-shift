@@ -1656,7 +1656,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261017-2003';
+var BUILD='20261017-2004';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -4502,14 +4502,24 @@ DB._reconcile = function (entries) {
     }
   }
   DB._recomputeBytes();
-  /* If the app already rendered from the boot (localStorage) values,
-     re-load state from the reconciled cache and re-render — the
-     IndexedDB values are the truth. (In practice init finishes before
-     enterApp, so this branch only fires with >5MB of data, where the
-     localStorage mirror had already gone stale.) */
-  if (changed && DB.appEntered) {
+  /* FIX (BUILD 20261017-2004): if reconcile changed any cache value,
+     re-load state from the reconciled cache — ALWAYS, not only after
+     enterApp. Before this fix the re-load ran only when
+     DB.appEntered was true, so on a normal reload the init loaders
+     (which run before IndexedDB finishes opening) read the STALE
+     localStorage mirror — e.g. an 89-byte defaultBase stub for
+     sfshift_base — and S.base stayed an empty default even though
+     IndexedDB held the real base. The next persist() then overwrote
+     the real base in the company with the empty one (CRITICAL
+     stale-mirror wipe, 1GB stress test). The state loaders
+     (loadCustomRotations / loadBase / loadSaved / loadNotifications)
+     only populate S.* from storage — safe to run before enterApp.
+     Re-renders still wait for appEntered (DOM may not be ready). */
+  if (changed) {
     try { loadCustomRotations(); loadBase(); loadSaved(); loadNotifications(); } catch (e) {}
-    try { renderHome(); renderAllRosters(); renderStaffTab(); renderSettings(); updateBell(); } catch (e) {}
+    if (DB.appEntered) {
+      try { renderHome(); renderAllRosters(); renderStaffTab(); renderSettings(); updateBell(); } catch (e) {}
+    }
   }
 };
 DB.get = function (k) {
@@ -4630,6 +4640,26 @@ function loadSaved(){
   loadDrafts();
   try{ S.rosters=JSON.parse(DB.get('sfshift_units')||'[]'); }catch(e){ S.rosters=[]; }
   S._rostersLoaded=true; companyLoad();
+  /* FIX (BUILD 20261017-2004): heal S.base from the company's active
+     base. If S.base is empty (no teams/staff/crews) but the active
+     workplace holds a real base, the empty S.base is a stale mirror
+     default (the Fix C poison: init loadBase read an 89-byte
+     defaultBase stub from the localStorage mirror) — adopt the
+     company's active base. Never fires for a genuinely-new user
+     (company has no workplaces) or a genuinely-empty workplace
+     (active base is also empty). Only fires empty → non-empty, never
+     the reverse, so it can never clobber real in-memory edits. */
+  try{
+    var _baseEmpty = !(S.base && ((S.base.vehicles||[]).length || (S.base.staff||[]).length || (S.base.crews||[]).length));
+    if(_baseEmpty && S.company && S.company.activeId){
+      var _awp=null;
+      for(var _wi=0; _wi<(S.company.workplaces||[]).length; _wi++){ if(S.company.workplaces[_wi].id===S.company.activeId){ _awp=S.company.workplaces[_wi]; break; } }
+      var _ab=_awp && _awp.base;
+      if(_ab && ((_ab.vehicles||[]).length || (_ab.staff||[]).length || (_ab.crews||[]).length)){
+        S.base=JSON.parse(JSON.stringify(_ab));
+      }
+    }
+  }catch(e){}
   loadShiftApps();
   if(!Array.isArray(S.rosters)) S.rosters=[];
   if(!S.rosters.length){
@@ -7848,7 +7878,20 @@ function companySyncActive(){
   var c=companyEnsure(); if(!c) return;
   for(var i=0;i<c.workplaces.length;i++){
     if(c.workplaces[i].id===c.activeId){
-      c.workplaces[i].base=JSON.parse(JSON.stringify(S.base||{}));
+      /* FIX (BUILD 20261017-2004): never wipe a non-empty company
+         base with an empty S.base (e.g. S.base clobbered by a stale
+         mirror default after a reload — the Fix C poison: one
+         persist() overwrote the real 40-team base with the empty
+         default, in-memory AND stored). Same defensive pattern as
+         the rosters guard below. A genuine delete-all goes through
+         Clear Data (which nulls the company first), so this guard
+         can never block a real user action. */
+      var _baseEmpty = !(S.base && ((S.base.vehicles||[]).length || (S.base.staff||[]).length || (S.base.crews||[]).length));
+      var _storedBase = c.workplaces[i].base;
+      var _storedNonEmpty = !!(_storedBase && ((_storedBase.vehicles||[]).length || (_storedBase.staff||[]).length || (_storedBase.crews||[]).length));
+      if(!_baseEmpty || !_storedNonEmpty){
+        c.workplaces[i].base=JSON.parse(JSON.stringify(S.base||{}));
+      }
       /* defensive: never wipe a non-empty company copy with an empty
          S.rosters (e.g. S.rosters clobbered by a loadSaved from stale
          storage). A genuine delete-all goes through Clear Data. */
