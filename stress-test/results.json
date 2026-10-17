@@ -1,8 +1,8 @@
 {
   "status": "running",
-  "stage": "Stage 1 — starting",
+  "stage": "Stage 1 of 7 — 2000 staff, 50 workplaces, 12 months",
   "progress": {
-    "current": 0,
+    "current": 1,
     "total": 7
   },
   "thresholds": {
@@ -25,7 +25,12 @@
     {
       "time": "13:32",
       "message": "Hardcore stress test started — finding the maximums (BUILD 2007)."
+    },
+    {
+      "time": "13:34",
+      "message": "Building up — seeding…"
     }
   ],
-  "updatedAt": "2026-10-17T13:32:19.646+02:00"
+  "updatedAt": "2026-10-17T13:34:37.731+02:00",
+  "history": []
 }
