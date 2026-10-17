@@ -333,9 +333,9 @@
     }
   ],
   "totals": {
-    "companies": 0,
-    "staff": 2000,
-    "rosters": 1200,
+    "companies": 1,
+    "staff": 0,
+    "rosters": 0,
     "changes": 12025
   },
   "perfHistory": [
@@ -392,6 +392,12 @@
       "loadMs": 1715,
       "renderMs": 8668,
       "exportMs": 45
+    },
+    {
+      "staff": 2000,
+      "loadMs": 1370,
+      "renderMs": 1711,
+      "exportMs": 51
     }
   ],
   "storageHistory": [
@@ -555,6 +561,13 @@
       "loadMs": 1715,
       "renderMs": 8668,
       "exportMs": 45
+    },
+    {
+      "level": "Density",
+      "staff": 2000,
+      "loadMs": 1370,
+      "renderMs": 1711,
+      "exportMs": 51
     }
   ],
   "problems": [
@@ -572,10 +585,6 @@
     }
   ],
   "log": [
-    {
-      "time": "14:03",
-      "message": "Workplace 930/1000 seeded — staff 18600, rosters 11160"
-    },
     {
       "time": "14:03",
       "message": "Workplace 931/1000 seeded — staff 18620, rosters 11172"
@@ -891,8 +900,12 @@
     {
       "time": "14:04",
       "message": "Added drafts — 50 of 50"
+    },
+    {
+      "time": "14:10",
+      "message": "Point s5a-2000dense done — countsOk=false, crashes=1"
     }
   ],
-  "updatedAt": "2026-10-17T14:10:36.990+02:00",
+  "updatedAt": "2026-10-17T14:10:39.580+02:00",
   "history": []
 }
