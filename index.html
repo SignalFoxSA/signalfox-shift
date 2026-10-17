@@ -1202,7 +1202,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261017-1997';
+var BUILD='20261017-1998';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -7758,8 +7758,44 @@ function companyStatsThisMonth(){
   var n=new Date(); c.statsYm=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
   companyPersist(); renderCompany();
 }
+/* ---------- Company Stats cache ----------
+   companyMonthStats() recomputes over every roster on every view
+   (stress test: 1s at 200 staff, 11.6s at 500, 48s at 1,000 — and the
+   Stats view calls it up to 13 times per render: once for the current
+   month + twice per other recent month for the trend). The result for
+   a month depends ONLY on the company data + the effective rules, so
+   cache per (month, withViol) keyed on a fingerprint of those inputs.
+   The fingerprint is recomputed from the live data on every call, so
+   ANY data change (by ANY path — no manual invalidation to forget)
+   busts the cache. The last serialized inputs are kept so a cache hit
+   costs one stringify + string compare, not a re-hash. Cached results
+   are returned as a deep copy so callers can never mutate the cache.
+   What Stats shows is unchanged — only how fast it computes it. */
+var _statsCache={fp:'', entries:{}, lastC:'\0', lastR:'\0'};
+function _statsHashStr(str){
+  /* FNV-1a rolling hash — a collision would only return a stale Stats
+     view, and the fingerprint also covers the full serialized data,
+     so a collision needs identical hashes for different data. */
+  var h=2166136261;
+  for(var i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); }
+  return (h>>>0).toString(36);
+}
+function _statsFingerprint(){
+  var c='', r='';
+  try{ c=JSON.stringify(S.company||null); }catch(e){ c=''; }
+  try{ r=JSON.stringify(rulesEffectiveObj()); }catch(e){ r=''; }
+  if(c===_statsCache.lastC && r===_statsCache.lastR) return _statsCache.fp;
+  _statsCache.lastC=c; _statsCache.lastR=r;
+  _statsCache.fp=_statsHashStr(c)+'|'+_statsHashStr(r);
+  _statsCache.entries={}; /* data changed — drop all cached months */
+  return _statsCache.fp;
+}
 function companyMonthStats(y, m, withViol){
   var ym=y+'-'+String(m+1).padStart(2,'0');
+  companyEnsure(); /* ensure/heal side effect (as before, via companyWorkplaces) */
+  var _fp=_statsFingerprint();
+  var _ck=ym+'|'+(withViol?1:0);
+  if(_statsCache.entries[_ck]) return JSON.parse(JSON.stringify(_statsCache.entries[_ck]));
   var st={ym:ym, label:MN[m]+' '+y, total:0, filled:0, open:0, sickDays:0, leaveDays:0,
     overtime:0, crossBaseOT:0, people:0, violations:[], violItems:[], perBase:[], perQual:[]};
   var sickSet={}, leaveSet={}, peopleSet={};
@@ -7835,7 +7871,8 @@ function companyMonthStats(y, m, withViol){
     st.violations=Object.keys(byLabel).sort().map(function(l){ return {label:l, count:byLabel[l]}; });
     st.violItems=items;
   }
-  return st;
+  _statsCache.entries[_ck]=st;
+  return JSON.parse(JSON.stringify(st)); /* copy: callers must never mutate the cache */
 }
 /* months that have any roster days (for the trend), newest first, capped */
 function companyStatsMonthsPresent(){
