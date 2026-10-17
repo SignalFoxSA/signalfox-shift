@@ -1,6 +1,6 @@
 {
   "status": "running",
-  "stage": "Stage 5 of 7 — s5b-4000dense",
+  "stage": "Stage 5 of 7 \u2014 s5c-8000dense",
   "progress": {
     "current": 5,
     "total": 7
@@ -11,18 +11,6 @@
     "break": null
   },
   "metrics": [
-    {
-      "label": "Load time (reload) s2a-4000staff",
-      "value": "1214ms"
-    },
-    {
-      "label": "Workplace switch (s2a-4000staff)",
-      "value": "2610ms, back 902ms"
-    },
-    {
-      "label": "Stats MISS (s2a-4000staff)",
-      "value": "385ms total=62000"
-    },
     {
       "label": "Stats HIT (s2a-4000staff)",
       "value": "14ms deep-equal=true"
@@ -330,13 +318,25 @@
     {
       "label": "Calendar render (s5b-4000dense)",
       "value": "2103ms"
+    },
+    {
+      "label": "Seed staff (s5c-8000dense)",
+      "value": "8000"
+    },
+    {
+      "label": "Load time (reload) s5c-8000dense",
+      "value": "2444ms"
+    },
+    {
+      "label": "Workplace switch (s5c-8000dense)",
+      "value": "0ms, back 0ms"
     }
   ],
   "totals": {
     "companies": 0,
-    "staff": 0,
-    "rosters": 0,
-    "changes": 24050
+    "staff": 8000,
+    "rosters": 4800,
+    "changes": 48100
   },
   "perfHistory": [
     {
@@ -392,12 +392,6 @@
       "loadMs": 1715,
       "renderMs": 8668,
       "exportMs": 45
-    },
-    {
-      "staff": 2000,
-      "loadMs": 1370,
-      "renderMs": 1711,
-      "exportMs": 51
     },
     {
       "staff": 4000,
@@ -510,6 +504,14 @@
     {
       "time": "14:10",
       "kb": 11639
+    },
+    {
+      "time": "15:10",
+      "kb": 23363
+    },
+    {
+      "time": "15:10",
+      "kb": 23363
     }
   ],
   "speedPerLevel": [
@@ -578,13 +580,6 @@
     },
     {
       "level": "Density",
-      "staff": 2000,
-      "loadMs": 1370,
-      "renderMs": 1711,
-      "exportMs": 51
-    },
-    {
-      "level": "Density",
       "staff": 4000,
       "loadMs": 1609,
       "renderMs": 2103,
@@ -601,8 +596,8 @@
     {
       "time": "14:10",
       "message": "Point s5a-2000dense: counts changed during measurements",
-      "detail": "afterReload={\"staff\":2000,\"teams\":100,\"rostersActiveMem\":1200,\"companyWorkplaces\":1,\"companyRosters\":1200,\"drafts\":50,\"notif\":1000,\"apps\":134,\"archived\":0,\"dbBytes\":5900883,\"dbMode\":\"idb\",\"dbKeys\":7,\"opensActiveWp\":25,\"changesActiveWp\":12025,\"heapUsedMB\":23.4,\"heapLimitMB\":3586} final={\"staff\":0,\"teams\":0,\"rostersActiveMem\":0,\"companyWorkplaces\":1,\"companyRosters\":0,\"drafts\":0,\"notif\":0,\"apps\":0,\"archived\":0,\"dbBytes\":684,\"dbMode\":\"idb\",\"dbKeys\":3,\"opensActiveWp\":0,\"changesActiveWp\":0,\"heapUsedM",
-      "fix": "Investigate which loader/render mutated state."
+      "detail": "afterReload={\"staff\":2000,\"teams\":100,\"rostersActiveMem\":1200,\"companyWorkplaces\":1,\"companyRosters\":1200,\"drafts\":50,\"notif\":1000,\"apps\":134,\"archived\":0,\"dbBytes\":5900883,\"dbMode\":\"idb\",\"dbKeys\":7,\"opensActiveWp\":25,\"changesActiveWp\":12025,\"heapUsedMB\":23.4,\"heapLimitMB\":3586} final={\"staff\":0,\"teams\":0,\"rostersActiveMem\":0,\"companyWorkplaces\":1,\"companyRosters\":0,\"drafts\":0,\"notif\":0,\"apps\":0,\"archived\":0,\"dbBytes\":684,\"dbMode\":\"idb\",\"dbKeys\":3,\"opensActiveWp\":0,\"changesActiveWp\":0,\"heapUsedM [HARNESS ARTIFACT \u2014 CORRECTION: recovery opened a fresh browser context, so stateFinal measured an empty app, not app data loss. The real s5a findings are the staff-list crash + the pending-apps prune. Harness fixed in v2: recovery now reuses the same context.]",
+      "fix": "Harness: recover() must create the new page in the SAME browser context (shared IndexedDB), not a fresh context."
     },
     {
       "time": "15:10",
@@ -614,325 +609,325 @@
   "log": [
     {
       "time": "14:03",
-      "message": "Workplace 938/1000 seeded — staff 18760, rosters 11256"
+      "message": "Workplace 948/1000 seeded \u2014 staff 18960, rosters 11376"
     },
     {
       "time": "14:03",
-      "message": "Workplace 939/1000 seeded — staff 18780, rosters 11268"
+      "message": "Workplace 949/1000 seeded \u2014 staff 18980, rosters 11388"
     },
     {
       "time": "14:03",
-      "message": "Workplace 940/1000 seeded — staff 18800, rosters 11280"
+      "message": "Workplace 950/1000 seeded \u2014 staff 19000, rosters 11400"
     },
     {
       "time": "14:03",
-      "message": "Workplace 941/1000 seeded — staff 18820, rosters 11292"
+      "message": "Workplace 951/1000 seeded \u2014 staff 19020, rosters 11412"
     },
     {
       "time": "14:03",
-      "message": "Workplace 942/1000 seeded — staff 18840, rosters 11304"
+      "message": "Workplace 952/1000 seeded \u2014 staff 19040, rosters 11424"
     },
     {
       "time": "14:03",
-      "message": "Workplace 943/1000 seeded — staff 18860, rosters 11316"
+      "message": "Workplace 953/1000 seeded \u2014 staff 19060, rosters 11436"
     },
     {
       "time": "14:03",
-      "message": "Workplace 944/1000 seeded — staff 18880, rosters 11328"
+      "message": "Workplace 954/1000 seeded \u2014 staff 19080, rosters 11448"
     },
     {
       "time": "14:03",
-      "message": "Workplace 945/1000 seeded — staff 18900, rosters 11340"
+      "message": "Workplace 955/1000 seeded \u2014 staff 19100, rosters 11460"
     },
     {
       "time": "14:03",
-      "message": "Workplace 946/1000 seeded — staff 18920, rosters 11352"
+      "message": "Workplace 956/1000 seeded \u2014 staff 19120, rosters 11472"
     },
     {
       "time": "14:03",
-      "message": "Workplace 947/1000 seeded — staff 18940, rosters 11364"
+      "message": "Workplace 957/1000 seeded \u2014 staff 19140, rosters 11484"
     },
     {
       "time": "14:03",
-      "message": "Workplace 948/1000 seeded — staff 18960, rosters 11376"
+      "message": "Workplace 958/1000 seeded \u2014 staff 19160, rosters 11496"
     },
     {
       "time": "14:03",
-      "message": "Workplace 949/1000 seeded — staff 18980, rosters 11388"
+      "message": "Workplace 959/1000 seeded \u2014 staff 19180, rosters 11508"
     },
     {
       "time": "14:03",
-      "message": "Workplace 950/1000 seeded — staff 19000, rosters 11400"
+      "message": "Workplace 960/1000 seeded \u2014 staff 19200, rosters 11520"
     },
     {
       "time": "14:03",
-      "message": "Workplace 951/1000 seeded — staff 19020, rosters 11412"
+      "message": "Workplace 961/1000 seeded \u2014 staff 19220, rosters 11532"
     },
     {
       "time": "14:03",
-      "message": "Workplace 952/1000 seeded — staff 19040, rosters 11424"
+      "message": "Workplace 962/1000 seeded \u2014 staff 19240, rosters 11544"
     },
     {
       "time": "14:03",
-      "message": "Workplace 953/1000 seeded — staff 19060, rosters 11436"
+      "message": "Workplace 963/1000 seeded \u2014 staff 19260, rosters 11556"
     },
     {
       "time": "14:03",
-      "message": "Workplace 954/1000 seeded — staff 19080, rosters 11448"
+      "message": "Workplace 964/1000 seeded \u2014 staff 19280, rosters 11568"
     },
     {
       "time": "14:03",
-      "message": "Workplace 955/1000 seeded — staff 19100, rosters 11460"
+      "message": "Workplace 965/1000 seeded \u2014 staff 19300, rosters 11580"
     },
     {
       "time": "14:03",
-      "message": "Workplace 956/1000 seeded — staff 19120, rosters 11472"
+      "message": "Workplace 966/1000 seeded \u2014 staff 19320, rosters 11592"
     },
     {
       "time": "14:03",
-      "message": "Workplace 957/1000 seeded — staff 19140, rosters 11484"
+      "message": "Workplace 967/1000 seeded \u2014 staff 19340, rosters 11604"
     },
     {
       "time": "14:03",
-      "message": "Workplace 958/1000 seeded — staff 19160, rosters 11496"
+      "message": "Workplace 968/1000 seeded \u2014 staff 19360, rosters 11616"
     },
     {
       "time": "14:03",
-      "message": "Workplace 959/1000 seeded — staff 19180, rosters 11508"
+      "message": "Workplace 969/1000 seeded \u2014 staff 19380, rosters 11628"
     },
     {
       "time": "14:03",
-      "message": "Workplace 960/1000 seeded — staff 19200, rosters 11520"
+      "message": "Workplace 970/1000 seeded \u2014 staff 19400, rosters 11640"
     },
     {
       "time": "14:03",
-      "message": "Workplace 961/1000 seeded — staff 19220, rosters 11532"
+      "message": "Workplace 971/1000 seeded \u2014 staff 19420, rosters 11652"
     },
     {
       "time": "14:03",
-      "message": "Workplace 962/1000 seeded — staff 19240, rosters 11544"
+      "message": "Workplace 972/1000 seeded \u2014 staff 19440, rosters 11664"
     },
     {
       "time": "14:03",
-      "message": "Workplace 963/1000 seeded — staff 19260, rosters 11556"
+      "message": "Workplace 973/1000 seeded \u2014 staff 19460, rosters 11676"
     },
     {
       "time": "14:03",
-      "message": "Workplace 964/1000 seeded — staff 19280, rosters 11568"
+      "message": "Workplace 974/1000 seeded \u2014 staff 19480, rosters 11688"
     },
     {
       "time": "14:03",
-      "message": "Workplace 965/1000 seeded — staff 19300, rosters 11580"
+      "message": "Workplace 975/1000 seeded \u2014 staff 19500, rosters 11700"
     },
     {
       "time": "14:03",
-      "message": "Workplace 966/1000 seeded — staff 19320, rosters 11592"
+      "message": "Workplace 976/1000 seeded \u2014 staff 19520, rosters 11712"
     },
     {
       "time": "14:03",
-      "message": "Workplace 967/1000 seeded — staff 19340, rosters 11604"
+      "message": "Workplace 977/1000 seeded \u2014 staff 19540, rosters 11724"
     },
     {
       "time": "14:03",
-      "message": "Workplace 968/1000 seeded — staff 19360, rosters 11616"
+      "message": "Workplace 978/1000 seeded \u2014 staff 19560, rosters 11736"
     },
     {
       "time": "14:03",
-      "message": "Workplace 969/1000 seeded — staff 19380, rosters 11628"
+      "message": "Workplace 979/1000 seeded \u2014 staff 19580, rosters 11748"
     },
     {
       "time": "14:03",
-      "message": "Workplace 970/1000 seeded — staff 19400, rosters 11640"
+      "message": "Workplace 980/1000 seeded \u2014 staff 19600, rosters 11760"
     },
     {
       "time": "14:03",
-      "message": "Workplace 971/1000 seeded — staff 19420, rosters 11652"
+      "message": "Workplace 981/1000 seeded \u2014 staff 19620, rosters 11772"
     },
     {
       "time": "14:03",
-      "message": "Workplace 972/1000 seeded — staff 19440, rosters 11664"
+      "message": "Workplace 982/1000 seeded \u2014 staff 19640, rosters 11784"
     },
     {
       "time": "14:03",
-      "message": "Workplace 973/1000 seeded — staff 19460, rosters 11676"
+      "message": "Workplace 983/1000 seeded \u2014 staff 19660, rosters 11796"
     },
     {
       "time": "14:03",
-      "message": "Workplace 974/1000 seeded — staff 19480, rosters 11688"
+      "message": "Workplace 984/1000 seeded \u2014 staff 19680, rosters 11808"
     },
     {
       "time": "14:03",
-      "message": "Workplace 975/1000 seeded — staff 19500, rosters 11700"
+      "message": "Workplace 985/1000 seeded \u2014 staff 19700, rosters 11820"
     },
     {
       "time": "14:03",
-      "message": "Workplace 976/1000 seeded — staff 19520, rosters 11712"
+      "message": "Workplace 986/1000 seeded \u2014 staff 19720, rosters 11832"
     },
     {
       "time": "14:03",
-      "message": "Workplace 977/1000 seeded — staff 19540, rosters 11724"
+      "message": "Workplace 987/1000 seeded \u2014 staff 19740, rosters 11844"
     },
     {
       "time": "14:03",
-      "message": "Workplace 978/1000 seeded — staff 19560, rosters 11736"
+      "message": "Workplace 988/1000 seeded \u2014 staff 19760, rosters 11856"
     },
     {
       "time": "14:03",
-      "message": "Workplace 979/1000 seeded — staff 19580, rosters 11748"
+      "message": "Workplace 989/1000 seeded \u2014 staff 19780, rosters 11868"
     },
     {
       "time": "14:03",
-      "message": "Workplace 980/1000 seeded — staff 19600, rosters 11760"
+      "message": "Workplace 990/1000 seeded \u2014 staff 19800, rosters 11880"
     },
     {
       "time": "14:03",
-      "message": "Workplace 981/1000 seeded — staff 19620, rosters 11772"
+      "message": "Workplace 991/1000 seeded \u2014 staff 19820, rosters 11892"
     },
     {
       "time": "14:03",
-      "message": "Workplace 982/1000 seeded — staff 19640, rosters 11784"
+      "message": "Workplace 992/1000 seeded \u2014 staff 19840, rosters 11904"
     },
     {
       "time": "14:03",
-      "message": "Workplace 983/1000 seeded — staff 19660, rosters 11796"
+      "message": "Workplace 993/1000 seeded \u2014 staff 19860, rosters 11916"
     },
     {
       "time": "14:03",
-      "message": "Workplace 984/1000 seeded — staff 19680, rosters 11808"
+      "message": "Workplace 994/1000 seeded \u2014 staff 19880, rosters 11928"
     },
     {
       "time": "14:03",
-      "message": "Workplace 985/1000 seeded — staff 19700, rosters 11820"
+      "message": "Workplace 995/1000 seeded \u2014 staff 19900, rosters 11940"
     },
     {
       "time": "14:03",
-      "message": "Workplace 986/1000 seeded — staff 19720, rosters 11832"
+      "message": "Workplace 996/1000 seeded \u2014 staff 19920, rosters 11952"
     },
     {
       "time": "14:03",
-      "message": "Workplace 987/1000 seeded — staff 19740, rosters 11844"
+      "message": "Workplace 997/1000 seeded \u2014 staff 19940, rosters 11964"
     },
     {
       "time": "14:03",
-      "message": "Workplace 988/1000 seeded — staff 19760, rosters 11856"
+      "message": "Workplace 998/1000 seeded \u2014 staff 19960, rosters 11976"
     },
     {
       "time": "14:03",
-      "message": "Workplace 989/1000 seeded — staff 19780, rosters 11868"
+      "message": "Workplace 999/1000 seeded \u2014 staff 19980, rosters 11988"
     },
     {
       "time": "14:03",
-      "message": "Workplace 990/1000 seeded — staff 19800, rosters 11880"
+      "message": "Workplace 1000/1000 seeded \u2014 staff 20000, rosters 12000"
     },
     {
       "time": "14:03",
-      "message": "Workplace 991/1000 seeded — staff 19820, rosters 11892"
+      "message": "Added notifications \u2014 1000 of 1000"
     },
     {
       "time": "14:03",
-      "message": "Workplace 992/1000 seeded — staff 19840, rosters 11904"
+      "message": "Added applications \u2014 200 of 200"
     },
     {
       "time": "14:03",
-      "message": "Workplace 993/1000 seeded — staff 19860, rosters 11916"
+      "message": "Added drafts \u2014 50 of 50"
     },
     {
       "time": "14:03",
-      "message": "Workplace 994/1000 seeded — staff 19880, rosters 11928"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 995/1000 seeded — staff 19900, rosters 11940"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 996/1000 seeded — staff 19920, rosters 11952"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 997/1000 seeded — staff 19940, rosters 11964"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 998/1000 seeded — staff 19960, rosters 11976"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 999/1000 seeded — staff 19980, rosters 11988"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 1000/1000 seeded — staff 20000, rosters 12000"
-    },
-    {
-      "time": "14:03",
-      "message": "Added notifications — 1000 of 1000"
-    },
-    {
-      "time": "14:03",
-      "message": "Added applications — 200 of 200"
-    },
-    {
-      "time": "14:03",
-      "message": "Added drafts — 50 of 50"
-    },
-    {
-      "time": "14:03",
-      "message": "Point s4c-1000wp done — countsOk=true, crashes=0"
+      "message": "Point s4c-1000wp done \u2014 countsOk=true, crashes=0"
     },
     {
       "time": "14:04",
-      "message": "Building up — seeding…"
+      "message": "Building up \u2014 seeding\u2026"
     },
     {
       "time": "14:04",
-      "message": "Workplace 1/1 seeded — staff 2000, rosters 1200"
+      "message": "Workplace 1/1 seeded \u2014 staff 2000, rosters 1200"
     },
     {
       "time": "14:04",
-      "message": "Added notifications — 1000 of 1000"
+      "message": "Added notifications \u2014 1000 of 1000"
     },
     {
       "time": "14:04",
-      "message": "Added applications — 200 of 200"
+      "message": "Added applications \u2014 200 of 200"
     },
     {
       "time": "14:04",
-      "message": "Added drafts — 50 of 50"
+      "message": "Added drafts \u2014 50 of 50"
     },
     {
       "time": "14:10",
-      "message": "Point s5a-2000dense done — countsOk=false, crashes=1"
+      "message": "Point s5a-2000dense done \u2014 countsOk=false, crashes=1"
     },
     {
       "time": "14:10",
-      "message": "Building up — seeding…"
+      "message": "Building up \u2014 seeding\u2026"
     },
     {
       "time": "14:10",
-      "message": "Workplace 1/1 seeded — staff 4000, rosters 2400"
+      "message": "Workplace 1/1 seeded \u2014 staff 4000, rosters 2400"
     },
     {
       "time": "14:10",
-      "message": "Added notifications — 1000 of 2000"
+      "message": "Added notifications \u2014 1000 of 2000"
     },
     {
       "time": "14:10",
-      "message": "Added notifications — 2000 of 2000"
+      "message": "Added notifications \u2014 2000 of 2000"
     },
     {
       "time": "14:10",
-      "message": "Added applications — 400 of 400"
+      "message": "Added applications \u2014 400 of 400"
     },
     {
       "time": "14:10",
-      "message": "Added drafts — 100 of 100"
+      "message": "Added drafts \u2014 100 of 100"
     },
     {
       "time": "15:10",
-      "message": "Point s5b-4000dense done — countsOk=false, crashes=1"
+      "message": "Point s5b-4000dense done \u2014 countsOk=false, crashes=1"
+    },
+    {
+      "time": "15:10",
+      "message": "Building up \u2014 seeding\u2026"
+    },
+    {
+      "time": "15:10",
+      "message": "Workplace 1/1 seeded \u2014 staff 8000, rosters 4800"
+    },
+    {
+      "time": "15:10",
+      "message": "Added notifications \u2014 1000 of 4000"
+    },
+    {
+      "time": "15:10",
+      "message": "Added notifications \u2014 2000 of 4000"
+    },
+    {
+      "time": "15:10",
+      "message": "Added notifications \u2014 3000 of 4000"
+    },
+    {
+      "time": "15:10",
+      "message": "Added notifications \u2014 4000 of 4000"
+    },
+    {
+      "time": "15:10",
+      "message": "Added applications \u2014 400 of 800"
+    },
+    {
+      "time": "15:10",
+      "message": "Added applications \u2014 800 of 800"
+    },
+    {
+      "time": "15:10",
+      "message": "Added drafts \u2014 100 of 200"
+    },
+    {
+      "time": "15:10",
+      "message": "Added drafts \u2014 200 of 200"
     }
   ],
-  "updatedAt": "2026-10-17T15:10:46.974+02:00",
+  "updatedAt": "2026-10-17T15:10:55.184+02:00",
   "history": []
 }
