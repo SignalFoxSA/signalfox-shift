@@ -1,6 +1,6 @@
 {
   "status": "running",
-  "stage": "Stage 1 of 7 — s1a-200staff",
+  "stage": "Stage 1 of 7 — s1b-1000staff",
   "progress": {
     "current": 1,
     "total": 7
@@ -34,13 +34,37 @@
     {
       "label": "Calendar render (s1a-200staff)",
       "value": "432ms"
+    },
+    {
+      "label": "Seed staff (s1b-1000staff)",
+      "value": "1000"
+    },
+    {
+      "label": "Load time (reload) s1b-1000staff",
+      "value": "1129ms"
+    },
+    {
+      "label": "Workplace switch (s1b-1000staff)",
+      "value": "766ms, back 263ms"
+    },
+    {
+      "label": "Stats MISS (s1b-1000staff)",
+      "value": "118ms total=15500"
+    },
+    {
+      "label": "Stats HIT (s1b-1000staff)",
+      "value": "4ms deep-equal=true"
+    },
+    {
+      "label": "Calendar render (s1b-1000staff)",
+      "value": "830ms"
     }
   ],
   "totals": {
-    "companies": 5,
-    "staff": 200,
-    "rosters": 120,
-    "changes": 1300
+    "companies": 10,
+    "staff": 1000,
+    "rosters": 600,
+    "changes": 6300
   },
   "perfHistory": [
     {
@@ -48,6 +72,12 @@
       "loadMs": 1113,
       "renderMs": 432,
       "exportMs": 3
+    },
+    {
+      "staff": 1000,
+      "loadMs": 1129,
+      "renderMs": 830,
+      "exportMs": 2
     }
   ],
   "storageHistory": [
@@ -58,6 +88,14 @@
     {
       "time": "13:56",
       "kb": 536
+    },
+    {
+      "time": "13:56",
+      "kb": 1900
+    },
+    {
+      "time": "13:56",
+      "kb": 1900
     }
   ],
   "speedPerLevel": [
@@ -67,6 +105,13 @@
       "loadMs": 1113,
       "renderMs": 432,
       "exportMs": 3
+    },
+    {
+      "level": "Low",
+      "staff": 1000,
+      "loadMs": 1129,
+      "renderMs": 830,
+      "exportMs": 2
     }
   ],
   "problems": [],
@@ -114,8 +159,68 @@
     {
       "time": "13:56",
       "message": "Point s1a-200staff done — countsOk=true, crashes=0"
+    },
+    {
+      "time": "13:56",
+      "message": "Building up — seeding…"
+    },
+    {
+      "time": "13:56",
+      "message": "Workplace 1/10 seeded — staff 100, rosters 60"
+    },
+    {
+      "time": "13:56",
+      "message": "Workplace 2/10 seeded — staff 200, rosters 120"
+    },
+    {
+      "time": "13:56",
+      "message": "Workplace 3/10 seeded — staff 300, rosters 180"
+    },
+    {
+      "time": "13:56",
+      "message": "Workplace 4/10 seeded — staff 400, rosters 240"
+    },
+    {
+      "time": "13:56",
+      "message": "Workplace 5/10 seeded — staff 500, rosters 300"
+    },
+    {
+      "time": "13:56",
+      "message": "Workplace 6/10 seeded — staff 600, rosters 360"
+    },
+    {
+      "time": "13:56",
+      "message": "Workplace 7/10 seeded — staff 700, rosters 420"
+    },
+    {
+      "time": "13:56",
+      "message": "Workplace 8/10 seeded — staff 800, rosters 480"
+    },
+    {
+      "time": "13:56",
+      "message": "Workplace 9/10 seeded — staff 900, rosters 540"
+    },
+    {
+      "time": "13:56",
+      "message": "Workplace 10/10 seeded — staff 1000, rosters 600"
+    },
+    {
+      "time": "13:56",
+      "message": "Added notifications — 1000 of 1000"
+    },
+    {
+      "time": "13:56",
+      "message": "Added applications — 200 of 200"
+    },
+    {
+      "time": "13:56",
+      "message": "Added drafts — 50 of 50"
+    },
+    {
+      "time": "13:56",
+      "message": "Point s1b-1000staff done — countsOk=true, crashes=0"
     }
   ],
-  "updatedAt": "2026-10-17T13:56:19.866+02:00",
+  "updatedAt": "2026-10-17T13:56:29.198+02:00",
   "history": []
 }
