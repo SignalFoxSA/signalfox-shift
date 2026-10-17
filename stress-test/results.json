@@ -41,6 +41,48 @@
       "staff": 200,
       "rosters": 120,
       "changes": 1450
+    },
+    {
+      "time": "12:11",
+      "companies": 0,
+      "staff": 40,
+      "rosters": 24,
+      "changes": 290
+    },
+    {
+      "time": "12:11",
+      "companies": 0,
+      "staff": 80,
+      "rosters": 48,
+      "changes": 580
+    },
+    {
+      "time": "12:11",
+      "companies": 0,
+      "staff": 120,
+      "rosters": 72,
+      "changes": 870
+    },
+    {
+      "time": "12:11",
+      "companies": 0,
+      "staff": 160,
+      "rosters": 96,
+      "changes": 1160
+    },
+    {
+      "time": "12:11",
+      "companies": 0,
+      "staff": 200,
+      "rosters": 120,
+      "changes": 1450
+    },
+    {
+      "time": "12:11",
+      "companies": 5,
+      "staff": 200,
+      "rosters": 120,
+      "changes": 1450
     }
   ],
   "log": [
@@ -99,6 +141,46 @@
     {
       "time": "12:11",
       "message": "Building up — seeding…"
+    },
+    {
+      "time": "12:11",
+      "message": "Added teams — staff 40, rosters 24 (active 24, archived 0), changes 290"
+    },
+    {
+      "time": "12:11",
+      "message": "Added teams — staff 80, rosters 48 (active 48, archived 0), changes 580"
+    },
+    {
+      "time": "12:11",
+      "message": "Added teams — staff 120, rosters 72 (active 72, archived 0), changes 870"
+    },
+    {
+      "time": "12:11",
+      "message": "Added teams — staff 160, rosters 96 (active 96, archived 0), changes 1160"
+    },
+    {
+      "time": "12:11",
+      "message": "Added teams — staff 200, rosters 120 (active 120, archived 0), changes 1450"
+    },
+    {
+      "time": "12:11",
+      "message": "Added notifications — 1000 of 1000"
+    },
+    {
+      "time": "12:11",
+      "message": "Added applications — 200 of 200"
+    },
+    {
+      "time": "12:11",
+      "message": "Added drafts — 50 of 50"
+    },
+    {
+      "time": "12:11",
+      "message": "Reloaded — load 1120ms, active 120, archived 0, bytes 776860"
+    },
+    {
+      "time": "12:11",
+      "message": "Stage 1 done — countsOk=true"
     }
   ],
   "metrics": [
@@ -112,35 +194,35 @@
     },
     {
       "label": "Persist (DB.set + flush)",
-      "value": "23ms, 464986 bytes"
+      "value": "49ms, 776860 bytes"
     },
     {
       "label": "Load time (reload)",
-      "value": "1170ms"
+      "value": "1120ms"
     },
     {
       "label": "Calendar render",
-      "value": "584ms"
+      "value": "620ms"
     },
     {
       "label": "Rosters list render",
-      "value": "433ms"
+      "value": "421ms"
     },
     {
       "label": "Company Dashboard render",
-      "value": "551ms"
+      "value": "535ms"
     },
     {
       "label": "Rules engine",
-      "value": "ok ms=7 violDays=undefined"
+      "value": "ok ms=4 violDays=undefined"
     },
     {
       "label": "Inbox render",
-      "value": "417ms"
+      "value": "505ms"
     },
     {
       "label": "Stats MISS (bust, first view)",
-      "value": "21ms total=3100"
+      "value": "34ms total=3100"
     },
     {
       "label": "Stats HIT (repeat view)",
@@ -148,7 +230,7 @@
     },
     {
       "label": "Stats fresh MISS == baseline",
-      "value": "fresh=22ms equal=true"
+      "value": "fresh=23ms equal=true"
     },
     {
       "label": "Stats archived month total (Nov 2024)",
@@ -156,15 +238,15 @@
     },
     {
       "label": "Export Excel",
-      "value": "ok ms=31 xlsxBytes=25242"
+      "value": "ok ms=24 xlsxBytes=25428"
     },
     {
       "label": "Export PDF",
-      "value": "ok ms=526 pdfBytes=344786"
+      "value": "ok ms=525 pdfBytes=369394"
     },
     {
       "label": "Export PNG",
-      "value": "ok ms=267 pngBytes=190331"
+      "value": "ok ms=392 pngBytes=202904"
     }
   ],
   "progress": {
@@ -184,7 +266,7 @@
     "rosters": 120,
     "changes": 1450
   },
-  "updatedAt": "2026-10-17T12:11:40.056+02:00",
+  "updatedAt": "2026-10-17T12:11:47.156+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
@@ -267,16 +349,31 @@
     {
       "time": "12:10",
       "kb": 454
+    },
+    {
+      "time": "12:11",
+      "kb": 759
+    },
+    {
+      "time": "12:11",
+      "kb": 759
     }
   ],
-  "perfHistory": [],
+  "perfHistory": [
+    {
+      "staff": 200,
+      "loadMs": 1120,
+      "renderMs": 620,
+      "exportMs": 32
+    }
+  ],
   "speedPerLevel": [
     {
       "level": "Low",
       "staff": 200,
-      "loadMs": 1170,
-      "renderMs": 584,
-      "exportMs": 36
+      "loadMs": 1120,
+      "renderMs": 620,
+      "exportMs": 32
     }
   ],
   "problems": []
