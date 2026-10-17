@@ -2352,6 +2352,10 @@
     {
       "time": "09:47",
       "message": "Problem: Company Stats FIRST compute still slow (270004ms at 2000 staff) — KNOWN REMAINING LIMIT; repeat views instant (Fix 2 held, HIT 47ms)"
+    },
+    {
+      "time": "09:48",
+      "message": "Building up — seeding…"
     }
   ],
   "metrics": [
@@ -2417,10 +2421,10 @@
     }
   ],
   "progress": {
-    "current": 4,
+    "current": 5,
     "total": 7
   },
-  "stage": "Stage 4 of 7 — 2000 staff, 36 months",
+  "stage": "Stage 5 of 7 — 4000 staff, 48 months",
   "status": "running",
   "thresholds": {
     "perfect": null,
@@ -2433,7 +2437,7 @@
     "rosters": 3600,
     "changes": 40000
   },
-  "updatedAt": "2026-10-17T09:47:44.979+02:00",
+  "updatedAt": "2026-10-17T09:48:36.016+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
