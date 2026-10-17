@@ -1,21 +1,33 @@
 {
-  "history": [],
+  "history": [
+    {
+      "time": "09:27",
+      "companies": 0,
+      "staff": 0,
+      "rosters": 0,
+      "changes": 0
+    }
+  ],
   "log": [
     {
       "time": "09:24",
-      "message": "Stress test re-run started \u2014 testing the three fixes (BUILD 1999)."
+      "message": "Stress test re-run started — testing the three fixes (BUILD 1999)."
     },
     {
       "time": "09:27",
       "message": "Re-run: cleared first-run chart history so the charts show only re-run data."
+    },
+    {
+      "time": "09:27",
+      "message": "Building up — seeding…"
     }
   ],
   "metrics": [],
   "progress": {
-    "current": 0,
+    "current": 1,
     "total": 7
   },
-  "stage": "Starting \u2014 Stage 1 of 7",
+  "stage": "Stage 1 of 7 — 200 staff, 12 months",
   "status": "running",
   "thresholds": {
     "perfect": null,
@@ -23,12 +35,12 @@
     "break": null
   },
   "totals": {
-    "companies": null,
-    "staff": null,
-    "rosters": null,
-    "changes": null
+    "companies": 0,
+    "staff": 0,
+    "rosters": 0,
+    "changes": 0
   },
-  "updatedAt": "2026-10-17T09:27:02.385091+02:00",
+  "updatedAt": "2026-10-17T09:27:12.684+02:00",
   "breakdown": null,
   "storageHistory": [],
   "perfHistory": [],
