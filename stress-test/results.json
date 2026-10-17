@@ -3107,6 +3107,10 @@
     {
       "time": "12:28",
       "message": "Stage 6g offline exports VERIFIED (probe bug corrected): icsBuild returns {text,count}, not a string — probe read .length of the wrapper (undefined) and misreported FAIL. Follow-up probe: .ics 105ms, 5,761,013 chars, 15,500 events for the 1000-staff roster. All exports (Excel/PDF/PNG/TXT/ICS) work offline."
+    },
+    {
+      "time": "12:28",
+      "message": "Building up — seeding…"
     }
   ],
   "metrics": [
@@ -3172,10 +3176,10 @@
     }
   ],
   "progress": {
-    "current": 6,
+    "current": 7,
     "total": 7
   },
-  "stage": "Stage 6 of 7 — Functional probes (cap, warning, archive, migration, fallback, exports, rapid, multitab)",
+  "stage": "Stage 7 of 7 — Slow device (4x CPU + Slow 3G), 200 staff",
   "status": "running",
   "thresholds": {
     "perfect": null,
@@ -3188,7 +3192,7 @@
     "rosters": 120,
     "changes": 1450
   },
-  "updatedAt": "2026-10-17T12:28:29.489+02:00",
+  "updatedAt": "2026-10-17T12:28:36.199+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
