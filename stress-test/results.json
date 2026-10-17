@@ -2378,6 +2378,10 @@
     {
       "label": "Company Dashboard render",
       "value": "898ms"
+    },
+    {
+      "label": "FIX 2 — Stats MISS (first view)",
+      "value": "270004ms"
     }
   ],
   "progress": {
@@ -2397,7 +2401,7 @@
     "rosters": 3600,
     "changes": 40000
   },
-  "updatedAt": "2026-10-17T09:33:52.136+02:00",
+  "updatedAt": "2026-10-17T09:47:26.364+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
