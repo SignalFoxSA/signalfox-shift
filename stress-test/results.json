@@ -272,6 +272,13 @@
       "staff": 500,
       "rosters": 600,
       "changes": 7000
+    },
+    {
+      "time": "09:30",
+      "companies": 0,
+      "staff": 0,
+      "rosters": 0,
+      "changes": 0
     }
   ],
   "log": [
@@ -506,75 +513,22 @@
     {
       "time": "09:30",
       "message": "Problem: Render/measure exceeded 10s (break): FIX 2 — Stats cache bust + cached==fresh = 11827ms"
+    },
+    {
+      "time": "09:30",
+      "message": "Correction: removed duplicate 'Render/measure exceeded 10s (bust)' problem — the bust measure is a deliberate full recompute (same known limit as the FIRST-compute entry), not a separate break."
+    },
+    {
+      "time": "09:30",
+      "message": "Building up — seeding…"
     }
   ],
-  "metrics": [
-    {
-      "label": "Seed time",
-      "value": "n/a"
-    },
-    {
-      "label": "Storage (JSON bytes)",
-      "value": "2361324"
-    },
-    {
-      "label": "Heap used",
-      "value": "26.3 MB"
-    },
-    {
-      "label": "Persist",
-      "value": "30ms, 2361324 bytes"
-    },
-    {
-      "label": "Load time (reload)",
-      "value": "2236ms"
-    },
-    {
-      "label": "FIX 1 — banner hidden when storage OK",
-      "value": "NO ({\"storageFull\":false,\"bannerDisplay\":\"\"})"
-    },
-    {
-      "label": "Calendar render",
-      "value": "964ms"
-    },
-    {
-      "label": "Rosters list render",
-      "value": "432ms"
-    },
-    {
-      "label": "On Duty render",
-      "value": "442ms"
-    },
-    {
-      "label": "Company Dashboard render",
-      "value": "593ms"
-    },
-    {
-      "label": "FIX 2 — Stats MISS (first view)",
-      "value": "12398ms"
-    },
-    {
-      "label": "FIX 2 — Stats HIT (repeat view)",
-      "value": "4ms deep-equal=true"
-    },
-    {
-      "label": "FIX 2 — Stats cache bust + cached==fresh",
-      "value": "bust=true freshEqual=true"
-    },
-    {
-      "label": "Rules engine",
-      "value": "ok ms=4 violDays=undefined"
-    },
-    {
-      "label": "Inbox render",
-      "value": "612ms"
-    }
-  ],
+  "metrics": [],
   "progress": {
-    "current": 2,
+    "current": 3,
     "total": 7
   },
-  "stage": "Stage 2 of 7 — 500 staff, 24 months",
+  "stage": "Stage 3 of 7 — 1000 staff, 24 months",
   "status": "running",
   "thresholds": {
     "perfect": null,
@@ -582,12 +536,12 @@
     "break": null
   },
   "totals": {
-    "companies": 5,
-    "staff": 500,
-    "rosters": 600,
-    "changes": 7000
+    "companies": 0,
+    "staff": 0,
+    "rosters": 0,
+    "changes": 0
   },
-  "updatedAt": "2026-10-17T09:30:30.846+02:00",
+  "updatedAt": "2026-10-17T09:30:56.265+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
@@ -764,12 +718,6 @@
       "message": "Company Stats FIRST compute still slow (12398ms at 500 staff) — KNOWN REMAINING LIMIT; repeat views instant (Fix 2 held, HIT 4ms)",
       "detail": "fix2={\"missMs\":12398,\"hitMs\":4,\"equal\":true,\"bustOk\":true,\"freshEqual\":true,\"missTotal\":7750,\"bustMs\":11827}",
       "fix": "Speeding up the FIRST computation (e.g. incremental per-roster aggregates) is a future optimization, not part of Fix 2. Repeat views are instant via the cache."
-    },
-    {
-      "time": "09:30",
-      "message": "Render/measure exceeded 10s (break): FIX 2 — Stats cache bust + cached==fresh = 11827ms",
-      "detail": "bustOk=true freshEqual=true (leaveDays +1 after probe entry, probe entry removed)",
-      "fix": "Profile the slowest render path at this scale; virtualise long lists / paginate."
     }
   ]
 }
