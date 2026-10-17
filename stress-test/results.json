@@ -7263,6 +7263,10 @@
     {
       "time": "10:21",
       "message": "Rapid: -50 drafts (tear-down) + 50 decisions + 30 tab switches"
+    },
+    {
+      "time": "10:22",
+      "message": "Building up — seeding…"
     }
   ],
   "metrics": [
@@ -7300,10 +7304,10 @@
     }
   ],
   "progress": {
-    "current": 6,
+    "current": 7,
     "total": 7
   },
-  "stage": "Stage 6 of 7 — Functional stress",
+  "stage": "Stage 7 of 7 — Slow device (throttled)",
   "status": "running",
   "thresholds": {
     "perfect": null,
@@ -7316,7 +7320,7 @@
     "rosters": 0,
     "changes": 0
   },
-  "updatedAt": "2026-10-17T10:21:55.817+02:00",
+  "updatedAt": "2026-10-17T10:22:10.501+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
