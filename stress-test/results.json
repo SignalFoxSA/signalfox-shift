@@ -7110,6 +7110,14 @@
     {
       "time": "10:21",
       "message": "Problem: Company Stats FIRST compute still slow (1444572ms at 4000 staff) — KNOWN REMAINING LIMIT; repeat views instant (Fix 2 held, HIT 159ms)"
+    },
+    {
+      "time": "10:21",
+      "message": "Correction: removed generic 'Data mismatch (countsOk=false)' problem — fully explained by the apps+notifications loader gap (apps 3,200->0, notif 16,000->0); company intact (5 workplaces, 9,600 rosters, drafts 800). Corrected the Stage 5 persist-fail entry: company survived, but apps+notif were lost (not 'no data lost')."
+    },
+    {
+      "time": "10:21",
+      "message": "Building up — seeding…"
     }
   ],
   "metrics": [
@@ -7175,10 +7183,10 @@
     }
   ],
   "progress": {
-    "current": 5,
+    "current": 6,
     "total": 7
   },
-  "stage": "Stage 5 of 7 — 4000 staff, 48 months",
+  "stage": "Stage 6 of 7 — Functional stress",
   "status": "running",
   "thresholds": {
     "perfect": null,
@@ -7191,7 +7199,7 @@
     "rosters": 9600,
     "changes": 104000
   },
-  "updatedAt": "2026-10-17T10:21:11.562+02:00",
+  "updatedAt": "2026-10-17T10:21:45.084+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
@@ -7544,7 +7552,7 @@
     },
     {
       "time": "10:21",
-      "message": "localStorage quota exceeded — persist FAILED (sfshift_notifications:Failed to execute 'setItem' on 'Storage': Setting the value of 'sfshift_notifications' exceeded the quota.), BUT the storage-full banner SHOWED and NO data was lost (Fix 1 HELD)",
+      "message": "localStorage quota exceeded — persist FAILED (sfshift_notifications:Failed to execute 'setItem' on 'Storage': Setting the value of 'sfshift_notifications' exceeded the quota.), BUT the storage-full banner SHOWED and the COMPANY survived (Fix 1 HELD for company); apps (3,200->0) + notifications (16,000->0) were lost via the loader gap (see Apps loader gap entry)",
       "detail": "persist={\"ok\":false,\"ms\":73,\"bytes\":9186942,\"failed\":\"sfshift_notifications:Failed to execute 'setItem' on 'Storage': Setting the value of 'sfshift_notifications' exceeded the quota.\"} fix1={\"persistOk\":false,\"bannerChecked\":true,\"bannerShown\":true,\"flagSet\":true,\"calSurvived\":true,\"loadSavedSurvived\":true,\"saveSurvived\":true,\"calAppsSurvived\":false,\"loadSavedAppsSurvived\":false,\"saveAppsSurvived\":false}",
       "fix": "Known limit: localStorage ~5MB cap remains. Raising the cap needs an IndexedDB migration (bigger job, not done). The app now warns instead of losing data."
     },
@@ -7553,12 +7561,6 @@
       "message": "Apps loader gap — shiftApps lost on calendar/loadSaved/save when storage is empty (company itself survived, Fix 1 held for company)",
       "detail": "fix1={\"persistOk\":false,\"bannerChecked\":true,\"bannerShown\":true,\"flagSet\":true,\"calSurvived\":true,\"loadSavedSurvived\":true,\"saveSurvived\":true,\"calAppsSurvived\":false,\"loadSavedAppsSurvived\":false,\"saveAppsSurvived\":false}",
       "fix": "The apps loader (loadShiftApps) unconditionally overwrites in-memory apps from localStorage; when storage is empty (persist failed on quota) it discards unsaved in-memory apps. Guard it like companyLoad (do not overwrite in-memory apps when storage is empty/stale and in-memory apps exist), or warn before discarding."
-    },
-    {
-      "time": "10:21",
-      "message": "Data mismatch after reload — final counts do not match the seeded counts (countsOk=false)",
-      "detail": "state={\"staff\":800,\"teams\":40,\"rostersActive\":1920,\"companyWorkplaces\":5,\"companyRosters\":9600,\"drafts\":800,\"notif\":0,\"apps\":0,\"opensActive\":1600,\"changesActive\":20800,\"storageBytes\":26886813,\"heapUsedMB\":92.9,\"heapLimitMB\":3586} seed={\"staff\":4000,\"teams\":40,\"workplaces\":5,\"rosters\":9600,\"opens\":8000,\"changes\":104000,\"notif\":16000,\"apps\":3200,\"drafts\":800}",
-      "fix": "Investigate which entity dropped during reload/render; check prune logic in loadShiftApps / loadDrafts / companyLoad."
     },
     {
       "time": "10:21",
