@@ -12,26 +12,6 @@
   },
   "metrics": [
     {
-      "label": "Stats MISS (s2b-10000staff)",
-      "value": "1028ms total=155000"
-    },
-    {
-      "label": "Stats HIT (s2b-10000staff)",
-      "value": "46ms deep-equal=true"
-    },
-    {
-      "label": "Export Excel (s2b-10000staff)",
-      "value": "ok ms=20 xlsxBytes=25428"
-    },
-    {
-      "label": "Export PDF (s2b-10000staff)",
-      "value": "ok ms=5194 pdfBytes=369115"
-    },
-    {
-      "label": "Export PNG (s2b-10000staff)",
-      "value": "ok ms=4581 pngBytes=202800"
-    },
-    {
       "label": "Calendar render (s2b-10000staff)",
       "value": "4977ms"
     },
@@ -330,6 +310,26 @@
     {
       "label": "Load time (reload) s5d-40000dense",
       "value": "4200ms"
+    },
+    {
+      "label": "Workplace switch (s5d-40000dense)",
+      "value": "CRASHED"
+    },
+    {
+      "label": "Stats MISS (s5d-40000dense)",
+      "value": "4652ms total=620000"
+    },
+    {
+      "label": "Stats HIT (s5d-40000dense)",
+      "value": "173ms deep-equal=true"
+    },
+    {
+      "label": "Export Excel (s5d-40000dense)",
+      "value": "ok ms=21 xlsxBytes=25428"
+    },
+    {
+      "label": "Calendar render (s5d-40000dense)",
+      "value": "17196ms"
     }
   ],
   "totals": {
@@ -970,6 +970,6 @@
       "message": "Added drafts — 400 of 400"
     }
   ],
-  "updatedAt": "2026-10-17T17:59:59.237+02:00",
+  "updatedAt": "2026-10-17T18:02:41.458+02:00",
   "history": []
 }
