@@ -1305,6 +1305,10 @@
     {
       "time": "13:14",
       "message": "Stage 4 done — countsOk=true"
+    },
+    {
+      "time": "13:14",
+      "message": "Building up — seeding…"
     }
   ],
   "metrics": [
@@ -1378,10 +1382,10 @@
     }
   ],
   "progress": {
-    "current": 4,
+    "current": 5,
     "total": 7
   },
-  "stage": "Stage 4 of 7 — 10000 staff, 48 months",
+  "stage": "Stage 5 of 7 — 20000 staff, 60 months",
   "status": "running",
   "thresholds": {
     "perfect": null,
@@ -1394,7 +1398,7 @@
     "rosters": 24000,
     "changes": 240400
   },
-  "updatedAt": "2026-10-17T13:14:35.000+02:00",
+  "updatedAt": "2026-10-17T13:14:45.233+02:00",
   "storageHistory": [
     {
       "time": "13:12",
