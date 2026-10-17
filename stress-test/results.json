@@ -636,6 +636,13 @@
       "staff": 1000,
       "rosters": 1200,
       "changes": 14000
+    },
+    {
+      "time": "09:33",
+      "companies": 0,
+      "staff": 0,
+      "rosters": 0,
+      "changes": 0
     }
   ],
   "log": [
@@ -1130,75 +1137,18 @@
     {
       "time": "09:33",
       "message": "Problem: Company Stats FIRST compute still slow (45689ms at 1000 staff) — KNOWN REMAINING LIMIT; repeat views instant (Fix 2 held, HIT 9ms)"
+    },
+    {
+      "time": "09:33",
+      "message": "Building up — seeding…"
     }
   ],
-  "metrics": [
-    {
-      "label": "Seed time",
-      "value": "n/a"
-    },
-    {
-      "label": "Storage (JSON bytes)",
-      "value": "4733087"
-    },
-    {
-      "label": "Heap used",
-      "value": "29.8 MB"
-    },
-    {
-      "label": "Persist",
-      "value": "40ms, 4733087 bytes"
-    },
-    {
-      "label": "Load time (reload)",
-      "value": "2302ms"
-    },
-    {
-      "label": "FIX 1 — banner hidden when storage OK",
-      "value": "YES"
-    },
-    {
-      "label": "Calendar render",
-      "value": "1543ms"
-    },
-    {
-      "label": "Rosters list render",
-      "value": "453ms"
-    },
-    {
-      "label": "On Duty render",
-      "value": "458ms"
-    },
-    {
-      "label": "Company Dashboard render",
-      "value": "664ms"
-    },
-    {
-      "label": "FIX 2 — Stats MISS (first view)",
-      "value": "45689ms"
-    },
-    {
-      "label": "FIX 2 — Stats HIT (repeat view)",
-      "value": "9ms deep-equal=true"
-    },
-    {
-      "label": "FIX 2 — Stats cache bust + cached==fresh",
-      "value": "bust=true freshEqual=true"
-    },
-    {
-      "label": "Rules engine",
-      "value": "ok ms=18 violDays=undefined"
-    },
-    {
-      "label": "Inbox render",
-      "value": "1326ms"
-    }
-  ],
+  "metrics": [],
   "progress": {
-    "current": 3,
+    "current": 4,
     "total": 7
   },
-  "stage": "Stage 3 of 7 — 1000 staff, 24 months",
+  "stage": "Stage 4 of 7 — 2000 staff, 36 months",
   "status": "running",
   "thresholds": {
     "perfect": null,
@@ -1206,12 +1156,12 @@
     "break": null
   },
   "totals": {
-    "companies": 5,
-    "staff": 1000,
-    "rosters": 1200,
-    "changes": 14000
+    "companies": 0,
+    "staff": 0,
+    "rosters": 0,
+    "changes": 0
   },
-  "updatedAt": "2026-10-17T09:33:27.023+02:00",
+  "updatedAt": "2026-10-17T09:33:40.866+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
