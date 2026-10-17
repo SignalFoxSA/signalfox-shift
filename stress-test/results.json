@@ -206,6 +206,26 @@
     {
       "label": "Stats MISS (s3b-40000staff)",
       "value": "4554ms total=620000"
+    },
+    {
+      "label": "Stats HIT (s3b-40000staff)",
+      "value": "201ms deep-equal=true"
+    },
+    {
+      "label": "Export Excel (s3b-40000staff)",
+      "value": "ok ms=38 xlsxBytes=25428"
+    },
+    {
+      "label": "Export PDF (s3b-40000staff)",
+      "value": "ok ms=6421 pdfBytes=369115"
+    },
+    {
+      "label": "Export PNG (s3b-40000staff)",
+      "value": "ok ms=7521 pngBytes=202800"
+    },
+    {
+      "label": "Calendar render (s3b-40000staff)",
+      "value": "19352ms"
     }
   ],
   "totals": {
@@ -672,6 +692,6 @@
       "message": "Added drafts — 800 of 800"
     }
   ],
-  "updatedAt": "2026-10-17T14:00:51.600+02:00",
+  "updatedAt": "2026-10-17T14:01:44.706+02:00",
   "history": []
 }
