@@ -1,8 +1,8 @@
 {
   "status": "running",
-  "stage": "Stage 3 of 7 — s3b-40000staff",
+  "stage": "Stage 4 of 7 — s4a-200wp",
   "progress": {
-    "current": 3,
+    "current": 4,
     "total": 7
   },
   "thresholds": {
@@ -386,10 +386,6 @@
   "log": [
     {
       "time": "13:59",
-      "message": "Workplace 54/100 seeded — staff 21600, rosters 12960"
-    },
-    {
-      "time": "13:59",
       "message": "Workplace 55/100 seeded — staff 22000, rosters 13200"
     },
     {
@@ -703,8 +699,12 @@
     {
       "time": "14:01",
       "message": "Point s3b-40000staff done — countsOk=true, crashes=0"
+    },
+    {
+      "time": "14:02",
+      "message": "Building up — seeding…"
     }
   ],
-  "updatedAt": "2026-10-17T14:01:55.311+02:00",
+  "updatedAt": "2026-10-17T14:02:06.961+02:00",
   "history": []
 }
