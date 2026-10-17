@@ -1,6 +1,6 @@
 {
   "status": "running",
-  "stage": "Stage 5 of 7 — s5a-2000dense",
+  "stage": "Stage 5 of 7 — s5b-4000dense",
   "progress": {
     "current": 5,
     "total": 7
@@ -11,42 +11,6 @@
     "break": null
   },
   "metrics": [
-    {
-      "label": "Load time (reload) s1b-1000staff",
-      "value": "1157ms"
-    },
-    {
-      "label": "Workplace switch (s1b-1000staff)",
-      "value": "971ms, back 364ms"
-    },
-    {
-      "label": "Stats MISS (s1b-1000staff)",
-      "value": "105ms total=15500"
-    },
-    {
-      "label": "Stats HIT (s1b-1000staff)",
-      "value": "4ms deep-equal=true"
-    },
-    {
-      "label": "Export Excel (s1b-1000staff)",
-      "value": "ok ms=17 xlsxBytes=25428"
-    },
-    {
-      "label": "Export PDF (s1b-1000staff)",
-      "value": "ok ms=749 pdfBytes=369115"
-    },
-    {
-      "label": "Export PNG (s1b-1000staff)",
-      "value": "ok ms=581 pngBytes=202800"
-    },
-    {
-      "label": "Calendar render (s1b-1000staff)",
-      "value": "849ms"
-    },
-    {
-      "label": "Seed staff (s2a-4000staff)",
-      "value": "4000"
-    },
     {
       "label": "Load time (reload) s2a-4000staff",
       "value": "1214ms"
@@ -330,13 +294,49 @@
     {
       "label": "Calendar render (s5a-2000dense)",
       "value": "1711ms"
+    },
+    {
+      "label": "Seed staff (s5b-4000dense)",
+      "value": "4000"
+    },
+    {
+      "label": "Load time (reload) s5b-4000dense",
+      "value": "1609ms"
+    },
+    {
+      "label": "Workplace switch (s5b-4000dense)",
+      "value": "0ms, back 0ms"
+    },
+    {
+      "label": "Stats MISS (s5b-4000dense)",
+      "value": "561ms total=62000"
+    },
+    {
+      "label": "Stats HIT (s5b-4000dense)",
+      "value": "25ms deep-equal=true"
+    },
+    {
+      "label": "Export Excel (s5b-4000dense)",
+      "value": "ok ms=64 xlsxBytes=25428"
+    },
+    {
+      "label": "Export PDF (s5b-4000dense)",
+      "value": "ok ms=837 pdfBytes=369115"
+    },
+    {
+      "label": "Export PNG (s5b-4000dense)",
+      "value": "ok ms=431 pngBytes=202800"
+    },
+    {
+      "label": "Calendar render (s5b-4000dense)",
+      "value": "2103ms"
     }
   ],
   "totals": {
-    "companies": 1,
-    "staff": 0,
-    "rosters": 0,
-    "changes": 12025
+    "companies": 0,
+    "staff": 4000,
+    "rosters": 2400,
+    "changes": 24050
   },
   "perfHistory": [
     {
@@ -496,6 +496,14 @@
     {
       "time": "14:04",
       "kb": 5763
+    },
+    {
+      "time": "14:10",
+      "kb": 11639
+    },
+    {
+      "time": "14:10",
+      "kb": 11639
     }
   ],
   "speedPerLevel": [
@@ -582,33 +590,15 @@
       "message": "Point s5a-2000dense: counts changed during measurements",
       "detail": "afterReload={\"staff\":2000,\"teams\":100,\"rostersActiveMem\":1200,\"companyWorkplaces\":1,\"companyRosters\":1200,\"drafts\":50,\"notif\":1000,\"apps\":134,\"archived\":0,\"dbBytes\":5900883,\"dbMode\":\"idb\",\"dbKeys\":7,\"opensActiveWp\":25,\"changesActiveWp\":12025,\"heapUsedMB\":23.4,\"heapLimitMB\":3586} final={\"staff\":0,\"teams\":0,\"rostersActiveMem\":0,\"companyWorkplaces\":1,\"companyRosters\":0,\"drafts\":0,\"notif\":0,\"apps\":0,\"archived\":0,\"dbBytes\":684,\"dbMode\":\"idb\",\"dbKeys\":3,\"opensActiveWp\":0,\"changesActiveWp\":0,\"heapUsedM",
       "fix": "Investigate which loader/render mutated state."
+    },
+    {
+      "time": "15:10",
+      "message": "Point s5b-4000dense: counts changed during measurements",
+      "detail": "afterReload={\"staff\":4000,\"teams\":200,\"rostersActiveMem\":2400,\"companyWorkplaces\":1,\"companyRosters\":2400,\"drafts\":100,\"notif\":2000,\"apps\":400,\"archived\":0,\"dbBytes\":11918422,\"dbMode\":\"idb\",\"dbKeys\":7,\"opensActiveWp\":50,\"changesActiveWp\":24050,\"heapUsedMB\":19.6,\"heapLimitMB\":3586} final={\"staff\":0,\"teams\":0,\"rostersActiveMem\":0,\"companyWorkplaces\":0,\"companyRosters\":0,\"drafts\":0,\"notif\":0,\"apps\":0,\"archived\":0,\"dbBytes\":127,\"dbMode\":\"idb\",\"dbKeys\":2,\"opensActiveWp\":0,\"changesActiveWp\":0,\"heapUse",
+      "fix": "Investigate which loader/render mutated state."
     }
   ],
   "log": [
-    {
-      "time": "14:03",
-      "message": "Workplace 931/1000 seeded — staff 18620, rosters 11172"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 932/1000 seeded — staff 18640, rosters 11184"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 933/1000 seeded — staff 18660, rosters 11196"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 934/1000 seeded — staff 18680, rosters 11208"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 935/1000 seeded — staff 18700, rosters 11220"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 936/1000 seeded — staff 18720, rosters 11232"
-    },
     {
       "time": "14:03",
       "message": "Workplace 937/1000 seeded — staff 18740, rosters 11244"
@@ -904,8 +894,32 @@
     {
       "time": "14:10",
       "message": "Point s5a-2000dense done — countsOk=false, crashes=1"
+    },
+    {
+      "time": "14:10",
+      "message": "Building up — seeding…"
+    },
+    {
+      "time": "14:10",
+      "message": "Workplace 1/1 seeded — staff 4000, rosters 2400"
+    },
+    {
+      "time": "14:10",
+      "message": "Added notifications — 1000 of 2000"
+    },
+    {
+      "time": "14:10",
+      "message": "Added notifications — 2000 of 2000"
+    },
+    {
+      "time": "14:10",
+      "message": "Added applications — 400 of 400"
+    },
+    {
+      "time": "14:10",
+      "message": "Added drafts — 100 of 100"
     }
   ],
-  "updatedAt": "2026-10-17T14:10:39.580+02:00",
+  "updatedAt": "2026-10-17T15:10:43.794+02:00",
   "history": []
 }
