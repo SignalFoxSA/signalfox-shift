@@ -602,8 +602,8 @@
     {
       "time": "15:10",
       "message": "Point s5b-4000dense: counts changed during measurements",
-      "detail": "afterReload={\"staff\":4000,\"teams\":200,\"rostersActiveMem\":2400,\"companyWorkplaces\":1,\"companyRosters\":2400,\"drafts\":100,\"notif\":2000,\"apps\":400,\"archived\":0,\"dbBytes\":11918422,\"dbMode\":\"idb\",\"dbKeys\":7,\"opensActiveWp\":50,\"changesActiveWp\":24050,\"heapUsedMB\":19.6,\"heapLimitMB\":3586} final={\"staff\":0,\"teams\":0,\"rostersActiveMem\":0,\"companyWorkplaces\":0,\"companyRosters\":0,\"drafts\":0,\"notif\":0,\"apps\":0,\"archived\":0,\"dbBytes\":127,\"dbMode\":\"idb\",\"dbKeys\":2,\"opensActiveWp\":0,\"changesActiveWp\":0,\"heapUse",
-      "fix": "Investigate which loader/render mutated state."
+      "detail": "afterReload={\"staff\":4000,\"teams\":200,\"rostersActiveMem\":2400,\"companyWorkplaces\":1,\"companyRosters\":2400,\"drafts\":100,\"notif\":2000,\"apps\":400,\"archived\":0,\"dbBytes\":11918422,\"dbMode\":\"idb\",\"dbKeys\":7,\"opensActiveWp\":50,\"changesActiveWp\":24050,\"heapUsedMB\":19.6,\"heapLimitMB\":3586} final={\"staff\":0,\"teams\":0,\"rostersActiveMem\":0,\"companyWorkplaces\":0,\"companyRosters\":0,\"drafts\":0,\"notif\":0,\"apps\":0,\"archived\":0,\"dbBytes\":127,\"dbMode\":\"idb\",\"dbKeys\":2,\"opensActiveWp\":0,\"changesActiveWp\":0,\"heapUse [HARNESS ARTIFACT \u2014 CORRECTION: same fresh-context recovery artifact as s5a (stateFinal measured an empty app). Real s5b finding: Staff list hung ~60 min then crashed (renderStaffTab at 4000 staff in one workplace). Harness fixed in v2 with same-context recovery + 60s cap.]",
+      "fix": "Harness: same-context recovery + 60s race cap on renderStaffTab. App: renderStaffTab needs virtualisation/pagination."
     }
   ],
   "log": [
