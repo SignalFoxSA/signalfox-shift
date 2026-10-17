@@ -1,8 +1,8 @@
 {
   "status": "running",
-  "stage": "Stage 2 of 7 — s2b-10000staff",
+  "stage": "Stage 3 of 7 — s3a-20000staff",
   "progress": {
-    "current": 2,
+    "current": 3,
     "total": 7
   },
   "thresholds": {
@@ -270,10 +270,6 @@
   ],
   "problems": [],
   "log": [
-    {
-      "time": "13:57",
-      "message": "Added notifications — 500 of 500"
-    },
     {
       "time": "13:57",
       "message": "Added applications — 100 of 100"
@@ -589,8 +585,12 @@
     {
       "time": "13:58",
       "message": "Point s2b-10000staff done — countsOk=true, crashes=0"
+    },
+    {
+      "time": "13:58",
+      "message": "Building up — seeding…"
     }
   ],
-  "updatedAt": "2026-10-17T13:58:33.827+02:00",
+  "updatedAt": "2026-10-17T13:58:42.298+02:00",
   "history": []
 }
