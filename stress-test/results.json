@@ -1434,6 +1434,41 @@
       "staff": 20000,
       "rosters": 60000,
       "changes": 600800
+    },
+    {
+      "time": "13:16",
+      "companies": 0,
+      "staff": 40,
+      "rosters": 24,
+      "changes": 290
+    },
+    {
+      "time": "13:16",
+      "companies": 0,
+      "staff": 80,
+      "rosters": 48,
+      "changes": 580
+    },
+    {
+      "time": "13:16",
+      "companies": 0,
+      "staff": 120,
+      "rosters": 72,
+      "changes": 870
+    },
+    {
+      "time": "13:16",
+      "companies": 0,
+      "staff": 160,
+      "rosters": 96,
+      "changes": 1160
+    },
+    {
+      "time": "13:16",
+      "companies": 0,
+      "staff": 200,
+      "rosters": 120,
+      "changes": 1450
     }
   ],
   "log": [
@@ -2556,76 +2591,96 @@
     {
       "time": "13:16",
       "message": "Stage 6 — functional probes starting"
+    },
+    {
+      "time": "13:16",
+      "message": "Building up — seeding…"
+    },
+    {
+      "time": "13:16",
+      "message": "Added teams — staff 40, rosters 24 (active 24, archived 0), changes 290"
+    },
+    {
+      "time": "13:16",
+      "message": "Added teams — staff 80, rosters 48 (active 48, archived 0), changes 580"
+    },
+    {
+      "time": "13:16",
+      "message": "Added teams — staff 120, rosters 72 (active 72, archived 0), changes 870"
+    },
+    {
+      "time": "13:16",
+      "message": "Added teams — staff 160, rosters 96 (active 96, archived 0), changes 1160"
+    },
+    {
+      "time": "13:16",
+      "message": "Added teams — staff 200, rosters 120 (active 120, archived 0), changes 1450"
+    },
+    {
+      "time": "13:16",
+      "message": "Added notifications — 1000 of 1000"
+    },
+    {
+      "time": "13:16",
+      "message": "Added applications — 200 of 200"
+    },
+    {
+      "time": "13:16",
+      "message": "Added drafts — 50 of 50"
     }
   ],
   "metrics": [
     {
-      "label": "Seed staff",
-      "value": "20000"
+      "label": "6a Loader guards under cap",
+      "value": "PASS"
     },
     {
-      "label": "IndexedDB bytes (after seed, in-memory)",
-      "value": "127"
+      "label": "6b Cap refusal (lowered cap)",
+      "value": "PASS"
     },
     {
-      "label": "Archive bodies write",
-      "value": "17130ms for 47000 bodies"
+      "label": "6c 900MB warning",
+      "value": "PASS"
     },
     {
-      "label": "Persist (DB.set + flush)",
-      "value": "2219ms, 156491306 bytes"
+      "label": "6d Archive boundary (12 stays, 13 moves, read-only)",
+      "value": "PASS"
     },
     {
-      "label": "Load time (reload)",
-      "value": "6033ms"
+      "label": "6d Calendar render with 200 archived",
+      "value": "3ms"
     },
     {
-      "label": "Calendar render",
-      "value": "10667ms"
+      "label": "6d Stats with 200 archived",
+      "value": "0ms"
     },
     {
-      "label": "Rosters list render",
-      "value": "3127ms"
+      "label": "6e Migration localStorage -> IndexedDB",
+      "value": "PASS"
     },
     {
-      "label": "Company Dashboard render",
-      "value": "2467ms"
+      "label": "6f Fallback (IndexedDB blocked -> local)",
+      "value": "PASS"
     },
     {
-      "label": "Rules engine",
-      "value": "ok ms=17 violDays=undefined"
+      "label": "6f localStorage quota banner",
+      "value": "NOT SHOWN (junk fill hit=true)"
     },
     {
-      "label": "Inbox render",
-      "value": "4574ms"
+      "label": "6g Export Excel (1000 staff, offline)",
+      "value": "17ms, 32619 bytes"
     },
     {
-      "label": "Stats MISS (bust, first view)",
-      "value": "2234ms total=310000"
+      "label": "6g Export PDF (1000 staff, offline)",
+      "value": "1775ms, 1898872 bytes"
     },
     {
-      "label": "Stats HIT (repeat view)",
-      "value": "90ms deep-equal=true"
+      "label": "6g Export PNG (1000 staff, offline)",
+      "value": "1512ms, 642018 bytes"
     },
     {
-      "label": "Stats fresh MISS == baseline",
-      "value": "fresh=2001ms equal=true"
-    },
-    {
-      "label": "Stats archived month total (Nov 2024)",
-      "value": "0"
-    },
-    {
-      "label": "Export Excel",
-      "value": "ok ms=22 xlsxBytes=25437"
-    },
-    {
-      "label": "Export PDF",
-      "value": "ok ms=6802 pdfBytes=371632"
-    },
-    {
-      "label": "Export PNG",
-      "value": "ok ms=5065 pngBytes=203089"
+      "label": "6g Blocked external requests",
+      "value": "2"
     }
   ],
   "progress": {
@@ -2640,12 +2695,12 @@
     "break": null
   },
   "totals": {
-    "companies": 5,
-    "staff": 20000,
-    "rosters": 60000,
-    "changes": 600800
+    "companies": 0,
+    "staff": 200,
+    "rosters": 120,
+    "changes": 1450
   },
-  "updatedAt": "2026-10-17T13:16:13.411+02:00",
+  "updatedAt": "2026-10-17T13:16:35.793+02:00",
   "storageHistory": [
     {
       "time": "13:12",
@@ -2757,7 +2812,32 @@
       "exportMs": 30
     }
   ],
-  "problems": [],
+  "problems": [
+    {
+      "time": "13:16",
+      "message": "Stage 6f: localStorage quota banner not shown",
+      "detail": "{\"mode\":\"local\",\"afterSave\":{\"unitsInLS\":true,\"baseInLS\":true,\"rosters\":1},\"junkChunks\":17,\"junkHitQuota\":true,\"afterQuotaPersist\":{\"bannerDisplay\":\"none\",\"storageFull\":false},\"afterCleanupPersist\":{\"bannerDisplay\":\"none\",\"storageFull\":false}}",
+      "fix": "Junk fill may not have reached quota, or persist path differs in local mode."
+    },
+    {
+      "time": "13:16",
+      "message": "Stage 6g: offline exports FAILED",
+      "detail": "{\"expDataMs\":2,\"expDataOk\":true,\"xlsxMs\":17,\"xlsxBytes\":32619,\"pdfMs\":1775,\"pdfBytes\":1898872,\"pngMs\":1512,\"pngBytes\":642018,\"txtMs\":1,\"txtChars\":11051,\"icsMs\":115,\"libsReady\":{\"xlsx\":true,\"jspdf\":true,\"html2canvas\":true}}",
+      "fix": "See result JSON."
+    },
+    {
+      "time": "13:16",
+      "message": "Stage 6h fatal",
+      "detail": "page.waitForTimeout: Target page, context or browser has been closed",
+      "fix": "See result JSON."
+    },
+    {
+      "time": "13:16",
+      "message": "Stage 6 main fatal",
+      "detail": "browser.newContext: Target page, context or browser has been closed",
+      "fix": "See logs."
+    }
+  ],
   "breakdown": {
     "staffPerWorkplace": [
       {
