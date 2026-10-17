@@ -1656,7 +1656,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261017-2004';
+var BUILD='20261017-2005';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -8016,15 +8016,53 @@ function archiveSweep(force){
   if(!force && S._archiveLastSweep && (Date.now()-S._archiveLastSweep)<30000) return Promise.resolve({moved:0, alreadyArchived:0});
   S._archiveRunning=true; S._archiveLastSweep=Date.now();
   var result={moved:0, alreadyArchived:0};
-  /* Chain candidates one at a time: each removal is persisted
-     (durable) before the next roster is touched. */
+  /* FIX (BUILD 20261017-2005): the sweep's workplace references used
+     to be captured once at sweep start, so a loadSaved() →
+     companyLoad() mid-sweep (e.g. enterApp → switchTab → renderHome
+     → renderToday → loadSaved) replaced S.company with a fresh parse
+     and detached the sweep's wp objects — removeFromActive then
+     filtered detached objects for non-active workplaces (lost), and
+     only the active workplace re-synced via S.rosters +
+     companySyncActive (Stage 2: 550 archived, active only fell
+     1200→1090). The sweep now RE-RESOLVES each workplace from the
+     LIVE S.company at step time, skips units no longer present in
+     the live workplace (already removed, or user-deleted mid-sweep),
+     and batches the active-company persist to ONCE at the end. The
+     per-roster archive body + index write-verify safety is
+     unchanged — only the removal persist is batched. A crash between
+     archiving and the final persist leaves bodies + index durable;
+     the next sweep's alreadyArchived path removes the active copies
+     (idempotent). */
+  var movedAids={}; /* aid -> true, for the end-of-sweep filter */
   var chain=Promise.resolve();
+  /* Re-resolve a workplace from the LIVE S.company by id. The sweep's
+     captured wp may have been detached by a mid-sweep companyLoad. */
+  function resolveLiveWp(wp){
+    if(!wp) return null;
+    if(wp.id==='__active') return null; /* no-company path uses S.rosters */
+    if(S.company && Array.isArray(S.company.workplaces)){
+      for(var i=0;i<S.company.workplaces.length;i++){
+        if(S.company.workplaces[i].id===wp.id) return S.company.workplaces[i];
+      }
+    }
+    return wp; /* company gone — fall back to the captured object */
+  }
+  /* Does the LIVE workplace still hold this unit? False = already
+     removed (e.g. a previous sweep step, a mid-sweep reload, or the
+     user deleted it) — skip without counting. */
+  function liveHas(wp, unitId){
+    if(wp.id==='__active') return (S.rosters||[]).some(function(u){ return u && u.id===unitId; });
+    var live=resolveLiveWp(wp);
+    return !!live && (live.rosters||[]).some(function(u){ return u && u.id===unitId; });
+  }
   function removeFromActive(wp, unitId){
-    wp.rosters=(wp.rosters||[]).filter(function(u){ return u && u.id!==unitId; });
+    var live=resolveLiveWp(wp);
+    if(live) live.rosters=(live.rosters||[]).filter(function(u){ return u && u.id!==unitId; });
+    else if(wp) wp.rosters=(wp.rosters||[]).filter(function(u){ return u && u.id!==unitId; });
     /* S.rosters mirrors ONLY the active workplace — never filter it
        for another workplace (unit ids can repeat across workplaces:
        a new workplace starts as a snapshot copy of the active one). */
-    if((S.company && wp.id===S.company.activeId) || wp.id==='__active') S.rosters=(S.rosters||[]).filter(function(u){ return u && u.id!==unitId; });
+    if(wp.id==='__active' || (S.company && wp.id===S.company.activeId)) S.rosters=(S.rosters||[]).filter(function(u){ return u && u.id!==unitId; });
   }
   function consider(wp, unit){
     chain=chain.then(function(){
@@ -8033,13 +8071,15 @@ function archiveSweep(force){
       /* The roster the user currently has open is left alone — it
          will be swept on a later load once it is no longer open. */
       if(S.fromSaved && S.unitId===unit.id) return;
+      /* Re-resolve + skip if the live workplace no longer holds it. */
+      if(!liveHas(wp, unit.id)) return;
       var aid=archiveAid(wp.id, unit.id);
       var idx=archiveLoadIndex();
       var inIndex=idx.some(function(e){ return e && e.aid===aid; });
       if(inIndex){
         /* Archive already holds this roster — just drop the active copy. */
         removeFromActive(wp, unit.id);
-        persist();
+        movedAids[aid]=true;
         result.alreadyArchived++;
         return;
       }
@@ -8054,8 +8094,11 @@ function archiveSweep(force){
         if(!DB.set(ARCHIVE_INDEX_KEY, idxStr)) return; /* index not saved: roster stays active */
         return DB.flush().then(function(){ return DB.verify(ARCHIVE_INDEX_KEY, idxStr); }).then(function(ok2){
           if(!ok2) return; /* index not verified: roster stays active */
+          /* Re-check liveness after the awaits — a mid-sweep loadSaved
+             or user delete may have removed it meanwhile. */
+          if(!liveHas(wp, unit.id)) return;
           removeFromActive(wp, unit.id);
-          persist();
+          movedAids[aid]=true;
           result.moved++;
         });
       });
@@ -8073,6 +8116,25 @@ function archiveSweep(force){
     }
   }catch(e){ /* never break boot/render because archiving hit a snag */ }
   return chain.then(function(){
+    /* End-of-sweep: apply the moved aids to the LIVE company (a
+       mid-sweep loadSaved may have resurrected some rosters from
+       storage after their removal step) — then persist ONCE. This
+       replaces the old per-roster persist (a full-company stringify
+       + write per roster, ~137ms/roster). Aids are per-workplace, so
+       unit ids that repeat across workplaces are handled correctly. */
+    try{
+      var movedList=Object.keys(movedAids);
+      if(movedList.length){
+        if(S.company && Array.isArray(S.company.workplaces)){
+          S.company.workplaces.forEach(function(wp){
+            wp.rosters=(wp.rosters||[]).filter(function(u){ return !(u && movedAids[archiveAid(wp.id, u.id)]); });
+          });
+        }
+        var _activeId=(S.company && S.company.activeId) || '__active';
+        S.rosters=(S.rosters||[]).filter(function(u){ return !(u && movedAids[archiveAid(_activeId, u.id)]); });
+        persist();
+      }
+    }catch(e){}
     S._archiveRunning=false;
     if(result.moved>0 || result.alreadyArchived>0){ try{ renderRosters(); }catch(e){} try{ renderArchiveList(); }catch(e){} }
     return result;
