@@ -357,7 +357,7 @@ function render(d){
   renderProblems(d);
 
   const log = Array.isArray(d.log) ? d.log : [];
-  $("log").innerHTML = log.map(l =>
+  $("log").innerHTML = [...log].reverse().map(l =>
     "<div class='logline'><span class='logtime'>"+esc(l.time)+"</span>"+esc(l.message)+"</div>").join("") || "<p class='empty'>No events yet.</p>";
 
   $("updated").textContent = d.updatedAt ? "Last updated: " + new Date(d.updatedAt).toLocaleTimeString() : "";
