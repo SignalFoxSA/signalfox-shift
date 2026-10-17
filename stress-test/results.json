@@ -1118,6 +1118,18 @@
     {
       "time": "09:31",
       "message": "Reloaded — load 2302ms"
+    },
+    {
+      "time": "09:33",
+      "message": "FIX 2: Stats MISS 45689ms → HIT 9ms (equal=true, bust=true, fresh=true)"
+    },
+    {
+      "time": "09:33",
+      "message": "Stage 3 done — countsOk=true"
+    },
+    {
+      "time": "09:33",
+      "message": "Problem: Company Stats FIRST compute still slow (45689ms at 1000 staff) — KNOWN REMAINING LIMIT; repeat views instant (Fix 2 held, HIT 9ms)"
     }
   ],
   "metrics": [
@@ -1164,6 +1176,22 @@
     {
       "label": "FIX 2 — Stats MISS (first view)",
       "value": "45689ms"
+    },
+    {
+      "label": "FIX 2 — Stats HIT (repeat view)",
+      "value": "9ms deep-equal=true"
+    },
+    {
+      "label": "FIX 2 — Stats cache bust + cached==fresh",
+      "value": "bust=true freshEqual=true"
+    },
+    {
+      "label": "Rules engine",
+      "value": "ok ms=18 violDays=undefined"
+    },
+    {
+      "label": "Inbox render",
+      "value": "1326ms"
     }
   ],
   "progress": {
@@ -1183,7 +1211,7 @@
     "rosters": 1200,
     "changes": 14000
   },
-  "updatedAt": "2026-10-17T09:33:21.736+02:00",
+  "updatedAt": "2026-10-17T09:33:27.023+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
@@ -1344,6 +1372,12 @@
       "loadMs": 2236,
       "renderMs": 964,
       "exportMs": null
+    },
+    {
+      "staff": 1000,
+      "loadMs": 2302,
+      "renderMs": 1543,
+      "exportMs": null
     }
   ],
   "speedPerLevel": [
@@ -1360,6 +1394,13 @@
       "loadMs": 2236,
       "renderMs": 964,
       "exportMs": null
+    },
+    {
+      "level": "Medium",
+      "staff": 1000,
+      "loadMs": 2302,
+      "renderMs": 1543,
+      "exportMs": null
     }
   ],
   "problems": [
@@ -1367,6 +1408,12 @@
       "time": "09:30",
       "message": "Company Stats FIRST compute still slow (12398ms at 500 staff) — KNOWN REMAINING LIMIT; repeat views instant (Fix 2 held, HIT 4ms)",
       "detail": "fix2={\"missMs\":12398,\"hitMs\":4,\"equal\":true,\"bustOk\":true,\"freshEqual\":true,\"missTotal\":7750,\"bustMs\":11827}",
+      "fix": "Speeding up the FIRST computation (e.g. incremental per-roster aggregates) is a future optimization, not part of Fix 2. Repeat views are instant via the cache."
+    },
+    {
+      "time": "09:33",
+      "message": "Company Stats FIRST compute still slow (45689ms at 1000 staff) — KNOWN REMAINING LIMIT; repeat views instant (Fix 2 held, HIT 9ms)",
+      "detail": "fix2={\"missMs\":45689,\"hitMs\":9,\"equal\":true,\"bustOk\":true,\"freshEqual\":true,\"missTotal\":15500,\"bustMs\":45317}",
       "fix": "Speeding up the FIRST computation (e.g. incremental per-roster aggregates) is a future optimization, not part of Fix 2. Repeat views are instant via the cache."
     }
   ]
