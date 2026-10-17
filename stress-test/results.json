@@ -433,6 +433,13 @@
       "staff": 1000,
       "rosters": 1200,
       "changes": 12500
+    },
+    {
+      "time": "12:17",
+      "companies": 5,
+      "staff": 1000,
+      "rosters": 1200,
+      "changes": 12500
     }
   ],
   "log": [
@@ -775,6 +782,14 @@
     {
       "time": "12:15",
       "message": "Added drafts — 100 of 100"
+    },
+    {
+      "time": "12:16",
+      "message": "Reloaded — load 1291ms, active 1090, archived 550, bytes 4846319"
+    },
+    {
+      "time": "12:17",
+      "message": "Stage 2 done — countsOk=false"
     }
   ],
   "metrics": [
@@ -797,6 +812,54 @@
     {
       "label": "Archive sweep (real, full backlog)",
       "value": "75002ms, archived=550"
+    },
+    {
+      "label": "Calendar render",
+      "value": "1384ms"
+    },
+    {
+      "label": "Rosters list render",
+      "value": "33707ms"
+    },
+    {
+      "label": "Company Dashboard render",
+      "value": "629ms"
+    },
+    {
+      "label": "Rules engine",
+      "value": "ok ms=9 violDays=undefined"
+    },
+    {
+      "label": "Inbox render",
+      "value": "643ms"
+    },
+    {
+      "label": "Stats MISS (bust, first view)",
+      "value": "113ms total=15500"
+    },
+    {
+      "label": "Stats HIT (repeat view)",
+      "value": "4ms deep-equal=true"
+    },
+    {
+      "label": "Stats fresh MISS == baseline",
+      "value": "fresh=95ms equal=true"
+    },
+    {
+      "label": "Stats archived month total (Nov 2024)",
+      "value": "0"
+    },
+    {
+      "label": "Export Excel",
+      "value": "ok ms=22 xlsxBytes=25437"
+    },
+    {
+      "label": "Export PDF",
+      "value": "ok ms=807 pdfBytes=371691"
+    },
+    {
+      "label": "Export PNG",
+      "value": "ok ms=526 pngBytes=203056"
     }
   ],
   "progress": {
@@ -811,83 +874,87 @@
     "break": null
   },
   "totals": {
-    "companies": 0,
+    "companies": 5,
     "staff": 1000,
     "rosters": 1200,
     "changes": 12500
   },
-  "updatedAt": "2026-10-17T12:16:25.324+02:00",
+  "updatedAt": "2026-10-17T12:17:06.691+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
         "name": "Workplace 1",
-        "staff": 40
+        "staff": 200
       },
       {
         "name": "Workplace 2",
-        "staff": 40
+        "staff": 200
       },
       {
         "name": "Workplace 3",
-        "staff": 40
+        "staff": 200
       },
       {
         "name": "Workplace 4",
-        "staff": 40
+        "staff": 200
       },
       {
         "name": "Workplace 5",
-        "staff": 40
+        "staff": 200
       }
     ],
     "rostersPerMonth": [
       {
+        "month": "2025-10",
+        "rosters": 50
+      },
+      {
         "month": "2025-11",
-        "rosters": 10
+        "rosters": 50
       },
       {
         "month": "2025-12",
-        "rosters": 10
+        "rosters": 50
       },
       {
         "month": "2026-01",
-        "rosters": 10
+        "rosters": 50
       },
       {
         "month": "2026-02",
-        "rosters": 10
+        "rosters": 50
       },
       {
         "month": "2026-03",
-        "rosters": 10
+        "rosters": 50
       },
       {
         "month": "2026-04",
-        "rosters": 10
+        "rosters": 50
       },
       {
         "month": "2026-05",
-        "rosters": 10
+        "rosters": 50
       },
       {
         "month": "2026-06",
-        "rosters": 10
+        "rosters": 50
       },
       {
         "month": "2026-07",
-        "rosters": 10
+        "rosters": 50
       },
       {
         "month": "2026-08",
-        "rosters": 10
+        "rosters": 50
       },
       {
         "month": "2026-09",
-        "rosters": 10
+        "rosters": 50
       },
       {
         "month": "2026-10",
-        "rosters": 10
+        "rosters": 50
       }
     ]
   },
@@ -919,6 +986,10 @@
     {
       "time": "12:15",
       "kb": 3881
+    },
+    {
+      "time": "12:16",
+      "kb": 4733
     }
   ],
   "perfHistory": [
@@ -927,6 +998,12 @@
       "loadMs": 1120,
       "renderMs": 620,
       "exportMs": 32
+    },
+    {
+      "staff": 1000,
+      "loadMs": 1291,
+      "renderMs": 1384,
+      "exportMs": 26
     }
   ],
   "speedPerLevel": [
@@ -936,7 +1013,21 @@
       "loadMs": 1120,
       "renderMs": 620,
       "exportMs": 32
+    },
+    {
+      "level": "Low/Medium",
+      "staff": 1000,
+      "loadMs": 1291,
+      "renderMs": 1384,
+      "exportMs": 26
     }
   ],
-  "problems": []
+  "problems": [
+    {
+      "time": "12:17",
+      "message": "Stage 2: counts changed during measurements",
+      "detail": "afterReload={\"staff\":1000,\"teams\":10,\"rostersActiveMem\":130,\"companyWorkplaces\":5,\"companyRosters\":1090,\"drafts\":100,\"notif\":2000,\"apps\":400,\"archived\":550,\"dbBytes\":4846319,\"dbMode\":\"idb\",\"dbKeys\":558,\"opensActiveWp\":45,\"changesActiveWp\":1345,\"heapUsedMB\":23.4,\"heapLimitMB\":3586} final={\"staff\":1000,\"teams\":10,\"rostersActiveMem\":130,\"companyWorkplaces\":5,\"companyRosters\":650,\"drafts\":100,\"notif\":2000,\"apps\":400,\"archived\":550,\"dbBytes\":3944783,\"dbMode\":\"idb\",\"dbKeys\":558,\"opensActiveWp\":45,\"cha",
+      "fix": "Investigate which loader/render mutated state."
+    }
+  ]
 }
