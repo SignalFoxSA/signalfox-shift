@@ -3099,6 +3099,10 @@
     {
       "time": "12:26",
       "message": "Stage 6 done — see result JSON for per-probe pass/fail"
+    },
+    {
+      "time": "12:27",
+      "message": "Stage 6f quota banner VERIFIED by follow-up probe (probe-local-quota): 5KB DB.set past exhausted quota -> returned false, banner flex, storageFull true; persist with 5KB draft growth -> banner flex; cleanup + persist -> banner cleared. Earlier non-showing was a probe artifact (growth < remaining slack). Minor note: failed local-mode set leaves the new value in DB.cache (DB.get returns it until reload) — unlike the IndexedDB cap path which keeps the old value."
     }
   ],
   "metrics": [
@@ -3180,7 +3184,7 @@
     "rosters": 120,
     "changes": 1450
   },
-  "updatedAt": "2026-10-17T12:26:31.364+02:00",
+  "updatedAt": "2026-10-17T12:27:42.063+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
@@ -3404,12 +3408,6 @@
       "message": "CRITICAL (Fix C): S.base silently replaced by a STALE empty default on reload when the localStorage mirror base is stale; next persist() then WIPES the active workplace base from the company",
       "detail": "Stage 3: after reload S.base.vehicles=0 (teams 0) though company still held the real base (40 teams). Probe-base-poison reproduced exactly: mirror sfshift_base was 89 bytes (a defaultBase stub from the very first load) because the real base mirror write failed once 4600 archive-body mirror writes filled the ~10MB localStorage mirror; init loadBase read the stale 89-byte mirror default into S.base; reconcile fixed the CACHE from IndexedDB but never re-loaded S.base (re-load branch requires DB.appEntered, false during init); enterApp loadSaved heals S.company/S.rosters from reconciled cache but nothing ever re-calls loadBase, so S.base stays the stale default all session. Then ONE persist() -> companySyncActive overwrote the active workplace base in the company with the empty default, in-memory AND stored (companyActiveBaseVehicles 40->0, stored 0). Any save after such a reload destroys the active base (teams/staff/crews/quals/shifts). No persist happened post-reload in the Stage 3 test run itself, so the test company survived; the probe proved the destruction step.",
       "fix": "(1) Reconcile must re-run loadBase/loadSaved when it changes cache values, even when appEntered is false (or defer init loaders until after reconcile). (2) loadBase must not trust a mirror base that looks like a fresh default when IndexedDB may hold more. (3) companySyncActive must NEVER replace a non-empty company base with an empty S.base — same defensive guard already used for rosters (never wipe non-empty company copy with empty S.rosters)."
-    },
-    {
-      "time": "12:26",
-      "message": "Stage 6f: localStorage quota banner not shown",
-      "detail": "{\"mode\":\"local\",\"afterSave\":{\"unitsInLS\":true,\"baseInLS\":true,\"rosters\":1},\"junkChunks\":17,\"junkHitQuota\":true,\"afterQuotaPersist\":{\"bannerDisplay\":\"none\",\"storageFull\":false},\"afterCleanupPersist\":{\"bannerDisplay\":\"none\",\"storageFull\":false}}",
-      "fix": "Junk fill may not have reached quota, or persist path differs in local mode."
     },
     {
       "time": "12:26",
