@@ -12,10 +12,6 @@
   },
   "metrics": [
     {
-      "label": "Seed staff (s1a-200staff)",
-      "value": "200"
-    },
-    {
       "label": "Load time (reload) s1a-200staff",
       "value": "1115ms"
     },
@@ -326,10 +322,18 @@
     {
       "label": "Export PDF (s4c-1000wp)",
       "value": "ok ms=502 pdfBytes=369115"
+    },
+    {
+      "label": "Export PNG (s4c-1000wp)",
+      "value": "ok ms=249 pngBytes=202800"
+    },
+    {
+      "label": "Calendar render (s4c-1000wp)",
+      "value": "8668ms"
     }
   ],
   "totals": {
-    "companies": 0,
+    "companies": 1000,
     "staff": 20000,
     "rosters": 12000,
     "changes": 122000
@@ -382,6 +386,12 @@
       "loadMs": 1456,
       "renderMs": 4775,
       "exportMs": 46
+    },
+    {
+      "staff": 20000,
+      "loadMs": 1715,
+      "renderMs": 8668,
+      "exportMs": 45
     }
   ],
   "storageHistory": [
@@ -530,14 +540,17 @@
       "loadMs": 1456,
       "renderMs": 4775,
       "exportMs": 46
+    },
+    {
+      "level": "Companies",
+      "staff": 20000,
+      "loadMs": 1715,
+      "renderMs": 8668,
+      "exportMs": 45
     }
   ],
   "problems": [],
   "log": [
-    {
-      "time": "14:03",
-      "message": "Workplace 924/1000 seeded — staff 18480, rosters 11088"
-    },
     {
       "time": "14:03",
       "message": "Workplace 925/1000 seeded — staff 18500, rosters 11100"
@@ -853,8 +866,12 @@
     {
       "time": "14:03",
       "message": "Added drafts — 50 of 50"
+    },
+    {
+      "time": "14:03",
+      "message": "Point s4c-1000wp done — countsOk=true, crashes=0"
     }
   ],
-  "updatedAt": "2026-10-17T14:03:42.981+02:00",
+  "updatedAt": "2026-10-17T14:03:58.607+02:00",
   "history": []
 }
