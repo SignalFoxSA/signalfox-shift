@@ -90,6 +90,188 @@
       "staff": 0,
       "rosters": 0,
       "changes": 0
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 20,
+      "rosters": 24,
+      "changes": 280
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 40,
+      "rosters": 48,
+      "changes": 560
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 60,
+      "rosters": 72,
+      "changes": 840
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 80,
+      "rosters": 96,
+      "changes": 1120
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 100,
+      "rosters": 120,
+      "changes": 1400
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 120,
+      "rosters": 144,
+      "changes": 1680
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 140,
+      "rosters": 168,
+      "changes": 1960
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 160,
+      "rosters": 192,
+      "changes": 2240
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 180,
+      "rosters": 216,
+      "changes": 2520
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 200,
+      "rosters": 240,
+      "changes": 2800
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 220,
+      "rosters": 264,
+      "changes": 3080
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 240,
+      "rosters": 288,
+      "changes": 3360
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 260,
+      "rosters": 312,
+      "changes": 3640
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 280,
+      "rosters": 336,
+      "changes": 3920
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 300,
+      "rosters": 360,
+      "changes": 4200
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 320,
+      "rosters": 384,
+      "changes": 4480
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 340,
+      "rosters": 408,
+      "changes": 4760
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 360,
+      "rosters": 432,
+      "changes": 5040
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 380,
+      "rosters": 456,
+      "changes": 5320
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 400,
+      "rosters": 480,
+      "changes": 5600
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 420,
+      "rosters": 504,
+      "changes": 5880
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 440,
+      "rosters": 528,
+      "changes": 6160
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 460,
+      "rosters": 552,
+      "changes": 6440
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 480,
+      "rosters": 576,
+      "changes": 6720
+    },
+    {
+      "time": "09:29",
+      "companies": 0,
+      "staff": 500,
+      "rosters": 600,
+      "changes": 7000
+    },
+    {
+      "time": "09:29",
+      "companies": 5,
+      "staff": 500,
+      "rosters": 600,
+      "changes": 7000
     }
   ],
   "log": [
@@ -184,9 +366,210 @@
     {
       "time": "09:29",
       "message": "Building up — seeding…"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 20, rosters 24, changes 280"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 40, rosters 48, changes 560"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 60, rosters 72, changes 840"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 80, rosters 96, changes 1120"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 100, rosters 120, changes 1400"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 120, rosters 144, changes 1680"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 140, rosters 168, changes 1960"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 160, rosters 192, changes 2240"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 180, rosters 216, changes 2520"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 200, rosters 240, changes 2800"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 220, rosters 264, changes 3080"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 240, rosters 288, changes 3360"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 260, rosters 312, changes 3640"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 280, rosters 336, changes 3920"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 300, rosters 360, changes 4200"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 320, rosters 384, changes 4480"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 340, rosters 408, changes 4760"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 360, rosters 432, changes 5040"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 380, rosters 456, changes 5320"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 400, rosters 480, changes 5600"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 420, rosters 504, changes 5880"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 440, rosters 528, changes 6160"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 460, rosters 552, changes 6440"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 480, rosters 576, changes 6720"
+    },
+    {
+      "time": "09:29",
+      "message": "Added teams — staff 500, rosters 600, changes 7000"
+    },
+    {
+      "time": "09:29",
+      "message": "Added notifications — 1000 of 2000"
+    },
+    {
+      "time": "09:29",
+      "message": "Added notifications — 2000 of 2000"
+    },
+    {
+      "time": "09:29",
+      "message": "Added applications — 400 of 400"
+    },
+    {
+      "time": "09:29",
+      "message": "Added drafts — 100 of 100"
+    },
+    {
+      "time": "09:29",
+      "message": "Build complete — staff 500, rosters 600, changes 7000"
+    },
+    {
+      "time": "09:29",
+      "message": "Reloaded — load 2236ms"
+    },
+    {
+      "time": "09:30",
+      "message": "FIX 2: Stats MISS 12398ms → HIT 4ms (equal=true, bust=true, fresh=true)"
+    },
+    {
+      "time": "09:30",
+      "message": "Stage 2 done — countsOk=true"
+    },
+    {
+      "time": "09:30",
+      "message": "Problem: Company Stats FIRST compute still slow (12398ms at 500 staff) — KNOWN REMAINING LIMIT; repeat views instant (Fix 2 held, HIT 4ms)"
+    },
+    {
+      "time": "09:30",
+      "message": "Problem: Render/measure exceeded 10s (break): FIX 2 — Stats cache bust + cached==fresh = 11827ms"
     }
   ],
-  "metrics": [],
+  "metrics": [
+    {
+      "label": "Seed time",
+      "value": "n/a"
+    },
+    {
+      "label": "Storage (JSON bytes)",
+      "value": "2361324"
+    },
+    {
+      "label": "Heap used",
+      "value": "26.3 MB"
+    },
+    {
+      "label": "Persist",
+      "value": "30ms, 2361324 bytes"
+    },
+    {
+      "label": "Load time (reload)",
+      "value": "2236ms"
+    },
+    {
+      "label": "FIX 1 — banner hidden when storage OK",
+      "value": "NO ({\"storageFull\":false,\"bannerDisplay\":\"\"})"
+    },
+    {
+      "label": "Calendar render",
+      "value": "964ms"
+    },
+    {
+      "label": "Rosters list render",
+      "value": "432ms"
+    },
+    {
+      "label": "On Duty render",
+      "value": "442ms"
+    },
+    {
+      "label": "Company Dashboard render",
+      "value": "593ms"
+    },
+    {
+      "label": "FIX 2 — Stats MISS (first view)",
+      "value": "12398ms"
+    },
+    {
+      "label": "FIX 2 — Stats HIT (repeat view)",
+      "value": "4ms deep-equal=true"
+    },
+    {
+      "label": "FIX 2 — Stats cache bust + cached==fresh",
+      "value": "bust=true freshEqual=true"
+    },
+    {
+      "label": "Rules engine",
+      "value": "ok ms=4 violDays=undefined"
+    },
+    {
+      "label": "Inbox render",
+      "value": "612ms"
+    }
+  ],
   "progress": {
     "current": 2,
     "total": 7
@@ -199,83 +582,131 @@
     "break": null
   },
   "totals": {
-    "companies": 0,
-    "staff": 0,
-    "rosters": 0,
-    "changes": 0
+    "companies": 5,
+    "staff": 500,
+    "rosters": 600,
+    "changes": 7000
   },
-  "updatedAt": "2026-10-17T09:29:46.884+02:00",
+  "updatedAt": "2026-10-17T09:30:30.846+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
         "name": "Workplace 1",
-        "staff": 40
+        "staff": 100
       },
       {
         "name": "Workplace 2",
-        "staff": 40
+        "staff": 100
       },
       {
         "name": "Workplace 3",
-        "staff": 40
+        "staff": 100
       },
       {
         "name": "Workplace 4",
-        "staff": 40
+        "staff": 100
       },
       {
         "name": "Workplace 5",
-        "staff": 40
+        "staff": 100
       }
     ],
     "rostersPerMonth": [
       {
         "month": "2026-01",
-        "rosters": 10
+        "rosters": 25
       },
       {
         "month": "2026-02",
-        "rosters": 10
+        "rosters": 25
       },
       {
         "month": "2026-03",
-        "rosters": 10
+        "rosters": 25
       },
       {
         "month": "2026-04",
-        "rosters": 10
+        "rosters": 25
       },
       {
         "month": "2026-05",
-        "rosters": 10
+        "rosters": 25
       },
       {
         "month": "2026-06",
-        "rosters": 10
+        "rosters": 25
       },
       {
         "month": "2026-07",
-        "rosters": 10
+        "rosters": 25
       },
       {
         "month": "2026-08",
-        "rosters": 10
+        "rosters": 25
       },
       {
         "month": "2026-09",
-        "rosters": 10
+        "rosters": 25
       },
       {
         "month": "2026-10",
-        "rosters": 10
+        "rosters": 25
       },
       {
         "month": "2026-11",
-        "rosters": 10
+        "rosters": 25
       },
       {
         "month": "2026-12",
-        "rosters": 10
+        "rosters": 25
+      },
+      {
+        "month": "2027-01",
+        "rosters": 25
+      },
+      {
+        "month": "2027-02",
+        "rosters": 25
+      },
+      {
+        "month": "2027-03",
+        "rosters": 25
+      },
+      {
+        "month": "2027-04",
+        "rosters": 25
+      },
+      {
+        "month": "2027-05",
+        "rosters": 25
+      },
+      {
+        "month": "2027-06",
+        "rosters": 25
+      },
+      {
+        "month": "2027-07",
+        "rosters": 25
+      },
+      {
+        "month": "2027-08",
+        "rosters": 25
+      },
+      {
+        "month": "2027-09",
+        "rosters": 25
+      },
+      {
+        "month": "2027-10",
+        "rosters": 25
+      },
+      {
+        "month": "2027-11",
+        "rosters": 25
+      },
+      {
+        "month": "2027-12",
+        "rosters": 25
       }
     ]
   },
@@ -287,6 +718,14 @@
     {
       "time": "09:27",
       "kb": 724
+    },
+    {
+      "time": "09:29",
+      "kb": 2306
+    },
+    {
+      "time": "09:29",
+      "kb": 2308
     }
   ],
   "perfHistory": [
@@ -294,6 +733,12 @@
       "staff": 200,
       "loadMs": 2582,
       "renderMs": 728,
+      "exportMs": null
+    },
+    {
+      "staff": 500,
+      "loadMs": 2236,
+      "renderMs": 964,
       "exportMs": null
     }
   ],
@@ -304,7 +749,27 @@
       "loadMs": 2582,
       "renderMs": 728,
       "exportMs": null
+    },
+    {
+      "level": "Low",
+      "staff": 500,
+      "loadMs": 2236,
+      "renderMs": 964,
+      "exportMs": null
     }
   ],
-  "problems": []
+  "problems": [
+    {
+      "time": "09:30",
+      "message": "Company Stats FIRST compute still slow (12398ms at 500 staff) — KNOWN REMAINING LIMIT; repeat views instant (Fix 2 held, HIT 4ms)",
+      "detail": "fix2={\"missMs\":12398,\"hitMs\":4,\"equal\":true,\"bustOk\":true,\"freshEqual\":true,\"missTotal\":7750,\"bustMs\":11827}",
+      "fix": "Speeding up the FIRST computation (e.g. incremental per-roster aggregates) is a future optimization, not part of Fix 2. Repeat views are instant via the cache."
+    },
+    {
+      "time": "09:30",
+      "message": "Render/measure exceeded 10s (break): FIX 2 — Stats cache bust + cached==fresh = 11827ms",
+      "detail": "bustOk=true freshEqual=true (leaveDays +1 after probe entry, probe entry removed)",
+      "fix": "Profile the slowest render path at this scale; virtualise long lists / paginate."
+    }
+  ]
 }
