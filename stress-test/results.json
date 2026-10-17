@@ -480,6 +480,10 @@
     {
       "time": "12:13",
       "message": "Reloaded — load 1288ms, active 1090, archived 550, bytes 4846319"
+    },
+    {
+      "time": "12:15",
+      "message": "Building up — seeding…"
     }
   ],
   "metrics": [
@@ -510,6 +514,46 @@
     {
       "label": "Rosters list render",
       "value": "88550ms"
+    },
+    {
+      "label": "Company Dashboard render",
+      "value": "644ms"
+    },
+    {
+      "label": "Rules engine",
+      "value": "ok ms=7 violDays=undefined"
+    },
+    {
+      "label": "Inbox render",
+      "value": "743ms"
+    },
+    {
+      "label": "Stats MISS (bust, first view)",
+      "value": "108ms total=15500"
+    },
+    {
+      "label": "Stats HIT (repeat view)",
+      "value": "4ms deep-equal=true"
+    },
+    {
+      "label": "Stats fresh MISS == baseline",
+      "value": "fresh=97ms equal=true"
+    },
+    {
+      "label": "Stats archived month total (Nov 2024)",
+      "value": "0"
+    },
+    {
+      "label": "Export Excel",
+      "value": "ok ms=19 xlsxBytes=25437"
+    },
+    {
+      "label": "Export PDF",
+      "value": "ok ms=689 pdfBytes=371691"
+    },
+    {
+      "label": "Export PNG",
+      "value": "ok ms=446 pngBytes=203056"
     }
   ],
   "progress": {
@@ -529,7 +573,7 @@
     "rosters": 1200,
     "changes": 12500
   },
-  "updatedAt": "2026-10-17T12:14:46.103+02:00",
+  "updatedAt": "2026-10-17T12:15:06.627+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
