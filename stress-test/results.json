@@ -333,7 +333,7 @@
     }
   ],
   "totals": {
-    "companies": 0,
+    "companies": 5,
     "staff": 40000,
     "rosters": 24000,
     "changes": 240400
@@ -398,6 +398,12 @@
       "loadMs": 1609,
       "renderMs": 2103,
       "exportMs": 92
+    },
+    {
+      "staff": 40000,
+      "loadMs": 4200,
+      "renderMs": 17196,
+      "exportMs": 76
     }
   ],
   "storageHistory": [
@@ -608,6 +614,13 @@
       "loadMs": 1609,
       "renderMs": 2103,
       "exportMs": 92
+    },
+    {
+      "level": "Density",
+      "staff": 40000,
+      "loadMs": 4200,
+      "renderMs": 17196,
+      "exportMs": 76
     }
   ],
   "problems": [
@@ -649,10 +662,6 @@
     }
   ],
   "log": [
-    {
-      "time": "14:03",
-      "message": "Point s4c-1000wp done — countsOk=true, crashes=0"
-    },
     {
       "time": "14:04",
       "message": "Building up — seeding…"
@@ -968,8 +977,12 @@
     {
       "time": "17:57",
       "message": "Added drafts — 400 of 400"
+    },
+    {
+      "time": "18:02",
+      "message": "Point s5d-40000dense done — countsOk=true, crashes=1"
     }
   ],
-  "updatedAt": "2026-10-17T18:02:41.458+02:00",
+  "updatedAt": "2026-10-17T18:02:50.374+02:00",
   "history": []
 }
