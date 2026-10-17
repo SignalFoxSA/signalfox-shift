@@ -375,6 +375,9 @@
   .draftbanner{display:none; background:var(--accent); color:var(--accent-ink);
     border-radius:10px; padding:12px 14px; margin:10px 0; font-size:20px; font-weight:900;
     letter-spacing:.5px; text-align:center;}
+  .archivebanner{display:none; background:#FFC13E; color:#000;
+    border-radius:10px; padding:12px 14px; margin:10px 0; font-size:20px; font-weight:900;
+    letter-spacing:.5px; text-align:center;}
   .drafttopbar{display:none; background:var(--card); border:1px solid var(--line);
     border-radius:10px; padding:10px 12px; margin:0 0 10px;}
   .draftopencount{font-size:14px; font-weight:800; margin-top:6px;}
@@ -1147,6 +1150,11 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     <button class="btn" onclick="toNewRoster()">+ New roster</button>
     <div id="allRosterList"></div>
     <div class="card">
+      <h3>Archive</h3>
+      <p class="sub">Rosters older than 12 months move here automatically. A roster moves here once the current month is more than 12 months after its month &mdash; so a roster exactly 12 months old stays active, and a roster 13 months old is archived. Archived rosters stay viewable, but don&rsquo;t count toward Stats or active memory.</p>
+    </div>
+    <div id="archiveList"></div>
+    <div class="card">
       <h3>Drafts</h3>
       <p class="sub">Rosters not yet live &mdash; build them here, publish when ready.</p>
     </div>
@@ -1427,6 +1435,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   <div class="view" id="v-cal">
     <div class="calhead"><b><span id="calTitle"></span></b></div>
     <div id="draftBanner" class="draftbanner">DRAFT &mdash; Not published yet</div>
+    <div id="archiveBanner" class="archivebanner">ARCHIVE &mdash; Read only</div>
     <div id="draftTopBar" class="drafttopbar">
       <label style="display:flex;gap:8px;align-items:center;font-size:14px;font-weight:700;cursor:pointer;">
         <input type="checkbox" id="draftOfferToggle" onchange="toggleDraftOffer(this.checked)" style="width:18px;height:18px;accent-color:var(--accent);"> Offer open shifts for booking
@@ -1457,7 +1466,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       <button class="btn ghost" id="deleteDraftBtn" onclick="deleteDraft()">Delete draft</button>
     </div>
     <button class="btn ghost" id="exportBtn" onclick="openExportSheet()">&#8681; Export roster</button>
-    <button class="btn ghost" onclick="openCrewSheet()">&#9998;&#65039; Edit crews</button>
+    <button class="btn ghost" id="editCrewsBtn" onclick="openCrewSheet()">&#9998;&#65039; Edit crews</button>
   </div>
 
   <!-- STAFF PROFILE TAB -->
@@ -1647,7 +1656,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261017-2002';
+var BUILD='20261017-2003';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -3141,6 +3150,8 @@ function resolveCalRoster(){
 }
 function renderCalendar(){
   var cal=ensureCal();
+  /* FIX D: archive view — pin the calendar to the archived roster's month/team */
+  if(S._archiveView){ cal.vehicleId=S._archiveView.vehicleId; cal.y=S._archiveView.y; cal.m=S._archiveView.m; cal.mode='month'; cal.sub='month'; cal.weekISO=null; }
   if(!cal.vehicleId){
     var v0=(S.base.vehicles||[])[0];
     if(v0) cal.vehicleId=v0.id;
@@ -3149,7 +3160,9 @@ function renderCalendar(){
     var d=new Date(); cal.y=d.getFullYear(); cal.m=d.getMonth();
   }
   var old=document.getElementById('calEmptyPrompt'); if(old) old.remove();
-  var ctx=resolveCalRoster();
+  var ctx=S._archiveView
+    ? {R:S._archiveView.unit.roster, saved:true, unitId:null, unitName:S._archiveView.unit.name}
+    : resolveCalRoster();
   renderCalChrome(ctx);
   var wM=document.getElementById('calMonthWrap'),
       wA=document.getElementById('calAgendaWrap'),
@@ -3161,7 +3174,7 @@ function renderCalendar(){
   }else if(!ctx){
     wM.style.display=''; renderCalEmpty();
   }else{
-    if(S.draft && !S.fromSaved && (ctx.saved || ctx.R!==S.draft)) autoSaveDraft();
+    if(!S._archiveView && S.draft && !S.fromSaved && (ctx.saved || ctx.R!==S.draft)) autoSaveDraft();
     S.draft=ctx.saved?JSON.parse(JSON.stringify(ctx.R)):ctx.R;
     S.fromSaved=ctx.saved; S.unitId=ctx.unitId||null; S.unitName=ctx.unitName;
     if(cal.sub==='week'){ wW.style.display=''; renderCalWeek(ctx); }
@@ -3171,6 +3184,8 @@ function renderCalendar(){
   var isDraftView=!!(ctx&&!ctx.saved);
   var bannerEl=document.getElementById('draftBanner');
   if(bannerEl) bannerEl.style.display=isDraftView?'block':'none';
+  var archBannerEl=document.getElementById('archiveBanner');
+  if(archBannerEl) archBannerEl.style.display=S._archiveView?'block':'none';
   var topBarEl=document.getElementById('draftTopBar');
   if(topBarEl) topBarEl.style.display=isDraftView?'block':'none';
   var saveBtnEl=document.getElementById('saveBtn');
@@ -3179,7 +3194,9 @@ function renderCalendar(){
   if(draftBtnsEl) draftBtnsEl.style.display=isDraftView?'block':'none';
   ensureDraftLeaveSection(isDraftView); /* draft-only long-term leave, below the calendar */
   var exportBtnEl=document.getElementById('exportBtn');
-  if(exportBtnEl) exportBtnEl.style.display=isDraftView?'none':'block'; /* drafts are not exported */
+  if(exportBtnEl) exportBtnEl.style.display=(isDraftView||S._archiveView)?'none':'block'; /* drafts are not exported; archive is read-only */
+  var crewBtnEl=document.getElementById('editCrewsBtn');
+  if(crewBtnEl) crewBtnEl.style.display=S._archiveView?'none':'block'; /* archive is read-only */
   var offerTog=document.getElementById('draftOfferToggle');
   if(offerTog && isDraftView){
     var _de=draftEntryForCurrent();
@@ -3214,6 +3231,7 @@ function countOpenSlots(R,y,m){ return countOpenSlotsFor(S.base, R, y, m); }
 function renderCalChrome(ctx){
   var cal=ensureCal();
   document.getElementById('calTitle').textContent=vehicleName(cal.vehicleId);
+  if(S._archiveView) document.getElementById('calTitle').textContent=S._archiveView.title;
   var vs=document.getElementById('calVehicles'); vs.innerHTML='';
   (S.base.vehicles||[]).forEach(function(v){
     var c=document.createElement('button'); c.className='vchip'+(v.id===cal.vehicleId?' sel':'');
@@ -3388,6 +3406,7 @@ function renderCalMonth(ctx){
     grid.parentNode.appendChild(lvWrap);
   }
   lvWrap.innerHTML=rosterNeedsFillingHtml(R,y,m);
+  if(S._archiveView){ appsWrap.innerHTML=''; lvWrap.innerHTML=''; } /* archive: read-only, no apps / needs-filling actions */
   /* Rule warnings at the bottom of the roster (never block) */
   var rwWrap=document.getElementById('calRuleWrap');
   if(!rwWrap){
@@ -3654,16 +3673,17 @@ function editShiftFromWeek(dayIdx, onList){
   else openSheet(dayIdx, null);
 }
 function calMonthNav(dir){
+  if(S._archiveView){ toast('Archive \u2014 read only'); return; }
   var cal=ensureCal();
   var m=cal.m+dir, y=cal.y;
   if(m<0){ m=11; y--; } if(m>11){ m=0; y++; }
   cal.m=m; cal.y=y; cal.sub='month';
   renderCalendar();
 }
-function calSetMode(mm){ var cal=ensureCal(); cal.mode=mm; cal.sub='month';
+function calSetMode(mm){ if(S._archiveView){ toast('Archive \u2014 read only'); return; } var cal=ensureCal(); cal.mode=mm; cal.sub='month';
   if(mm==='sixmonth'&&(cal.sixY==null)){ cal.sixY=cal.y; cal.sixM=cal.m; }
   renderCalendar(); }
-function calSwitchVehicle(vid){ var cal=ensureCal(); cal.vehicleId=vid; cal.sub='month'; renderCalendar(); }
+function calSwitchVehicle(vid){ if(S._archiveView){ toast('Archive \u2014 read only'); return; } var cal=ensureCal(); cal.vehicleId=vid; cal.sub='month'; renderCalendar(); }
 function calOpenWeek(iso){ var cal=ensureCal(); cal.weekISO=iso; cal.sub='week'; renderCalendar(); }
 function calBackToMonth(){ var cal=ensureCal(); cal.sub='month'; renderCalendar(); }
 function calWeekNav(dir){
@@ -3747,6 +3767,7 @@ function closeSheet(){ document.getElementById('sheetWrap').classList.remove('op
 /* ---------- day detail sheet: view + staff editor ---------- */
 var dayCtx=null;
 function openDaySheet(dateISO){
+  if(S._archiveView){ toast('Archive \u2014 read only'); return; }
   var R=S.draft; if(!R||!R.crews) return;
   var p=dateISO.split('-'); if(p.length<3) return;
   var info=calRosterDay(R, parseInt(p[0],10), parseInt(p[1],10)-1, parseInt(p[2],10));
@@ -4230,6 +4251,7 @@ document.getElementById('daySheetBg').onclick=closeDaySheet;
 
 /* ---------- per-roster crew & staff editing ---------- */
 function openCrewSheet(){
+  if(S._archiveView){ toast('Archive \u2014 read only'); return; }
   var R=S.draft; if(!R) return;
   S.crewEdit=R.crews.map(function(c){
     return {name:c.name, color:c.color, members:((c.members||[]).slice())};
@@ -4344,6 +4366,26 @@ var DB = {
 DB._readyPromise = new Promise(function (res) { DB._readyResolve = res; });
 DB.ready = function () { return DB._readyPromise; };
 DB.flush = function () { return DB._queue; };
+/* FIX D: read a key back from the actual backing store (IndexedDB when
+   in idb mode, localStorage otherwise) and compare with the expected
+   value. Used by the archiver's write-verify-then-remove: a roster is
+   only removed from the active company after its archive copy is
+   verified here. Returns a Promise<boolean>. */
+DB.verify = function (k, expected) {
+  return DB.ready().then(function () {
+    if (DB.mode === 'idb' && DB._db) {
+      return new Promise(function (resolve) {
+        try {
+          var tx = DB._db.transaction(['kv'], 'readonly');
+          var r = tx.objectStore('kv').get(k);
+          r.onsuccess = function () { resolve(!!(r.result && r.result.v === expected)); };
+          r.onerror = function () { resolve(false); };
+        } catch (e) { resolve(false); }
+      });
+    }
+    try { return localStorage.getItem(k) === expected; } catch (e) { return false; }
+  }).catch(function () { return false; });
+};
 DB._strBytes = function (s) {
   try {
     if (typeof TextEncoder !== 'undefined') return new TextEncoder().encode(s).length;
@@ -4688,6 +4730,7 @@ function syncUnit(){
   if(ix>=0){ S.rosters[ix].roster=S.draft; S.rosters[ix].name=S.unitName; persist(); renderRosters(); }
 }
 function saveRoster(){
+  if(S._archiveView){ toast('Archive \u2014 read only'); return; }
   var R=S.draft;
   if(!R){ toast('Generate a roster first'); return; }
   var u={ id:S.unitId||('u'+Date.now()), name:S.unitName||'Untitled team', roster:R };
@@ -4702,6 +4745,7 @@ function saveRoster(){
 }
 function openRoster(id){
   loadSaved();
+  S._archiveView=null; /* leaving any archive view — this is a live roster */
   var u=S.rosters.find(function(x){ return x.id===id; });
   if(!u) return;
   /* STALE-DRAFT FIX: an in-memory draft working copy must never shadow the
@@ -4876,12 +4920,14 @@ function draftEntryForCurrent(){
   return null;
 }
 function saveDraft(){
+  if(S._archiveView){ toast('Archive \u2014 read only'); return; }
   if(!S.draft || S.fromSaved){ toast('Nothing to save as a draft'); return; }
   autoSaveDraft();
   renderDrafts();
   toast('Draft saved');
 }
 function publishDraft(){
+  if(S._archiveView){ toast('Archive \u2014 read only'); return; }
   if(!S.draft || S.fromSaved){ toast('Nothing to publish'); return; }
   var ex=autoSaveDraft();
   if(!ex) return;
@@ -4941,6 +4987,7 @@ function deleteDraftById(id, skipConfirm){
 }
 function openDraft(id){
   autoSaveDraft();
+  S._archiveView=null; /* leaving any archive view — this is a draft */
   loadDrafts();
   var d=(S.drafts||[]).find(function(x){ return x.id===id; });
   if(!d) return;
@@ -7856,6 +7903,176 @@ function companyLoad(){
   if(S.company && Array.isArray(S.company.workplaces) && S.company.workplaces.length) return S.company;
   S.company=null; return null;
 }
+/* ---------- Archiving (FIX D, BUILD 20261017-2003) ----------
+   Rosters older than 12 months AUTO-move to an Archive. Automatic —
+   no button, no confirmation, no setting.
+
+   BOUNDARY RULE: a roster for month M is archived once the current
+   month is MORE than 12 months after M. A roster exactly 12 months
+   old STAYS active; a roster 13 months old is ARCHIVED.
+   (Month difference = (nowYear*12+nowMonth) - (rosterYear*12+rosterMonth);
+   archive when that difference is > 12.) Month rosters use their
+   year/month; span rosters use the month of their startISO; a roster
+   with no date is never archived (safety: never archive what we
+   cannot date).
+
+   STORAGE: the Archive lives in the same DB layer (IndexedDB, same
+   1GB cap — active + archive count together). Two key shapes:
+     sfshift_archive_index  -> JSON array of small metadata entries
+       (aid, unitId, workplaceId, workplaceName, teamName, year,
+       month, label, archivedAt). The list view reads ONLY this.
+     sfshift_archive_<aid>  -> JSON of the full archived unit
+       ({aid, unit, workplaceId, ...}). One roster body is parsed
+       ONLY when the user opens that archived roster; the whole
+       Archive is never loaded into working memory, and Stats /
+       On Duty / calendar / exports only ever scan the active
+       company, so archived rosters never appear there.
+   SAFETY (write-verify-then-remove, same pattern as Fix C's
+   migration): a roster is removed from the active company ONLY
+   after its archive body AND the updated index have both been
+   written AND read back verified from the backing store. If any
+   write/verify fails, the roster stays active and nothing is lost.
+   A roster already in the index (e.g. resurrected by an older cloud
+   sync) is removed from active WITHOUT re-writing — the archive
+   already holds its copy.
+   NOTE: the Archive is local-only in this build: it is not part of
+   cloud sync (collectState) or the backup file, and there is NO
+   restore-from-archive (a later build can add it). Clear Data
+   removes archive keys too. */
+var ARCHIVE_INDEX_KEY='sfshift_archive_index';
+var ARCHIVE_KEY_PREFIX='sfshift_archive_';
+var ARCHIVE_RETENTION_MONTHS=12;
+function archiveMonthIndex(y,m){ return y*12+m; }
+function archiveRosterMonthIndex(R){
+  if(!R) return null;
+  if(R.kind==='month' && typeof R.year==='number' && typeof R.month==='number') return archiveMonthIndex(R.year,R.month);
+  if(R.startISO){ try{ var d=parseISO(R.startISO); if(d && !isNaN(d.getTime())) return archiveMonthIndex(d.getFullYear(), d.getMonth()); }catch(e){} }
+  return null;
+}
+function archiveIsOld(R, nowIdx){
+  var ri=archiveRosterMonthIndex(R); if(ri==null) return false;
+  var now=(typeof nowIdx==='number') ? nowIdx : archiveMonthIndex(new Date().getFullYear(), new Date().getMonth());
+  return (now-ri) > ARCHIVE_RETENTION_MONTHS;
+}
+function archiveLoadIndex(){
+  try{ var raw=DB.get(ARCHIVE_INDEX_KEY); if(!raw) return []; var a=JSON.parse(raw); return Array.isArray(a)?a:[]; }
+  catch(e){ return []; }
+}
+function archiveKeyFor(aid){ return ARCHIVE_KEY_PREFIX+String(aid).replace(/[^A-Za-z0-9_-]/g,'_'); }
+function archiveAid(wpId, unitId){ return wpId+'__'+unitId; }
+function archiveMetaFor(aid, unit, wp){
+  var R=unit&&unit.roster, y=null, m=null;
+  if(R && R.kind==='month'){ y=R.year; m=R.month; }
+  else if(R && R.startISO){ try{ var d=parseISO(R.startISO); y=d.getFullYear(); m=d.getMonth(); }catch(e){} }
+  return {aid:aid, unitId:unit.id, workplaceId:wp.id, workplaceName:wp.name||'Workplace',
+    teamName:unit.name||(R&&R.name)||'Team', year:y, month:m,
+    label:((m==null)?'Roster':(MN[m]+' '+y)), archivedAt:Date.now()};
+}
+function archiveSweep(force){
+  if(S._archiveRunning) return Promise.resolve({moved:0, alreadyArchived:0});
+  if(!force && S._archiveLastSweep && (Date.now()-S._archiveLastSweep)<30000) return Promise.resolve({moved:0, alreadyArchived:0});
+  S._archiveRunning=true; S._archiveLastSweep=Date.now();
+  var result={moved:0, alreadyArchived:0};
+  /* Chain candidates one at a time: each removal is persisted
+     (durable) before the next roster is touched. */
+  var chain=Promise.resolve();
+  function removeFromActive(wp, unitId){
+    wp.rosters=(wp.rosters||[]).filter(function(u){ return u && u.id!==unitId; });
+    /* S.rosters mirrors ONLY the active workplace — never filter it
+       for another workplace (unit ids can repeat across workplaces:
+       a new workplace starts as a snapshot copy of the active one). */
+    if((S.company && wp.id===S.company.activeId) || wp.id==='__active') S.rosters=(S.rosters||[]).filter(function(u){ return u && u.id!==unitId; });
+  }
+  function consider(wp, unit){
+    chain=chain.then(function(){
+      var R=unit&&unit.roster;
+      if(!R || !archiveIsOld(R)) return;
+      /* The roster the user currently has open is left alone — it
+         will be swept on a later load once it is no longer open. */
+      if(S.fromSaved && S.unitId===unit.id) return;
+      var aid=archiveAid(wp.id, unit.id);
+      var idx=archiveLoadIndex();
+      var inIndex=idx.some(function(e){ return e && e.aid===aid; });
+      if(inIndex){
+        /* Archive already holds this roster — just drop the active copy. */
+        removeFromActive(wp, unit.id);
+        persist();
+        result.alreadyArchived++;
+        return;
+      }
+      var meta=archiveMetaFor(aid, unit, wp);
+      var body=JSON.stringify({aid:aid, unit:JSON.parse(JSON.stringify(unit)), workplaceId:wp.id, workplaceName:wp.name||'', archivedAt:meta.archivedAt});
+      if(!DB.set(archiveKeyFor(aid), body)) return; /* cap/full: roster stays active */
+      return DB.flush().then(function(){ return DB.verify(archiveKeyFor(aid), body); }).then(function(ok){
+        if(!ok){ try{ DB.remove(archiveKeyFor(aid)); }catch(e){} return; }
+        var idx2=archiveLoadIndex();
+        idx2.push(meta);
+        var idxStr=JSON.stringify(idx2);
+        if(!DB.set(ARCHIVE_INDEX_KEY, idxStr)) return; /* index not saved: roster stays active */
+        return DB.flush().then(function(){ return DB.verify(ARCHIVE_INDEX_KEY, idxStr); }).then(function(ok2){
+          if(!ok2) return; /* index not verified: roster stays active */
+          removeFromActive(wp, unit.id);
+          persist();
+          result.moved++;
+        });
+      });
+    }).catch(function(){ /* one roster's failure never blocks the rest, and never loses data */ });
+  }
+  try{
+    if(S.company && Array.isArray(S.company.workplaces) && S.company.workplaces.length){
+      S.company.workplaces.forEach(function(wp){
+        (wp.rosters||[]).slice().forEach(function(u){ consider(wp, u); });
+      });
+    }else{
+      /* No company yet: the active rosters live only in S.rosters. */
+      var pseudo={id:'__active', name:(S.base&&S.base.name)||'Workplace', rosters:S.rosters||[]};
+      (S.rosters||[]).slice().forEach(function(u){ consider(pseudo, u); });
+    }
+  }catch(e){ /* never break boot/render because archiving hit a snag */ }
+  return chain.then(function(){
+    S._archiveRunning=false;
+    if(result.moved>0 || result.alreadyArchived>0){ try{ renderRosters(); }catch(e){} try{ renderArchiveList(); }catch(e){} }
+    return result;
+  }).catch(function(){ S._archiveRunning=false; return result; });
+}
+/* Archive list (Rosters tab): reads ONLY the small index, most recent
+   first. Tapping a row opens that ONE archived roster read-only. */
+function renderArchiveList(){
+  var el=document.getElementById('archiveList'); if(!el) return;
+  var idx=archiveLoadIndex().slice();
+  idx.sort(function(a,b){
+    var ai=(a.year||0)*12+(a.month||0), bi=(b.year||0)*12+(b.month||0);
+    if(bi!==ai) return bi-ai;
+    return String(a.teamName||'').localeCompare(String(b.teamName||''));
+  });
+  if(!idx.length){ el.innerHTML='<p class="fine">No archived rosters yet.</p>'; return; }
+  el.innerHTML='';
+  idx.forEach(function(e){
+    var d=document.createElement('div'); d.className='rosteritem';
+    d.innerHTML='<div class="ri"><b>'+escapeHtml(e.teamName||'Team')+'</b><span>'+
+      escapeHtml(e.label||'')+' &middot; '+escapeHtml(e.workplaceName||'Workplace')+'</span></div>';
+    d.onclick=(function(aid){ return function(){ openArchivedRoster(aid); }; })(e.aid);
+    el.appendChild(d);
+  });
+}
+function openArchivedRoster(aid){
+  autoSaveDraft();
+  var raw=null; try{ raw=DB.get(archiveKeyFor(aid)); }catch(e){ raw=null; }
+  var entry=null; try{ entry=raw?JSON.parse(raw):null; }catch(e){ entry=null; }
+  if(!entry || !entry.unit || !entry.unit.roster){ toast('That archived roster could not be found.'); return; }
+  var unit=entry.unit, R=unit.roster;
+  var y=null, m=null;
+  if(R.kind==='month'){ y=R.year; m=R.month; }
+  else if(R.startISO){ try{ var d=parseISO(R.startISO); y=d.getFullYear(); m=d.getMonth(); }catch(e){} }
+  if(y==null||m==null){ toast('That archived roster has no date.'); return; }
+  S._archiveView={aid:aid, unit:JSON.parse(JSON.stringify(unit)), vehicleId:R.vehicleId||null, y:y, m:m,
+    title:(unit.name||R.name||'Team')+' \u00b7 '+MN[m]+' '+y};
+  S.draft=null; S.draftId=null; S.fromSaved=true; S.unitId=null; S.unitName=unit.name;
+  S._calBack='rosters';
+  S.cal={vehicleId:R.vehicleId||((S.base.vehicles||[])[0]||{}).id||null, y:y, m:m, mode:'month', sub:'month', weekISO:null};
+  renderCalendar();
+  show('v-cal');
+}
 function companyWorkplaces(){
   var c=companyEnsure(); return c?c.workplaces:[];
 }
@@ -10092,6 +10309,7 @@ function enterApp(){
   themeApply(themeGet());
   var tabs=document.querySelector('.tabs'); if(tabs) tabs.classList.add('show');
   renderTabs();
+  archiveSweep(); /* FIX D: auto-archive rosters older than 12 months */
   var r=appRole();
   if(r==='staff'&&msPerson){ switchTab('myshifts'); }
   else if(r==='company'){ switchTab('company'); }
@@ -10274,6 +10492,7 @@ function goBack(){
   }
   if(active==='v-anchor'){ show('v-newroster'); return; }
   if(active==='v-cal'){
+    if(S._archiveView){ S._archiveView=null; switchTab('rosters'); return; } /* archive read-only view → back to Rosters */
     var cal=ensureCal();
     if(cal.sub==='week'){ cal.sub='month'; renderCalendar(); return; }
     /* Only a freshly GENERATED roster goes back to the anchor step.
@@ -10364,7 +10583,7 @@ function renderRosters(){
   var all=document.getElementById('allRosterList');
   if(all) renderRosterList(all, 0);
 }
-function renderAllRosters(){ renderRosterList(document.getElementById('allRosterList'), 0); renderDrafts(); renderPublishAlerts(); }
+function renderAllRosters(){ renderRosterList(document.getElementById('allRosterList'), 0); renderDrafts(); renderPublishAlerts(); renderArchiveList(); archiveSweep(); }
 
 /* ---------- workplace setup (teams + crews + custom rotations; rendered into Shift setup) ---------- */
 function openBaseSetup(){ switchTab('staff'); }
@@ -12394,10 +12613,12 @@ function clearData(){
   });
   /* holiday cache keys (dynamic sfshift_hol_* names) come from the DB key index */
   DB.keys().forEach(function(k){ if(k.indexOf('sfshift_hol_')===0) DB.remove(k); });
+  /* FIX D: archive keys (index + one body key per archived roster) */
+  DB.keys().forEach(function(k){ if(k.indexOf('sfshift_archive')===0) DB.remove(k); });
   HOL_MEM={};
   Object.keys(ROTATIONS).forEach(function(k){ if(ROTATIONS[k]&&ROTATIONS[k].custom) delete ROTATIONS[k]; });
   if(sb && sbUser){ try{ sb.from('app_state').delete().eq('user_id', sbUser.id).then(function(){}).catch(function(){}); }catch(e){} }
-  S.company=null; S._rostersLoaded=false;
+  S.company=null; S._rostersLoaded=false; S._archiveView=null;
   S.drafts=[]; S.shiftApps=[]; S.notifications=[]; S.draftId=null; S.draft=null; S.fromSaved=false; S.unitId=null;
   loadBase(); loadSaved();
   renderHome(); renderAllRosters(); renderStaffTab(); renderSettings();
@@ -13165,6 +13386,7 @@ function expFitSheet(){
   sh.style.maxHeight=Math.round(window.innerHeight*0.88)+'px';
 }
 function openExportSheet(){
+  if(S._archiveView){ toast('Archive \u2014 read only'); return; }
   var _ctx=null; try{ _ctx=resolveCalRoster(); }catch(e){}
   if(_ctx && !_ctx.saved){ toast('Drafts can\u2019t be exported \u2014 publish it first.'); return; }
   var E=expData();
@@ -13288,6 +13510,7 @@ async function expGenerateFormat(fmt){
 /* ---------- init ---------- */
 loadCustomRotations();
 loadBase(); loadSaved();
+archiveSweep(); /* FIX D: auto-archive rosters older than 12 months */
 try{
   if(typeof navigator!=='undefined' && 'serviceWorker' in navigator && typeof location!=='undefined' && /^https?:$/.test(location.protocol)){
     /* update banner: when a new app version is ready, offer it instead of
