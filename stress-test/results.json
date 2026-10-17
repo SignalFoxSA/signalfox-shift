@@ -1065,6 +1065,10 @@
     {
       "time": "12:21",
       "message": "Stage 3 done — countsOk=true"
+    },
+    {
+      "time": "12:23",
+      "message": "Stage 3 done — CRITICAL BUG FOUND: stale-mirror S.base wipe (see problems). Counts intact in-test because no post-reload persist ran."
     }
   ],
   "metrics": [
@@ -1154,7 +1158,7 @@
     "rosters": 7200,
     "changes": 72200
   },
-  "updatedAt": "2026-10-17T12:21:33.120+02:00",
+  "updatedAt": "2026-10-17T12:23:41.838+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
@@ -1330,6 +1334,12 @@
       "message": "BUG (Fix D): archiveSweep removals for NON-ACTIVE workplaces are silently lost when loadSaved() runs mid-sweep",
       "detail": "Stage 2: init sweep archived all 550 old rosters (bodies+index landed) but active only fell 1200->1090 (w0 240->130, w1-w4 still 240 each). Mechanism: enterApp -> switchTab(home) -> renderHome -> renderToday -> loadSaved -> companyLoad REPLACES S.company with a fresh parse, detaching the sweep workplace objects. removeFromActive then filters detached wp.rosters for w1-w4 (lost); only the active workplace re-syncs via live S.rosters + companySyncActive. A later Rosters-tab visit runs a second sweep (alreadyArchived path) which removed the other 440 -> final 650 active + 550 archived, consistent. Stats/active views double-count the stale rosters until the Rosters tab is visited. Repro: Stage 2 run (enterApp during sweep) vs probe-sweep-mirror (no enterApp until sweep settled -> clean 130x5). No data loss: archive held all copies; cleanup sweep fixed active.",
       "fix": "Sweep should re-resolve workplace objects from live S.company on each chain step (or companyLoad must not replace S.company while a sweep is running / sweep should hold a lock that loadSaved respects). Also consider: archiveSweep should not rely on captured wp references across awaits."
+    },
+    {
+      "time": "12:23",
+      "message": "CRITICAL (Fix C): S.base silently replaced by a STALE empty default on reload when the localStorage mirror base is stale; next persist() then WIPES the active workplace base from the company",
+      "detail": "Stage 3: after reload S.base.vehicles=0 (teams 0) though company still held the real base (40 teams). Probe-base-poison reproduced exactly: mirror sfshift_base was 89 bytes (a defaultBase stub from the very first load) because the real base mirror write failed once 4600 archive-body mirror writes filled the ~10MB localStorage mirror; init loadBase read the stale 89-byte mirror default into S.base; reconcile fixed the CACHE from IndexedDB but never re-loaded S.base (re-load branch requires DB.appEntered, false during init); enterApp loadSaved heals S.company/S.rosters from reconciled cache but nothing ever re-calls loadBase, so S.base stays the stale default all session. Then ONE persist() -> companySyncActive overwrote the active workplace base in the company with the empty default, in-memory AND stored (companyActiveBaseVehicles 40->0, stored 0). Any save after such a reload destroys the active base (teams/staff/crews/quals/shifts). No persist happened post-reload in the Stage 3 test run itself, so the test company survived; the probe proved the destruction step.",
+      "fix": "(1) Reconcile must re-run loadBase/loadSaved when it changes cache values, even when appEntered is false (or defer init loaders until after reconcile). (2) loadBase must not trust a mirror base that looks like a fresh default when IndexedDB may hold more. (3) companySyncActive must NEVER replace a non-empty company base with an empty S.base — same defensive guard already used for rosters (never wipe non-empty company copy with empty S.rosters)."
     }
   ]
 }
