@@ -12,14 +12,6 @@
   },
   "metrics": [
     {
-      "label": "Load time (reload) s2b-10000staff",
-      "value": "1458ms"
-    },
-    {
-      "label": "Workplace switch (s2b-10000staff)",
-      "value": "7149ms, back 2793ms"
-    },
-    {
       "label": "Stats MISS (s2b-10000staff)",
       "value": "1028ms total=155000"
     },
@@ -330,13 +322,21 @@
     {
       "label": "Calendar render (s5c-8000dense)",
       "value": "3903ms"
+    },
+    {
+      "label": "Seed staff (s5d-40000dense)",
+      "value": "40000"
+    },
+    {
+      "label": "Load time (reload) s5d-40000dense",
+      "value": "4582ms"
     }
   ],
   "totals": {
     "companies": 0,
-    "staff": 8000,
-    "rosters": 4800,
-    "changes": 48100
+    "staff": 40000,
+    "rosters": 24000,
+    "changes": 240400
   },
   "perfHistory": [
     {
@@ -520,6 +520,14 @@
     {
       "time": "15:16",
       "kb": 23363
+    },
+    {
+      "time": "16:13",
+      "kb": 68934
+    },
+    {
+      "time": "16:13",
+      "kb": 68934
     }
   ],
   "speedPerLevel": [
@@ -624,93 +632,15 @@
       "message": "Point s5c-8000dense fatal",
       "detail": "browser.newContext: Target page, context or browser has been closed",
       "fix": "See result JSON + screenshot."
+    },
+    {
+      "time": "16:15",
+      "message": "Point s5d-40000dense: workplace switch CRASHED the page",
+      "detail": "switch to workplace #2 (5 workplaces, 8000 staff/workplace, 4800 rosters/workplace): SWITCH-TIMEOUT-120s: companySwitchWorkplace did not finish in 120s (renders hung)",
+      "fix": "companySwitchWorkplace deep-clones the whole target workplace + renders 5 views synchronously; it needs incremental/virtualised switching."
     }
   ],
   "log": [
-    {
-      "time": "14:03",
-      "message": "Workplace 960/1000 seeded — staff 19200, rosters 11520"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 961/1000 seeded — staff 19220, rosters 11532"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 962/1000 seeded — staff 19240, rosters 11544"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 963/1000 seeded — staff 19260, rosters 11556"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 964/1000 seeded — staff 19280, rosters 11568"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 965/1000 seeded — staff 19300, rosters 11580"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 966/1000 seeded — staff 19320, rosters 11592"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 967/1000 seeded — staff 19340, rosters 11604"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 968/1000 seeded — staff 19360, rosters 11616"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 969/1000 seeded — staff 19380, rosters 11628"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 970/1000 seeded — staff 19400, rosters 11640"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 971/1000 seeded — staff 19420, rosters 11652"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 972/1000 seeded — staff 19440, rosters 11664"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 973/1000 seeded — staff 19460, rosters 11676"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 974/1000 seeded — staff 19480, rosters 11688"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 975/1000 seeded — staff 19500, rosters 11700"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 976/1000 seeded — staff 19520, rosters 11712"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 977/1000 seeded — staff 19540, rosters 11724"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 978/1000 seeded — staff 19560, rosters 11736"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 979/1000 seeded — staff 19580, rosters 11748"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 980/1000 seeded — staff 19600, rosters 11760"
-    },
     {
       "time": "14:03",
       "message": "Workplace 981/1000 seeded — staff 19620, rosters 11772"
@@ -946,8 +876,92 @@
     {
       "time": "16:13",
       "message": "Building up — seeding…"
+    },
+    {
+      "time": "16:13",
+      "message": "Workplace 1/5 seeded — staff 8000, rosters 4800"
+    },
+    {
+      "time": "16:13",
+      "message": "Workplace 2/5 seeded — staff 16000, rosters 9600"
+    },
+    {
+      "time": "16:13",
+      "message": "Workplace 3/5 seeded — staff 24000, rosters 14400"
+    },
+    {
+      "time": "16:13",
+      "message": "Workplace 4/5 seeded — staff 32000, rosters 19200"
+    },
+    {
+      "time": "16:13",
+      "message": "Workplace 5/5 seeded — staff 40000, rosters 24000"
+    },
+    {
+      "time": "16:13",
+      "message": "Added notifications — 1000 of 8000"
+    },
+    {
+      "time": "16:13",
+      "message": "Added notifications — 2000 of 8000"
+    },
+    {
+      "time": "16:13",
+      "message": "Added notifications — 3000 of 8000"
+    },
+    {
+      "time": "16:13",
+      "message": "Added notifications — 4000 of 8000"
+    },
+    {
+      "time": "16:13",
+      "message": "Added notifications — 5000 of 8000"
+    },
+    {
+      "time": "16:13",
+      "message": "Added notifications — 6000 of 8000"
+    },
+    {
+      "time": "16:13",
+      "message": "Added notifications — 7000 of 8000"
+    },
+    {
+      "time": "16:13",
+      "message": "Added notifications — 8000 of 8000"
+    },
+    {
+      "time": "16:13",
+      "message": "Added applications — 400 of 1600"
+    },
+    {
+      "time": "16:13",
+      "message": "Added applications — 800 of 1600"
+    },
+    {
+      "time": "16:13",
+      "message": "Added applications — 1200 of 1600"
+    },
+    {
+      "time": "16:13",
+      "message": "Added applications — 1600 of 1600"
+    },
+    {
+      "time": "16:13",
+      "message": "Added drafts — 100 of 400"
+    },
+    {
+      "time": "16:13",
+      "message": "Added drafts — 200 of 400"
+    },
+    {
+      "time": "16:13",
+      "message": "Added drafts — 300 of 400"
+    },
+    {
+      "time": "16:13",
+      "message": "Added drafts — 400 of 400"
     }
   ],
-  "updatedAt": "2026-10-17T16:13:25.387+02:00",
+  "updatedAt": "2026-10-17T16:15:39.437+02:00",
   "history": []
 }
