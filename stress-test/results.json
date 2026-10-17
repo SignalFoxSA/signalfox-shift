@@ -1,8 +1,8 @@
 {
   "status": "running",
-  "stage": "Stage 1 of 7 — s1b-1000staff",
+  "stage": "Stage 2 of 7 — s2a-4000staff",
   "progress": {
-    "current": 1,
+    "current": 2,
     "total": 7
   },
   "thresholds": {
@@ -351,8 +351,12 @@
     {
       "time": "13:57",
       "message": "Point s1b-1000staff done — countsOk=true, crashes=0"
+    },
+    {
+      "time": "13:57",
+      "message": "Building up — seeding…"
     }
   ],
-  "updatedAt": "2026-10-17T13:57:21.567+02:00",
+  "updatedAt": "2026-10-17T13:57:29.635+02:00",
   "history": []
 }
