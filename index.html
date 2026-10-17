@@ -449,7 +449,7 @@
     color:#ffd97a; font-size:12px; text-align:center; padding:7px 10px; border-radius:10px; margin:8px 0 0;}
   /* Storage-full (quota) warning: persistent banner, NOT a toast — a
      toast disappears and the user would keep working on unsaved state.
-     Shown when any localStorage save fails because the device storage
+     Shown when any save fails because the device storage
      is full (~5MB browser cap). Stays until storage is freed (a later
      save succeeds) or the user dismisses it; reappears on the next
      failed save if dismissed. */
@@ -1647,7 +1647,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261017-2001';
+var BUILD='20261017-2002';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -1848,7 +1848,7 @@ Object.keys(ROTATIONS).forEach(function(k){ if(!ROTATIONS[k].cov) ROTATIONS[k].c
 /* merge user-designed custom rotations */
 function loadCustomRotations(){
   var customs={};
-  try{ customs=JSON.parse(localStorage.getItem('sfshift_custom_rot')||'{}'); }catch(e){ customs={}; }
+  try{ customs=JSON.parse(DB.get('sfshift_custom_rot')||'{}'); }catch(e){ customs={}; }
   Object.keys(customs).forEach(function(k){
     var c=customs[k];
     if(c && c.pattern && c.cycle){ ROTATIONS[k]=migrateCustomRotation(c); }
@@ -1857,7 +1857,7 @@ function loadCustomRotations(){
 function persistCustomRotations(){
   var customs={};
   Object.keys(ROTATIONS).forEach(function(k){ if(ROTATIONS[k].custom) customs[k]=ROTATIONS[k]; });
-  try{ localStorage.setItem('sfshift_custom_rot', JSON.stringify(customs)); }catch(e){ storageQuotaWarn(e); }
+  DB.set('sfshift_custom_rot', JSON.stringify(customs));
   queueCloudSave();
 }
 
@@ -2476,8 +2476,8 @@ var S = {
   draft:null,       // roster being built / viewed
   rosters:[],       // saved roster snapshots: [{id, name, roster}]
   drafts:[],        // persisted draft rosters: [{id, teamId, year, month, name, roster, createdAt, offerOpenShifts}]
-  shiftApps:[],     // persisted marketplace applications (localStorage 'sfshift_apps' + cloud sync via collectState)
-  notifications:[], // persisted inbox notifications (localStorage 'sfshift_notifications' + cloud sync via collectState)
+  shiftApps:[],     // persisted marketplace applications (IndexedDB 'sfshift_apps' + cloud sync via collectState)
+  notifications:[], // persisted inbox notifications (IndexedDB 'sfshift_notifications' + cloud sync via collectState)
   draftId:null,     // id of the persisted draft currently being viewed (null = transient / live)
   base:null,
   cal:null,         // calendar view context: {vehicleId, y, m, mode:'month'|'agenda', sub:'month'|'week', weekISO}
@@ -2544,7 +2544,7 @@ function pillVal(id){ return document.querySelector('#'+id+' .pill.sel').getAttr
 /* ---------- base: build once, every roster follows the standard ---------- */
 function defaultBase(){ return {name:'My Workplace', vehicles:[], staff:[], crews:[], quals:[], peoplePerShift:2}; }
 function loadBase(){
-  try{ S.base=JSON.parse(localStorage.getItem('sfshift_base')||'null'); }catch(e){ S.base=null; }
+  try{ S.base=JSON.parse(DB.get('sfshift_base')||'null'); }catch(e){ S.base=null; }
   if(!S.base || !S.base.vehicles){ S.base=defaultBase(); migrateUnitsToBase(); persistBase(); }
   /* normalize older saves: coverage + valid rotation + crew colors */
   S.base.vehicles.forEach(function(v,vi){
@@ -2574,7 +2574,7 @@ function shiftLenOptions(k){
   var r=ROTATIONS[k]||{};
   return [[String(r.hours||12),(r.hours||12)+'-hour']];
 }
-function persistBase(){ try{ localStorage.setItem('sfshift_base', JSON.stringify(S.base)); }catch(e){ storageQuotaWarn(e); } if(S.company) companyPersist(); queueCloudSave(); }
+function persistBase(){ DB.set('sfshift_base', JSON.stringify(S.base)); if(S.company) companyPersist(); queueCloudSave(); }
 function staffName(id){ var s=S.base.staff.find(function(x){ return x.id===id; }); return s?s.name:''; }
 function vehicleCrews(vid){ return S.base.crews.filter(function(c){ return c.vehicleId===vid; }); }
 /* crew names must be unique across the whole workplace ("I'm crew A — but on which team?"
@@ -2620,7 +2620,7 @@ function ensureCrews(v){
 }
 /* migrate old per-vehicle rosters into a base */
 function migrateUnitsToBase(){
-  var units=[]; try{ units=JSON.parse(localStorage.getItem('sfshift_units')||'[]'); }catch(e){}
+  var units=[]; try{ units=JSON.parse(DB.get('sfshift_units')||'[]'); }catch(e){}
   if(!units.length) return;
   var byName={};
   units.forEach(function(u){
@@ -4286,16 +4286,313 @@ function saveCrewEdit(){
 }
 
 
+/* ---------- IndexedDB storage layer (FIX C, BUILD 20261017-2002) ----------
+   The app's DATA lives in IndexedDB ("the big box"), capped at 1GB
+   (1,073,741,824 bytes), instead of localStorage (~5MB browser cap).
+   The data model is unchanged: same keys, same shapes, same behaviour —
+   only where the data lives changed.
+
+   Why a sync cache: every existing read/write call site is synchronous,
+   but IndexedDB is async. DB keeps a synchronous in-memory cache
+   (key -> string) that all reads/writes go through, and flushes writes
+   to IndexedDB on an ordered queue. The cache is hydrated synchronously
+   from localStorage at boot (the pre-update store), then reconciled
+   against IndexedDB once it opens: IndexedDB wins for any key the user
+   has not changed since boot; a key the user already changed in the
+   boot window keeps the user's newer value (and its queued write then
+   lands that value in IndexedDB).
+
+   Migration: first load after the update finds IndexedDB empty and
+   localStorage full -> every localStorage value is written to
+   IndexedDB, read back, and compared (write-verify). localStorage
+   copies are KEPT as a fallback/mirror (never deleted before the new
+   copy is confirmed — and never deleted at all), so a failed
+   migration loses nothing: the app keeps running on localStorage.
+
+   Fallback: if IndexedDB is unavailable (old browser, private mode,
+   blocked), mode stays 'local' and everything works exactly as
+   before on localStorage, including the old ~5MB quota behaviour.
+
+   Cap: in IndexedDB mode, DB.set() refuses a write that would push
+   total stored bytes over 1GB (keeps the in-memory data, shows the
+   storage-full banner, returns false — same contract as a quota
+   failure before). At >=900MB the same banner shows the
+   "almost full" message instead. The cap is enforced on writes only;
+   reads are never blocked.
+
+   Offline: IndexedDB is on-device; no network is involved.
+
+   TEST HOOKS (used by the verification script only, never by the app):
+   DB.CAP_BYTES / DB.WARN_BYTES are mutable so a test can lower the
+   cap and watch the warnings fire; DB.flush() awaits the write queue;
+   DB.ready() resolves when IndexedDB init/migration has finished. */
+var DB = {
+  CAP_BYTES: 1073741824,   /* 1GB cap */
+  WARN_BYTES: 900000000,   /* warn at 900MB */
+  mode: 'pending',         /* 'pending' | 'idb' | 'local' */
+  cache: {},
+  bytes: 0,
+  migrated: false,
+  appEntered: false,
+  _boot: null,
+  _queue: Promise.resolve(),
+  _db: null,
+  _readyResolve: null,
+  _readyPromise: null,
+  _lastFailToast: 0
+};
+DB._readyPromise = new Promise(function (res) { DB._readyResolve = res; });
+DB.ready = function () { return DB._readyPromise; };
+DB.flush = function () { return DB._queue; };
+DB._strBytes = function (s) {
+  try {
+    if (typeof TextEncoder !== 'undefined') return new TextEncoder().encode(s).length;
+  } catch (e) {}
+  return String(s).length;
+};
+DB._entryBytes = function (k, v) { return DB._strBytes(k) + DB._strBytes(v == null ? '' : v); };
+DB._recomputeBytes = function () {
+  var total = 0, k;
+  for (k in DB.cache) if (Object.prototype.hasOwnProperty.call(DB.cache, k)) total += DB._entryBytes(k, DB.cache[k]);
+  DB.bytes = total;
+};
+/* Sync boot: hydrate the cache from localStorage (the pre-update store).
+   Runs at parse time, before any app code reads storage. */
+DB.boot = function () {
+  var snap = {};
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf('sfshift_') === 0) {
+        try { snap[k] = localStorage.getItem(k); } catch (e) {}
+      }
+    }
+  } catch (e) {}
+  DB.cache = snap;
+  DB._boot = {};
+  for (var k2 in snap) if (Object.prototype.hasOwnProperty.call(snap, k2)) DB._boot[k2] = snap[k2];
+  DB._recomputeBytes();
+  DB.initAsync();
+};
+DB.initAsync = function () {
+  var done = function () { try { DB._readyResolve(); } catch (e) {} DB.recheckWarnings(); };
+  try {
+    if (!window.indexedDB || !window.indexedDB.open) { DB.mode = 'local'; done(); return; }
+  } catch (e) { DB.mode = 'local'; done(); return; }
+  var req;
+  try {
+    req = window.indexedDB.open('signalfox-shift', 1);
+  } catch (e) { DB.mode = 'local'; done(); return; }
+  req.onupgradeneeded = function () {
+    try {
+      var db = req.result;
+      if (db && !db.objectStoreNames.contains('kv')) db.createObjectStore('kv', { keyPath: 'k' });
+    } catch (e) {}
+  };
+  req.onerror = function () { DB.mode = 'local'; done(); };
+  req.onblocked = function () { /* another tab holds the DB — success/error still fire */ };
+  req.onsuccess = function () {
+    try { DB._db = req.result; } catch (e) { DB.mode = 'local'; done(); return; }
+    DB._idbGetAll().then(function (entries) {
+      if (entries && entries.length) { DB.mode = 'idb'; DB._reconcile(entries); return; }
+      return DB._migrate();
+    }).catch(function () { DB.mode = 'local'; }).then(function () { done(); });
+  };
+};
+DB._idbGetAll = function () {
+  return new Promise(function (resolve, reject) {
+    try {
+      var tx = DB._db.transaction(['kv'], 'readonly');
+      var r = tx.objectStore('kv').getAll();
+      r.onsuccess = function () { resolve(r.result || []); };
+      r.onerror = function () { reject(r.error); };
+    } catch (e) { reject(e); }
+  });
+};
+DB._idbPutMany = function (keys, snap) {
+  return new Promise(function (resolve) {
+    if (!keys.length) { resolve(); return; }
+    try {
+      var tx = DB._db.transaction(['kv'], 'readwrite');
+      var st = tx.objectStore('kv');
+      keys.forEach(function (k) { try { st.put({ k: k, v: snap[k] }); } catch (e) {} });
+      tx.oncomplete = function () { resolve(); };
+      tx.onerror = function () { resolve(); };
+      tx.onabort = function () { resolve(); };
+    } catch (e) { resolve(); }
+  });
+};
+/* Migration: localStorage -> IndexedDB, write-verify. localStorage
+   copies are kept (fallback/mirror) whatever the outcome. */
+DB._migrate = function () {
+  var snap = {};
+  for (var k in DB.cache) if (Object.prototype.hasOwnProperty.call(DB.cache, k)) snap[k] = DB.cache[k];
+  var keys = Object.keys(snap);
+  return DB._idbPutMany(keys, snap).then(function () {
+    return DB._idbGetAll();
+  }).then(function (back) {
+    var map = {};
+    (back || []).forEach(function (e) { if (e && typeof e.k === 'string') map[e.k] = e.v; });
+    var ok = Object.keys(map).length === keys.length;
+    if (ok) { for (var i = 0; i < keys.length; i++) if (map[keys[i]] !== snap[keys[i]]) { ok = false; break; } }
+    if (ok) { DB.mode = 'idb'; if (keys.length) DB.migrated = true; }
+    else { DB.mode = 'local'; }
+  }).catch(function () { DB.mode = 'local'; });
+};
+/* Reconcile: IndexedDB is the source of truth. It wins for keys
+   untouched since boot; the user's newer in-window edits win for keys
+   they already changed (their queued write then lands in IndexedDB). */
+DB._reconcile = function (entries) {
+  var map = {};
+  (entries || []).forEach(function (e) { if (e && typeof e.k === 'string') map[e.k] = e.v; });
+  var changed = false, k;
+  for (k in map) {
+    if (!Object.prototype.hasOwnProperty.call(map, k)) continue;
+    var winner = (DB.cache[k] === DB._boot[k]) ? map[k] : DB.cache[k];
+    if (DB.cache[k] !== winner) { DB.cache[k] = winner; changed = true; }
+    try { localStorage.setItem(k, winner); } catch (e) {}
+  }
+  for (k in DB.cache) {
+    if (!Object.prototype.hasOwnProperty.call(DB.cache, k)) continue;
+    if (!(k in map) && DB.cache[k] === DB._boot[k]) {
+      delete DB.cache[k]; changed = true;
+      try { localStorage.removeItem(k); } catch (e) {}
+    }
+  }
+  DB._recomputeBytes();
+  /* If the app already rendered from the boot (localStorage) values,
+     re-load state from the reconciled cache and re-render — the
+     IndexedDB values are the truth. (In practice init finishes before
+     enterApp, so this branch only fires with >5MB of data, where the
+     localStorage mirror had already gone stale.) */
+  if (changed && DB.appEntered) {
+    try { loadCustomRotations(); loadBase(); loadSaved(); loadNotifications(); } catch (e) {}
+    try { renderHome(); renderAllRosters(); renderStaffTab(); renderSettings(); updateBell(); } catch (e) {}
+  }
+};
+DB.get = function (k) {
+  if (Object.prototype.hasOwnProperty.call(DB.cache, k)) return DB.cache[k];
+  /* Cache miss: direct localStorage read (a key written outside DB,
+     or the pre-main-script theme snippet). */
+  var v = null;
+  try { v = localStorage.getItem(k); } catch (e) { v = null; }
+  if (v !== null && v !== undefined) { DB.cache[k] = v; DB._recomputeBytes(); return v; }
+  return null;
+};
+DB.set = function (k, v) {
+  try { v = String(v); } catch (e) { v = ''; }
+  try {
+    if (DB.mode !== 'local') {
+      var oldB = 0;
+      if (Object.prototype.hasOwnProperty.call(DB.cache, k)) oldB = DB._entryBytes(k, DB.cache[k]);
+      if (DB.bytes - oldB + DB._entryBytes(k, v) > DB.CAP_BYTES) {
+        DB._showFull();
+        return false;
+      }
+    }
+    var had = Object.prototype.hasOwnProperty.call(DB.cache, k);
+    var prev = had ? DB.cache[k] : null;
+    DB.cache[k] = v;
+    if (had) DB.bytes += DB._entryBytes(k, v) - DB._entryBytes(k, prev);
+    else DB.bytes += DB._entryBytes(k, v);
+    if (DB.mode === 'local') {
+      /* Fallback: localStorage IS the store — a failure here is real. */
+      try { localStorage.setItem(k, v); }
+      catch (e) { try { storageQuotaWarn(e); } catch (_) {} return false; }
+    } else {
+      /* IndexedDB is the store; the localStorage mirror is best-effort
+         (it fails silently past ~5MB — exactly why we moved). */
+      try { localStorage.setItem(k, v); } catch (e) {}
+      DB._enqueuePut(k, v);
+    }
+    if (DB.mode !== 'local' && DB.bytes >= DB.WARN_BYTES) DB._showAlmost();
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+DB.remove = function (k) {
+  try {
+    if (Object.prototype.hasOwnProperty.call(DB.cache, k)) {
+      DB.bytes -= DB._entryBytes(k, DB.cache[k]);
+      delete DB.cache[k];
+    }
+    try { localStorage.removeItem(k); } catch (e) {}
+    if (DB.mode !== 'local') DB._enqueueDelete(k);
+    return true;
+  } catch (e) { return false; }
+};
+DB.keys = function () { return Object.keys(DB.cache); };
+DB._enqueuePut = function (k, v) {
+  DB._queue = DB._queue.then(function () { return DB._idbPut(k, v); }).catch(function () {});
+};
+DB._enqueueDelete = function (k) {
+  DB._queue = DB._queue.then(function () { return DB._idbDelete(k); }).catch(function () {});
+};
+DB._idbPut = function (k, v) {
+  return DB.ready().then(function () {
+    if (DB.mode !== 'idb' || !DB._db) return;
+    return new Promise(function (resolve) {
+      try {
+        var tx = DB._db.transaction(['kv'], 'readwrite');
+        tx.objectStore('kv').put({ k: k, v: v });
+        tx.oncomplete = function () { resolve(); };
+        tx.onerror = function () { DB._idbWriteFailed(); resolve(); };
+        tx.onabort = function () { DB._idbWriteFailed(); resolve(); };
+      } catch (e) { DB._idbWriteFailed(); resolve(); }
+    });
+  }).catch(function () {});
+};
+DB._idbDelete = function (k) {
+  return DB.ready().then(function () {
+    if (DB.mode !== 'idb' || !DB._db) return;
+    return new Promise(function (resolve) {
+      try {
+        var tx = DB._db.transaction(['kv'], 'readwrite');
+        tx.objectStore('kv').delete(k);
+        tx.oncomplete = function () { resolve(); };
+        tx.onerror = function () { DB._idbWriteFailed(); resolve(); };
+        tx.onabort = function () { DB._idbWriteFailed(); resolve(); };
+      } catch (e) { DB._idbWriteFailed(); resolve(); }
+    });
+  }).catch(function () {});
+};
+DB._idbWriteFailed = function () {
+  try { S._storageFull = true; } catch (e) {}
+  try { storageWarnShow(); } catch (e) {}
+  var now = Date.now();
+  if (now - DB._lastFailToast > 5000) {
+    DB._lastFailToast = now;
+    try { toast('Storage full \u2014 changes can\u2019t be saved. Free space to keep your data safe.'); } catch (e) {}
+  }
+};
+DB._showFull = function () {
+  try { S._storageFull = true; } catch (e) {}
+  try { storageWarnShow(); } catch (e) {}
+  try { toast('Storage full \u2014 changes can\u2019t be saved. Free space to keep your data safe.'); } catch (e) {}
+};
+DB._showAlmost = function () {
+  try { storageWarnShowAlmost(); } catch (e) {}
+};
+DB.recheckWarnings = function () {
+  try {
+    if (DB.mode === 'local') return;
+    if (DB.bytes >= DB.WARN_BYTES) DB._showAlmost();
+  } catch (e) {}
+};
+DB.boot();
+
+
 /* ---------- save / load (units) ---------- */
 function loadSaved(){
   loadDrafts();
-  try{ S.rosters=JSON.parse(localStorage.getItem('sfshift_units')||'[]'); }catch(e){ S.rosters=[]; }
+  try{ S.rosters=JSON.parse(DB.get('sfshift_units')||'[]'); }catch(e){ S.rosters=[]; }
   S._rostersLoaded=true; companyLoad();
   loadShiftApps();
   if(!Array.isArray(S.rosters)) S.rosters=[];
   if(!S.rosters.length){
     try{ /* migrate old single-roster saves */
-      var old=JSON.parse(localStorage.getItem('sfshift_rosters')||'[]');
+      var old=JSON.parse(DB.get('sfshift_rosters')||'[]');
       if(old.length){
         S.rosters=old.map(function(r){
           (r.crews||[]).forEach(function(c){ if(!c.members) c.members=[]; });
@@ -4316,8 +4613,9 @@ function loadSaved(){
   if(S.rosters.length!==before) persist();
 }
 /* ---------- Storage-full (quota) warning ----------
-   localStorage is capped at ~5MB by the browser. Before this fix, a
-   save that failed because storage was full was silently swallowed
+   IndexedDB is capped at 1GB by the app (Fix C); localStorage (~5MB
+   browser cap) is only the fallback when IndexedDB is unavailable.
+   Before Fix 1, a save that failed because storage was full was silently swallowed
    (empty catch), so the app kept running on unsaved state — and a
    later loadSaved() → companyLoad() then DISCARDED the in-memory
    company (stress test Stages 4–5: 5→1 workplaces, 3,600→720 rosters,
@@ -4340,6 +4638,11 @@ function storageQuotaWarn(e){
 }
 function storageQuotaClear(){
   S._storageFull=false;
+  /* FIX C: if IndexedDB is still >=900MB, keep the almost-full banner
+     up instead of hiding it — the warning stays until space is freed. */
+  try{
+    if(typeof DB!=='undefined' && DB.mode!=='local' && DB.bytes>=DB.WARN_BYTES){ storageWarnShowAlmost(); return; }
+  }catch(e){}
   var b=null; try{ b=document.getElementById('storageWarn'); }catch(_){}
   if(b) b.style.display='none';
 }
@@ -4352,13 +4655,26 @@ function storageWarnDismiss(){
    (S._storageFull) and a loader had to keep in-memory data because
    storage came back empty, the warning is still true — re-assert it. */
 function storageWarnShow(){
+  /* FIX C: always restore the full-storage text — the banner doubles
+     as the almost-full warning (storageWarnShowAlmost), and a later
+     full event must not leave the almost-full wording up. */
   var b=null; try{ b=document.getElementById('storageWarn'); }catch(_){}
-  if(b) b.style.display='flex';
+  if(!b) return;
+  try{ var sp=b.querySelector('span'); if(sp) sp.textContent='Device storage is full \u2014 changes can\u2019t be saved. Delete old rosters or drafts to free space, so you don\u2019t lose work.'; }catch(_){}
+  b.style.display='flex';
+}
+/* FIX C (BUILD 20261017-2002): almost-full warning at >=900MB — same
+   #storageWarn banner, different text, no second banner style. */
+function storageWarnShowAlmost(){
+  var b=null; try{ b=document.getElementById('storageWarn'); }catch(_){}
+  if(!b) return;
+  try{ var sp=b.querySelector('span'); if(sp) sp.textContent='Storage almost full \u2014 archive or delete old rosters to free space.'; }catch(_){}
+  b.style.display='flex';
 }
 function persist(){
   var failed=false;
-  try{ localStorage.setItem('sfshift_units', JSON.stringify(S.rosters)); }catch(e){ failed=true; storageQuotaWarn(e); }
-  if(S._draftsLoaded){ try{ localStorage.setItem('sfshift_drafts', JSON.stringify(S.drafts||[])); }catch(e){ failed=true; storageQuotaWarn(e); } }
+  if(!DB.set('sfshift_units', JSON.stringify(S.rosters))) failed=true;
+  if(S._draftsLoaded){ if(!DB.set('sfshift_drafts', JSON.stringify(S.drafts||[]))) failed=true; }
   if(S.company && !companyPersist()) failed=true;
   queueCloudSave();
   if(!failed) storageQuotaClear();
@@ -4422,7 +4738,7 @@ function deleteRoster(id){
 }
 
 /* ---------- Draft Mode: persisted, manageable roster drafts ----------
-   A draft is a roster that is NOT live. It lives in S.drafts (localStorage
+   A draft is a roster that is NOT live. It lives in S.drafts (IndexedDB
    'sfshift_drafts' + cloud sync via collectState), is listed on the Rosters
    tab, opens in the calendar with the DRAFT badge, and is published into
    S.rosters when ready. The ONE exception to "drafts are not live": a
@@ -4438,7 +4754,7 @@ function draftWorkplaceId(d){ return (d && d.workplaceId) || activeWorkplaceId()
 function draftBelongsTo(d, wid){ return !!d && draftWorkplaceId(d)===wid; }
 function draftsForWorkplace(wid){ return (S.drafts||[]).filter(function(d){ return draftBelongsTo(d, wid); }); }
 function loadDrafts(){
-  try{ S.drafts=JSON.parse(localStorage.getItem('sfshift_drafts')||'[]'); }catch(e){ S.drafts=[]; }
+  try{ S.drafts=JSON.parse(DB.get('sfshift_drafts')||'[]'); }catch(e){ S.drafts=[]; }
   S._draftsLoaded=true;
   if(!Array.isArray(S.drafts)) S.drafts=[];
   var before=S.drafts.length;
@@ -4455,12 +4771,12 @@ function loadDrafts(){
   if(S.drafts.length!==before || stamped) persistDrafts();
 }
 function persistDrafts(){
-  try{ localStorage.setItem('sfshift_drafts', JSON.stringify(S.drafts||[])); }catch(e){ storageQuotaWarn(e); }
+  DB.set('sfshift_drafts', JSON.stringify(S.drafts||[]));
   S._draftsLoaded=true;
   queueCloudSave();
 }
 /* ---------- Marketplace applications: persisted, like drafts ----------
-   S.shiftApps lives in localStorage ('sfshift_apps') + cloud sync via
+   S.shiftApps lives in IndexedDB ('sfshift_apps') + cloud sync via
    collectState. Pending applications whose roster/draft no longer exists
    are dropped silently on load (never shown as a broken approval). A
    pending application whose slot has since been filled is KEPT — the
@@ -4479,7 +4795,7 @@ function loadShiftApps(){
      storage is healthy and holds a value, loading from storage works
      exactly as before. */
   var _raw=null, _parsed=null, _parseOk=false;
-  try{ _raw=localStorage.getItem('sfshift_apps'); }catch(e){ _raw=null; }
+  try{ _raw=DB.get('sfshift_apps'); }catch(e){ _raw=null; }
   if(_raw){
     try{ _parsed=JSON.parse(_raw); _parseOk=true; }catch(e){ _parsed=null; _parseOk=false; }
   }
@@ -4513,7 +4829,7 @@ function loadShiftApps(){
   if(S.shiftApps.length!==before) persistShiftApps();
 }
 function persistShiftApps(){
-  try{ localStorage.setItem('sfshift_apps', JSON.stringify(S.shiftApps||[])); }catch(e){ storageQuotaWarn(e); }
+  DB.set('sfshift_apps', JSON.stringify(S.shiftApps||[]));
   S._appsLoaded=true;
   queueCloudSave();
 }
@@ -7173,7 +7489,7 @@ function dayAppUnapprove(appId){ mkUnapprove(appId); daySheetRefreshAfterApp(); 
 function dayAppReopen(appId){ mkReopen(appId); daySheetRefreshAfterApp(); }
 /* ---------- Inbox / Notifications ----------
    System notifications, NOT two-way chat — staff cannot reply through it.
-   S.notifications lives in localStorage ('sfshift_notifications') + cloud
+   S.notifications lives in IndexedDB ('sfshift_notifications') + cloud
    sync via collectState, exactly like S.shiftApps. addNotification() is the
    general container any future feature can call; the application types
    are application / approved / declined / unapproved / withdrawn /
@@ -7191,7 +7507,7 @@ function loadNotifications(){
      storage is healthy and holds a value, loading from storage works
      exactly as before. */
   var _raw=null, _parsed=null, _parseOk=false;
-  try{ _raw=localStorage.getItem('sfshift_notifications'); }catch(e){ _raw=null; }
+  try{ _raw=DB.get('sfshift_notifications'); }catch(e){ _raw=null; }
   if(_raw){
     try{ _parsed=JSON.parse(_raw); _parseOk=true; }catch(e){ _parsed=null; _parseOk=false; }
   }
@@ -7210,7 +7526,7 @@ function loadNotifications(){
   if(!Array.isArray(S.notifications)) S.notifications=[];
 }
 function persistNotifications(){
-  try{ localStorage.setItem('sfshift_notifications', JSON.stringify(S.notifications||[])); }catch(e){ storageQuotaWarn(e); }
+  DB.set('sfshift_notifications', JSON.stringify(S.notifications||[]));
   S._notificationsLoaded=true;
   queueCloudSave();
   updateBell();
@@ -7341,7 +7657,7 @@ function inboxMarkAllRead(){
 }
 /* Delete ONE notification (read or unread) after confirm. The row's ✕
    stops propagation so tapping it never also fires inboxTap. Deletion
-   removes it from S.notifications + persists (localStorage + cloud sync
+   removes it from S.notifications + persists (IndexedDB + cloud sync
    via persistNotifications), so it stays gone across reload/sync. */
 function inboxDelete(id){
   if(!confirm('Delete this notification?')) return;
@@ -7505,7 +7821,7 @@ function companySyncActive(){
 function companyPersist(){
   if(!S.company) return true;
   companySyncActive();
-  try{ localStorage.setItem('sfshift_company', JSON.stringify(S.company)); }catch(e){ storageQuotaWarn(e); return false; }
+  if(!DB.set('sfshift_company', JSON.stringify(S.company))) return false;
   queueCloudSave();
   return true;
 }
@@ -7513,13 +7829,13 @@ function companyPersist(){
    paths that must not rewrite stored rosters (see companyEnsure Q1). */
 function companyPersistNoSync(){
   if(!S.company) return true;
-  try{ localStorage.setItem('sfshift_company', JSON.stringify(S.company)); }catch(e){ storageQuotaWarn(e); return false; }
+  if(!DB.set('sfshift_company', JSON.stringify(S.company))) return false;
   queueCloudSave();
   return true;
 }
 function companyLoad(){
   var raw=null;
-  try{ raw=localStorage.getItem('sfshift_company'); }catch(e){ raw=null; }
+  try{ raw=DB.get('sfshift_company'); }catch(e){ raw=null; }
   if(!raw){
     /* Storage has no company (never saved, or the save failed — e.g.
        quota). NEVER discard an in-memory company that already has
@@ -9546,7 +9862,7 @@ function mostRecentMonday(){ var d=new Date(); var diff=(d.getDay()+6)%7; d.setD
     reset.style.display=custom?'block':'none';
   }
   try{
-    var saved=localStorage.getItem(KEY);
+    var saved=DB.get(KEY);
     if(saved) apply(saved, true);
   }catch(e){}
   edit.addEventListener('click', function(ev){ ev.stopPropagation(); file.click(); });
@@ -9556,7 +9872,7 @@ function mostRecentMonday(){ var d=new Date(); var diff=(d.getDay()+6)%7; d.setD
     var r=new FileReader();
     r.onload=function(){
       var url=r.result;
-      try{ localStorage.setItem(KEY, url); }catch(e){ toast('Image too large to save on this device'); return; }
+      if(!DB.set(KEY, url)){ toast('Image too large to save on this device'); return; }
       apply(url, true);
       queueCloudSave();
       toast('Logo updated');
@@ -9565,7 +9881,7 @@ function mostRecentMonday(){ var d=new Date(); var diff=(d.getDay()+6)%7; d.setD
     file.value='';
   });
   reset.addEventListener('click', function(){
-    try{ localStorage.removeItem(KEY); }catch(e){}
+    DB.remove(KEY);
     queueCloudSave();
     logo.style.backgroundImage='';
     logo.style.backgroundSize='';
@@ -9616,7 +9932,7 @@ function sbInit(){
    device has signed in before; otherwise the login screen explains the need
    for a connection. Local data is never discarded. */
 function bootOffline(){
-  var uid=null; try{ uid=localStorage.getItem('sfshift_sb_uid'); }catch(e){}
+  var uid=null; try{ uid=DB.get('sfshift_sb_uid'); }catch(e){}
   if(uid){
     sbBooted=true;
     enterApp();
@@ -9632,8 +9948,8 @@ function onAuthState(session){
     if(sbUser && sbUser.id===session.user.id && sbBooted) return; /* duplicate event */
     sbUser=session.user; sbBooted=true;
     try{
-      localStorage.setItem('sfshift_sb_uid', session.user.id);
-      localStorage.setItem('sfshift_sb_email', session.user.email||'');
+      DB.set('sfshift_sb_uid', session.user.id);
+      DB.set('sfshift_sb_email', session.user.email||'');
     }catch(e){}
     enterApp();
     syncAfterLogin();
@@ -9691,7 +10007,7 @@ function authForgot(){
 function logout(){
   function done(){
     sbUser=null; sbBooted=false;
-    try{ localStorage.removeItem('sfshift_sb_uid'); localStorage.removeItem('sfshift_sb_email'); }catch(e){}
+    DB.remove('sfshift_sb_uid'); DB.remove('sfshift_sb_email');
     var tabs=document.querySelector('.tabs'); if(tabs) tabs.classList.remove('show');
     try{ document.getElementById('liEmail').value=''; document.getElementById('liPass').value=''; }catch(e){}
     show('v-login');
@@ -9701,8 +10017,8 @@ function logout(){
   else done();
 }
 /* ---------- cloud state ---------- */
-function profileName(){ try{ return localStorage.getItem('sfshift_profile_name')||''; }catch(e){ return ''; } }
-function localMtime(){ try{ return parseInt(localStorage.getItem('sfshift_mtime')||'0',10)||0; }catch(e){ return 0; } }
+function profileName(){ try{ return DB.get('sfshift_profile_name')||''; }catch(e){ return ''; } }
+function localMtime(){ try{ return parseInt(DB.get('sfshift_mtime')||'0',10)||0; }catch(e){ return 0; } }
 function hasContent(st){
   return !!(st && ((st.base && st.base.vehicles && st.base.vehicles.length) || (st.rosters && st.rosters.length) || (st.drafts && st.drafts.length)));
 }
@@ -9711,30 +10027,30 @@ function collectState(){
   try{ Object.keys(ROTATIONS).forEach(function(k){ if(ROTATIONS[k] && ROTATIONS[k].custom) customs[k]=ROTATIONS[k]; }); }catch(e){}
   var st={ v:1, mtime:Date.now(), base:S.base||null, rosters:S.rosters||[], drafts:S.drafts||[], customs:customs, profileName:profileName(), company:S.company||null, apps:S.shiftApps||[], notifications:S.notifications||[] };
   try{
-    st.heroLogo=localStorage.getItem('sfshift_hero_logo');
+    st.heroLogo=DB.get('sfshift_hero_logo');
   }catch(e){}
   return st;
 }
 function applyState(st){
   if(!st) return;
   try{
-    if(st.base) localStorage.setItem('sfshift_base', JSON.stringify(st.base));
-    if(st.rosters) localStorage.setItem('sfshift_units', JSON.stringify(st.rosters));
-    if(st.drafts) localStorage.setItem('sfshift_drafts', JSON.stringify(st.drafts));
-    if(st.apps) localStorage.setItem('sfshift_apps', JSON.stringify(st.apps));
-    if(st.notifications) localStorage.setItem('sfshift_notifications', JSON.stringify(st.notifications));
-    if(st.customs) localStorage.setItem('sfshift_custom_rot', JSON.stringify(st.customs));
-    if(st.company) localStorage.setItem('sfshift_company', JSON.stringify(st.company));
-    if(st.heroLogo) localStorage.setItem('sfshift_hero_logo', st.heroLogo);
-    else localStorage.removeItem('sfshift_hero_logo');
-    if(st.profileName) localStorage.setItem('sfshift_profile_name', st.profileName);
-    if(st.mtime) localStorage.setItem('sfshift_mtime', String(st.mtime));
+    if(st.base) DB.set('sfshift_base', JSON.stringify(st.base));
+    if(st.rosters) DB.set('sfshift_units', JSON.stringify(st.rosters));
+    if(st.drafts) DB.set('sfshift_drafts', JSON.stringify(st.drafts));
+    if(st.apps) DB.set('sfshift_apps', JSON.stringify(st.apps));
+    if(st.notifications) DB.set('sfshift_notifications', JSON.stringify(st.notifications));
+    if(st.customs) DB.set('sfshift_custom_rot', JSON.stringify(st.customs));
+    if(st.company) DB.set('sfshift_company', JSON.stringify(st.company));
+    if(st.heroLogo) DB.set('sfshift_hero_logo', st.heroLogo);
+    else DB.remove('sfshift_hero_logo');
+    if(st.profileName) DB.set('sfshift_profile_name', st.profileName);
+    if(st.mtime) DB.set('sfshift_mtime', String(st.mtime));
   }catch(e){}
   loadCustomRotations(); loadBase(); loadSaved();
   renderHome(); renderAllRosters(); renderStaffTab(); renderSettings();
 }
 function queueCloudSave(){
-  try{ localStorage.setItem('sfshift_mtime', String(Date.now())); }catch(e){}
+  DB.set('sfshift_mtime', String(Date.now()));
   if(cloudTimer) clearTimeout(cloudTimer);
   cloudTimer=setTimeout(function(){ cloudSaveNow(); }, 2000);
 }
@@ -9772,6 +10088,7 @@ function offlineNote(on){
   if(on) n.textContent='Offline \u2014 using this device\u2019s data. Changes will sync when you\u2019re back online.';
 }
 function enterApp(){
+  DB.appEntered=true;
   themeApply(themeGet());
   var tabs=document.querySelector('.tabs'); if(tabs) tabs.classList.add('show');
   renderTabs();
@@ -11454,7 +11771,7 @@ function holMapForBase(base, y){
   var k=cc+'_'+y;
   if(HOL_MEM[k]!==undefined) return HOL_MEM[k];
   try{
-    var raw=localStorage.getItem('sfshift_hol_'+k);
+    var raw=DB.get('sfshift_hol_'+k);
     if(raw){ HOL_MEM[k]=JSON.parse(raw); return HOL_MEM[k]; }
   }catch(e){}
   return null;
@@ -11546,10 +11863,10 @@ function migrateShifts(){
 
 /* ---------- display settings ---------- */
 /* THEME — personal, per-device. NOT per-workplace, NOT per-role. Stored in
-   localStorage ('sfshift_theme'), applies to whoever uses this device.
+   IndexedDB ('sfshift_theme'), applies to whoever uses this device.
    Default = Dark. Deliberately NOT cleared by Clear Data (device preference). */
 function themeGet(){
-  try{ return localStorage.getItem('sfshift_theme')==='light' ? 'light' : 'dark'; }catch(e){ return 'dark'; }
+  try{ return DB.get('sfshift_theme')==='light' ? 'light' : 'dark'; }catch(e){ return 'dark'; }
 }
 function themeApply(t){
   document.body.classList.toggle('light', t==='light');
@@ -11557,7 +11874,7 @@ function themeApply(t){
   if(mc) mc.setAttribute('content', t==='light' ? '#f4f2ee' : '#08080a');
 }
 function setTheme(t){
-  try{ localStorage.setItem('sfshift_theme', t==='light' ? 'light' : 'dark'); }catch(e){}
+  DB.set('sfshift_theme', t==='light' ? 'light' : 'dark');
   themeApply(t);
   renderSettings();
 }
@@ -11653,7 +11970,7 @@ function holMapFor(y){
   var k=cc+'_'+y;
   if(HOL_MEM[k]!==undefined) return HOL_MEM[k];
   try{
-    var raw=localStorage.getItem('sfshift_hol_'+k);
+    var raw=DB.get('sfshift_hol_'+k);
     if(raw){ HOL_MEM[k]=JSON.parse(raw); return HOL_MEM[k]; }
   }catch(e){}
   return null;
@@ -11663,7 +11980,7 @@ function ensureHolidays(y){
   var k=cc+'_'+y;
   if(HOL_MEM[k]!==undefined || HOL_MEM[k+':f']) return;
   var cached=null;
-  try{ cached=localStorage.getItem('sfshift_hol_'+k); }catch(e){}
+  try{ cached=DB.get('sfshift_hol_'+k); }catch(e){}
   if(cached){ try{ HOL_MEM[k]=JSON.parse(cached); }catch(e){ HOL_MEM[k]=null; } return; }
   HOL_MEM[k+':f']=true;
   fetch('https://date.nager.at/api/v3/publicholidays/'+y+'/'+cc).then(function(r){
@@ -11672,7 +11989,7 @@ function ensureHolidays(y){
     var map={};
     (arr||[]).forEach(function(h){ if(h&&h.date) map[h.date]=h.localName||h.name||'Public holiday'; });
     HOL_MEM[k]=map;
-    try{ localStorage.setItem('sfshift_hol_'+k, JSON.stringify(map)); }catch(e){}
+    DB.set('sfshift_hol_'+k, JSON.stringify(map));
     delete HOL_MEM[k+':f'];
     renderCalendar();
   }).catch(function(){ delete HOL_MEM[k+':f']; });
@@ -12035,7 +12352,7 @@ function genTestData(){
 function saveSettingsProfile(){
   var name=document.getElementById('setName').value.trim();
   if(!name){ toast('Name is required'); return; }
-  try{ localStorage.setItem('sfshift_profile_name', name); }catch(e){}
+  DB.set('sfshift_profile_name', name);
   S.base.name=document.getElementById('setBase').value.trim()||'My Workplace';
   persistBase(); renderHome();
   toast('Saved');
@@ -12061,7 +12378,7 @@ function importData(file){
       if(d.drafts){ S.drafts=d.drafts; persistDrafts(); }
       if(d.apps){ S.shiftApps=d.apps; persistShiftApps(); loadShiftApps(); }
       if(d.notifications){ S.notifications=d.notifications; persistNotifications(); loadNotifications(); }
-      if(d.customs){ try{ localStorage.setItem('sfshift_custom_rot', JSON.stringify(d.customs)); }catch(e){} loadCustomRotations(); renderLibraryList(); }
+      if(d.customs){ DB.set('sfshift_custom_rot', JSON.stringify(d.customs)); loadCustomRotations(); renderLibraryList(); }
       migrateShifts(); persistBase();
       renderHome(); renderAllRosters(); renderStaffTab(); renderSettings();
       queueCloudSave();
@@ -12073,13 +12390,10 @@ function importData(file){
 function clearData(){
   if(!confirm('Delete ALL bases, rosters and staff \u2014 on this device and in your cloud account?')) return;
   ['sfshift_base','sfshift_units','sfshift_rosters','sfshift_hero_logo','sfshift_profile_name','sfshift_mtime','sfshift_custom_rot','sfshift_company','sfshift_drafts','sfshift_apps','sfshift_notifications'].forEach(function(k){
-    try{ localStorage.removeItem(k); }catch(e){}
+    DB.remove(k);
   });
-  try{
-    var hk=[];
-    for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(k&&k.indexOf('sfshift_hol_')===0) hk.push(k); }
-    hk.forEach(function(k){ localStorage.removeItem(k); });
-  }catch(e){}
+  /* holiday cache keys (dynamic sfshift_hol_* names) come from the DB key index */
+  DB.keys().forEach(function(k){ if(k.indexOf('sfshift_hol_')===0) DB.remove(k); });
   HOL_MEM={};
   Object.keys(ROTATIONS).forEach(function(k){ if(ROTATIONS[k]&&ROTATIONS[k].custom) delete ROTATIONS[k]; });
   if(sb && sbUser){ try{ sb.from('app_state').delete().eq('user_id', sbUser.id).then(function(){}).catch(function(){}); }catch(e){} }
