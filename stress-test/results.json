@@ -329,7 +329,7 @@
     },
     {
       "label": "Load time (reload) s5d-40000dense",
-      "value": "4582ms"
+      "value": "4200ms"
     }
   ],
   "totals": {
@@ -528,6 +528,14 @@
     {
       "time": "16:13",
       "kb": 68934
+    },
+    {
+      "time": "17:57",
+      "kb": 68934
+    },
+    {
+      "time": "17:57",
+      "kb": 68934
     }
   ],
   "speedPerLevel": [
@@ -641,90 +649,6 @@
     }
   ],
   "log": [
-    {
-      "time": "14:03",
-      "message": "Workplace 983/1000 seeded — staff 19660, rosters 11796"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 984/1000 seeded — staff 19680, rosters 11808"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 985/1000 seeded — staff 19700, rosters 11820"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 986/1000 seeded — staff 19720, rosters 11832"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 987/1000 seeded — staff 19740, rosters 11844"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 988/1000 seeded — staff 19760, rosters 11856"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 989/1000 seeded — staff 19780, rosters 11868"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 990/1000 seeded — staff 19800, rosters 11880"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 991/1000 seeded — staff 19820, rosters 11892"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 992/1000 seeded — staff 19840, rosters 11904"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 993/1000 seeded — staff 19860, rosters 11916"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 994/1000 seeded — staff 19880, rosters 11928"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 995/1000 seeded — staff 19900, rosters 11940"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 996/1000 seeded — staff 19920, rosters 11952"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 997/1000 seeded — staff 19940, rosters 11964"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 998/1000 seeded — staff 19960, rosters 11976"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 999/1000 seeded — staff 19980, rosters 11988"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 1000/1000 seeded — staff 20000, rosters 12000"
-    },
-    {
-      "time": "14:03",
-      "message": "Added notifications — 1000 of 1000"
-    },
-    {
-      "time": "14:03",
-      "message": "Added applications — 200 of 200"
-    },
-    {
-      "time": "14:03",
-      "message": "Added drafts — 50 of 50"
-    },
     {
       "time": "14:03",
       "message": "Point s4c-1000wp done — countsOk=true, crashes=0"
@@ -960,8 +884,92 @@
     {
       "time": "17:57",
       "message": "Building up — seeding…"
+    },
+    {
+      "time": "17:57",
+      "message": "Workplace 1/5 seeded — staff 8000, rosters 4800"
+    },
+    {
+      "time": "17:57",
+      "message": "Workplace 2/5 seeded — staff 16000, rosters 9600"
+    },
+    {
+      "time": "17:57",
+      "message": "Workplace 3/5 seeded — staff 24000, rosters 14400"
+    },
+    {
+      "time": "17:57",
+      "message": "Workplace 4/5 seeded — staff 32000, rosters 19200"
+    },
+    {
+      "time": "17:57",
+      "message": "Workplace 5/5 seeded — staff 40000, rosters 24000"
+    },
+    {
+      "time": "17:57",
+      "message": "Added notifications — 1000 of 8000"
+    },
+    {
+      "time": "17:57",
+      "message": "Added notifications — 2000 of 8000"
+    },
+    {
+      "time": "17:57",
+      "message": "Added notifications — 3000 of 8000"
+    },
+    {
+      "time": "17:57",
+      "message": "Added notifications — 4000 of 8000"
+    },
+    {
+      "time": "17:57",
+      "message": "Added notifications — 5000 of 8000"
+    },
+    {
+      "time": "17:57",
+      "message": "Added notifications — 6000 of 8000"
+    },
+    {
+      "time": "17:57",
+      "message": "Added notifications — 7000 of 8000"
+    },
+    {
+      "time": "17:57",
+      "message": "Added notifications — 8000 of 8000"
+    },
+    {
+      "time": "17:57",
+      "message": "Added applications — 400 of 1600"
+    },
+    {
+      "time": "17:57",
+      "message": "Added applications — 800 of 1600"
+    },
+    {
+      "time": "17:57",
+      "message": "Added applications — 1200 of 1600"
+    },
+    {
+      "time": "17:57",
+      "message": "Added applications — 1600 of 1600"
+    },
+    {
+      "time": "17:57",
+      "message": "Added drafts — 100 of 400"
+    },
+    {
+      "time": "17:57",
+      "message": "Added drafts — 200 of 400"
+    },
+    {
+      "time": "17:57",
+      "message": "Added drafts — 300 of 400"
+    },
+    {
+      "time": "17:57",
+      "message": "Added drafts — 400 of 400"
     }
   ],
-  "updatedAt": "2026-10-17T17:57:29.563+02:00",
+  "updatedAt": "2026-10-17T17:59:59.237+02:00",
   "history": []
 }
