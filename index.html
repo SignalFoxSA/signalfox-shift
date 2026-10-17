@@ -1647,7 +1647,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261017-1999';
+var BUILD='20261017-2000';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -4347,6 +4347,14 @@ function storageWarnDismiss(){
   var b=null; try{ b=document.getElementById('storageWarn'); }catch(_){}
   if(b) b.style.display='none';
 }
+/* Re-show the storage-full banner (same #storageWarn element Fix 1 uses).
+   Used by the guarded loaders: if a quota failure is already known
+   (S._storageFull) and a loader had to keep in-memory data because
+   storage came back empty, the warning is still true — re-assert it. */
+function storageWarnShow(){
+  var b=null; try{ b=document.getElementById('storageWarn'); }catch(_){}
+  if(b) b.style.display='flex';
+}
 function persist(){
   var failed=false;
   try{ localStorage.setItem('sfshift_units', JSON.stringify(S.rosters)); }catch(e){ failed=true; storageQuotaWarn(e); }
@@ -4458,7 +4466,34 @@ function persistDrafts(){
    pending application whose slot has since been filled is KEPT — the
    approval-time open-slot re-check (mkSlotStillOpen) blocks filling it. */
 function loadShiftApps(){
-  try{ S.shiftApps=JSON.parse(localStorage.getItem('sfshift_apps')||'[]'); }catch(e){ S.shiftApps=[]; }
+  /* FIX A (BUILD 20261017-2000): same guard pattern as companyLoad()
+     (Fix 1). When storage has NO apps value (never persisted — e.g.
+     the save failed on quota) or it is malformed/unreadable, NEVER
+     discard a non-empty in-memory S.shiftApps: the old code replaced
+     it with [] here, and a later loadSaved() (e.g. just viewing a
+     calendar) silently wiped every application (stress-test Stage 5:
+     3,200→0). Same when a quota failure is already known
+     (S._storageFull) and storage reads back empty while in-memory
+     still has applications — the empty stored value is stale (the
+     save never landed); the in-memory copy is the live data. When
+     storage is healthy and holds a value, loading from storage works
+     exactly as before. */
+  var _raw=null, _parsed=null, _parseOk=false;
+  try{ _raw=localStorage.getItem('sfshift_apps'); }catch(e){ _raw=null; }
+  if(_raw){
+    try{ _parsed=JSON.parse(_raw); _parseOk=true; }catch(e){ _parsed=null; _parseOk=false; }
+  }
+  var _mem=(Array.isArray(S.shiftApps) && S.shiftApps.length)?S.shiftApps:null;
+  if(!_raw || !_parseOk || !Array.isArray(_parsed)){
+    /* storage missing / unreadable / malformed — keep in-memory if any */
+    if(_mem){ S.shiftApps=_mem; if(S._storageFull) storageWarnShow(); }
+    else S.shiftApps=[];
+  }else if(!_parsed.length && _mem && S._storageFull){
+    /* storage reads back empty but a quota failure is known — stale */
+    S.shiftApps=_mem; storageWarnShow();
+  }else{
+    S.shiftApps=_parsed;
+  }
   S._appsLoaded=true;
   if(!Array.isArray(S.shiftApps)) S.shiftApps=[];
   /* prune stale PENDING applications only when rosters + drafts are loaded,
@@ -7144,7 +7179,33 @@ function dayAppReopen(appId){ mkReopen(appId); daySheetRefreshAfterApp(); }
    are application / approved / declined / unapproved / withdrawn /
    reopened. */
 function loadNotifications(){
-  try{ S.notifications=JSON.parse(localStorage.getItem('sfshift_notifications')||'[]'); }catch(e){ S.notifications=[]; }
+  /* FIX A (BUILD 20261017-2000): same guard pattern as companyLoad()
+     (Fix 1) and loadShiftApps() above. When storage has NO
+     notifications value (never persisted — e.g. the save failed on
+     quota) or it is malformed/unreadable, NEVER discard a non-empty
+     in-memory S.notifications: the old code replaced it with [] here,
+     and a later loadSaved() (e.g. just viewing a calendar) silently
+     wiped every notification (stress-test Stage 5: 16,000→0). Same
+     when a quota failure is already known (S._storageFull) and storage
+     reads back empty while in-memory still has notifications. When
+     storage is healthy and holds a value, loading from storage works
+     exactly as before. */
+  var _raw=null, _parsed=null, _parseOk=false;
+  try{ _raw=localStorage.getItem('sfshift_notifications'); }catch(e){ _raw=null; }
+  if(_raw){
+    try{ _parsed=JSON.parse(_raw); _parseOk=true; }catch(e){ _parsed=null; _parseOk=false; }
+  }
+  var _mem=(Array.isArray(S.notifications) && S.notifications.length)?S.notifications:null;
+  if(!_raw || !_parseOk || !Array.isArray(_parsed)){
+    /* storage missing / unreadable / malformed — keep in-memory if any */
+    if(_mem){ S.notifications=_mem; if(S._storageFull) storageWarnShow(); }
+    else S.notifications=[];
+  }else if(!_parsed.length && _mem && S._storageFull){
+    /* storage reads back empty but a quota failure is known — stale */
+    S.notifications=_mem; storageWarnShow();
+  }else{
+    S.notifications=_parsed;
+  }
   S._notificationsLoaded=true;
   if(!Array.isArray(S.notifications)) S.notifications=[];
 }
