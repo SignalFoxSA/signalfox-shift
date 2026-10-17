@@ -1,6 +1,6 @@
 {
   "status": "running",
-  "stage": "Stage 5 of 7 — s5c-8000dense",
+  "stage": "Stage 5 of 7 — s5d-40000dense (resumed)",
   "progress": {
     "current": 5,
     "total": 7
@@ -946,8 +946,12 @@
     {
       "time": "15:16",
       "message": "Added drafts — 200 of 200"
+    },
+    {
+      "time": "16:13",
+      "message": "Resumed — s5a/s5b/s5c done, running s5d-40000dense (Stage 5 remainder), then Stages 6–7."
     }
   ],
-  "updatedAt": "2026-10-17T16:10:14.134+02:00",
+  "updatedAt": "2026-10-17T16:13:13.934+02:00",
   "history": []
 }
