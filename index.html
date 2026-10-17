@@ -447,6 +447,19 @@
   .authrow .btn{margin:0; flex:1;}
   #cloudNote{display:none; position:sticky; top:0; z-index:30; background:#2a2108; border:1px solid #8a6d1f;
     color:#ffd97a; font-size:12px; text-align:center; padding:7px 10px; border-radius:10px; margin:8px 0 0;}
+  /* Storage-full (quota) warning: persistent banner, NOT a toast — a
+     toast disappears and the user would keep working on unsaved state.
+     Shown when any localStorage save fails because the device storage
+     is full (~5MB browser cap). Stays until storage is freed (a later
+     save succeeds) or the user dismisses it; reappears on the next
+     failed save if dismissed. */
+  #storageWarn{display:none; position:sticky; top:0; z-index:31; background:#2a1215; border:1px solid #7f2d35;
+    color:#fda4af; font-size:12px; text-align:center; padding:8px 10px; border-radius:10px; margin:8px 0 0;
+    align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;}
+  #storageWarn button{flex:none; background:#7f2d35; color:#fff; border:0; border-radius:8px;
+    padding:5px 10px; font-size:12px; font-weight:700; cursor:pointer;}
+  body.light #storageWarn{background:#ffe9ec; border:1px solid #d46a76; color:#8a1f2b;}
+  body.light #storageWarn button{background:#c23a48;}
   /* ---------- calendar-month redesign (Oct 2026): color-block month ---------- */
   .vswitch{display:flex; gap:8px; margin:10px 0 4px; overflow-x:auto; padding-bottom:4px;}
   .vchip{flex:none; padding:8px 14px; border-radius:999px; border:1px solid var(--line);
@@ -620,6 +633,7 @@
 <script>try{ if(localStorage.getItem('sfshift_theme')==='light') document.body.classList.add('light'); }catch(e){}</script>
 <div id="app">
     <div id="cloudNote"></div>
+    <div id="storageWarn"><span>Device storage is full &mdash; changes can&rsquo;t be saved. Delete old rosters or drafts to free space, so you don&rsquo;t lose work.</span><button onclick="storageWarnDismiss()" aria-label="Dismiss storage warning">Dismiss</button></div>
   <header>
     <div class="brandfox"></div>
     <div class="brand">SignalFox Shift<small>A Signal Fox app</small></div>
@@ -1188,7 +1202,7 @@
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261015-1996';
+var BUILD='20261017-1997';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -1398,7 +1412,7 @@ function loadCustomRotations(){
 function persistCustomRotations(){
   var customs={};
   Object.keys(ROTATIONS).forEach(function(k){ if(ROTATIONS[k].custom) customs[k]=ROTATIONS[k]; });
-  try{ localStorage.setItem('sfshift_custom_rot', JSON.stringify(customs)); }catch(e){}
+  try{ localStorage.setItem('sfshift_custom_rot', JSON.stringify(customs)); }catch(e){ storageQuotaWarn(e); }
   queueCloudSave();
 }
 
@@ -2115,7 +2129,7 @@ function shiftLenOptions(k){
   var r=ROTATIONS[k]||{};
   return [[String(r.hours||12),(r.hours||12)+'-hour']];
 }
-function persistBase(){ try{ localStorage.setItem('sfshift_base', JSON.stringify(S.base)); }catch(e){} if(S.company) companyPersist(); queueCloudSave(); }
+function persistBase(){ try{ localStorage.setItem('sfshift_base', JSON.stringify(S.base)); }catch(e){ storageQuotaWarn(e); } if(S.company) companyPersist(); queueCloudSave(); }
 function staffName(id){ var s=S.base.staff.find(function(x){ return x.id===id; }); return s?s.name:''; }
 function vehicleCrews(vid){ return S.base.crews.filter(function(c){ return c.vehicleId===vid; }); }
 /* crew names must be unique across the whole workplace ("I'm crew A — but on which team?"
@@ -2643,7 +2657,15 @@ function memberList(c){ return (c.members && c.members.length) ? ' ('+c.members.
    Tap a day -> week detail view (big readable cards). Month | Agenda toggle.
    Team switcher chips on top. */
 function findSavedRoster(vid,y,m){
-  loadSaved();
+  /* Do NOT reload from storage unconditionally: loadSaved() re-reads
+     S.rosters + S.company from storage, which can clobber in-memory
+     state (a quota-failed persist leaves stale/empty storage — the
+     old unconditional reload is what turned a failed save into a
+     company wipe on the next calendar view). Reload only when the
+     rosters have not been loaded yet this session; every caller that
+     needs a fresh read (save, switch, delete) calls loadSaved()
+     itself, and a page reload always runs loadSaved() at init. */
+  if(!S._rostersLoaded) loadSaved();
   var vname=vehicleName(vid), best=null, bestUnit=null, bestOv=-1;
   S.rosters.forEach(function(u){
     var R=u.roster; if(!R||!Array.isArray(R.crews)) return;
@@ -3848,11 +3870,45 @@ function loadSaved(){
   });
   if(S.rosters.length!==before) persist();
 }
+/* ---------- Storage-full (quota) warning ----------
+   localStorage is capped at ~5MB by the browser. Before this fix, a
+   save that failed because storage was full was silently swallowed
+   (empty catch), so the app kept running on unsaved state — and a
+   later loadSaved() → companyLoad() then DISCARDED the in-memory
+   company (stress test Stages 4–5: 5→1 workplaces, 3,600→720 rosters,
+   just from viewing a calendar). Now: any quota failure shows the
+   persistent #storageWarn banner + a toast, and sets S._storageFull.
+   The banner clears only when a full persist() succeeds (storage
+   freed). Non-quota storage errors (e.g. private mode) are ignored
+   here — they are not a full-storage problem. */
+function storageQuotaWarn(e){
+  if(!e) return false;
+  var m='';
+  try{ m=String((e&&e.message)||e); }catch(_){}
+  var isQuota=(e&&e.name==='QuotaExceededError')||e.code===22||e.code===1014||/quota|exceeded/i.test(m);
+  if(!isQuota) return false;
+  S._storageFull=true;
+  var b=null; try{ b=document.getElementById('storageWarn'); }catch(_){}
+  if(b) b.style.display='flex';
+  toast('Storage full \u2014 changes can\u2019t be saved. Free space to keep your data safe.');
+  return true;
+}
+function storageQuotaClear(){
+  S._storageFull=false;
+  var b=null; try{ b=document.getElementById('storageWarn'); }catch(_){}
+  if(b) b.style.display='none';
+}
+function storageWarnDismiss(){
+  var b=null; try{ b=document.getElementById('storageWarn'); }catch(_){}
+  if(b) b.style.display='none';
+}
 function persist(){
-  try{ localStorage.setItem('sfshift_units', JSON.stringify(S.rosters)); }catch(e){}
-  if(S._draftsLoaded){ try{ localStorage.setItem('sfshift_drafts', JSON.stringify(S.drafts||[])); }catch(e){} }
-  if(S.company) companyPersist();
+  var failed=false;
+  try{ localStorage.setItem('sfshift_units', JSON.stringify(S.rosters)); }catch(e){ failed=true; storageQuotaWarn(e); }
+  if(S._draftsLoaded){ try{ localStorage.setItem('sfshift_drafts', JSON.stringify(S.drafts||[])); }catch(e){ failed=true; storageQuotaWarn(e); } }
+  if(S.company && !companyPersist()) failed=true;
   queueCloudSave();
+  if(!failed) storageQuotaClear();
 }
 /* write the open roster back into its saved unit */
 function syncUnit(){
@@ -3946,7 +4002,7 @@ function loadDrafts(){
   if(S.drafts.length!==before || stamped) persistDrafts();
 }
 function persistDrafts(){
-  try{ localStorage.setItem('sfshift_drafts', JSON.stringify(S.drafts||[])); }catch(e){}
+  try{ localStorage.setItem('sfshift_drafts', JSON.stringify(S.drafts||[])); }catch(e){ storageQuotaWarn(e); }
   S._draftsLoaded=true;
   queueCloudSave();
 }
@@ -3977,7 +4033,7 @@ function loadShiftApps(){
   if(S.shiftApps.length!==before) persistShiftApps();
 }
 function persistShiftApps(){
-  try{ localStorage.setItem('sfshift_apps', JSON.stringify(S.shiftApps||[])); }catch(e){}
+  try{ localStorage.setItem('sfshift_apps', JSON.stringify(S.shiftApps||[])); }catch(e){ storageQuotaWarn(e); }
   S._appsLoaded=true;
   queueCloudSave();
 }
@@ -6648,7 +6704,7 @@ function loadNotifications(){
   if(!Array.isArray(S.notifications)) S.notifications=[];
 }
 function persistNotifications(){
-  try{ localStorage.setItem('sfshift_notifications', JSON.stringify(S.notifications||[])); }catch(e){}
+  try{ localStorage.setItem('sfshift_notifications', JSON.stringify(S.notifications||[])); }catch(e){ storageQuotaWarn(e); }
   S._notificationsLoaded=true;
   queueCloudSave();
   updateBell();
@@ -6941,21 +6997,41 @@ function companySyncActive(){
   }
 }
 function companyPersist(){
-  if(!S.company) return;
+  if(!S.company) return true;
   companySyncActive();
-  try{ localStorage.setItem('sfshift_company', JSON.stringify(S.company)); }catch(e){}
+  try{ localStorage.setItem('sfshift_company', JSON.stringify(S.company)); }catch(e){ storageQuotaWarn(e); return false; }
   queueCloudSave();
+  return true;
 }
 /* Save S.company exactly as-is, WITHOUT companySyncActive(). For read
    paths that must not rewrite stored rosters (see companyEnsure Q1). */
 function companyPersistNoSync(){
-  if(!S.company) return;
-  try{ localStorage.setItem('sfshift_company', JSON.stringify(S.company)); }catch(e){}
+  if(!S.company) return true;
+  try{ localStorage.setItem('sfshift_company', JSON.stringify(S.company)); }catch(e){ storageQuotaWarn(e); return false; }
   queueCloudSave();
+  return true;
 }
 function companyLoad(){
-  try{ S.company=JSON.parse(localStorage.getItem('sfshift_company')||'null'); }catch(e){ S.company=null; }
-  if(S.company && Array.isArray(S.company.workplaces)) return S.company;
+  var raw=null;
+  try{ raw=localStorage.getItem('sfshift_company'); }catch(e){ raw=null; }
+  if(!raw){
+    /* Storage has no company (never saved, or the save failed — e.g.
+       quota). NEVER discard an in-memory company that already has
+       workplaces: the old code nulled S.company here, and the next
+       companyEnsure() rebuilt a company with only the active
+       workplace, silently discarding the other workplaces' rosters
+       (stress test Stages 4–5: 5→1 workplaces, 3,600→720 rosters,
+       just from viewing a calendar). */
+    if(S.company && Array.isArray(S.company.workplaces) && S.company.workplaces.length) return S.company;
+    S.company=null; return null;
+  }
+  var c=null;
+  try{ c=JSON.parse(raw); }catch(e){ c=null; }
+  if(c && Array.isArray(c.workplaces)){ S.company=c; return S.company; }
+  /* Stored company is malformed / half-built — keep the in-memory one
+     if it has workplaces (companyEnsure heals a stored half-built
+     company on a fresh load, when there is no in-memory company). */
+  if(S.company && Array.isArray(S.company.workplaces) && S.company.workplaces.length) return S.company;
   S.company=null; return null;
 }
 function companyWorkplaces(){
