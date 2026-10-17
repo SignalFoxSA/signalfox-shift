@@ -12,42 +12,6 @@
   },
   "metrics": [
     {
-      "label": "Load time (reload) s1a-200staff",
-      "value": "1115ms"
-    },
-    {
-      "label": "Workplace switch (s1a-200staff)",
-      "value": "215ms, back 73ms"
-    },
-    {
-      "label": "Stats MISS (s1a-200staff)",
-      "value": "50ms total=3100"
-    },
-    {
-      "label": "Stats HIT (s1a-200staff)",
-      "value": "2ms deep-equal=true"
-    },
-    {
-      "label": "Export Excel (s1a-200staff)",
-      "value": "ok ms=22 xlsxBytes=25428"
-    },
-    {
-      "label": "Export PDF (s1a-200staff)",
-      "value": "ok ms=464 pdfBytes=369115"
-    },
-    {
-      "label": "Export PNG (s1a-200staff)",
-      "value": "ok ms=283 pngBytes=202800"
-    },
-    {
-      "label": "Calendar render (s1a-200staff)",
-      "value": "427ms"
-    },
-    {
-      "label": "Seed staff (s1b-1000staff)",
-      "value": "1000"
-    },
-    {
       "label": "Load time (reload) s1b-1000staff",
       "value": "1157ms"
     },
@@ -330,13 +294,49 @@
     {
       "label": "Calendar render (s4c-1000wp)",
       "value": "8668ms"
+    },
+    {
+      "label": "Seed staff (s5a-2000dense)",
+      "value": "2000"
+    },
+    {
+      "label": "Load time (reload) s5a-2000dense",
+      "value": "1370ms"
+    },
+    {
+      "label": "Workplace switch (s5a-2000dense)",
+      "value": "0ms, back 0ms"
+    },
+    {
+      "label": "Stats MISS (s5a-2000dense)",
+      "value": "210ms total=31000"
+    },
+    {
+      "label": "Stats HIT (s5a-2000dense)",
+      "value": "8ms deep-equal=true"
+    },
+    {
+      "label": "Export Excel (s5a-2000dense)",
+      "value": "ok ms=18 xlsxBytes=25428"
+    },
+    {
+      "label": "Export PDF (s5a-2000dense)",
+      "value": "ok ms=445 pdfBytes=369115"
+    },
+    {
+      "label": "Export PNG (s5a-2000dense)",
+      "value": "ok ms=299 pngBytes=202800"
+    },
+    {
+      "label": "Calendar render (s5a-2000dense)",
+      "value": "1711ms"
     }
   ],
   "totals": {
-    "companies": 1000,
-    "staff": 20000,
-    "rosters": 12000,
-    "changes": 122000
+    "companies": 0,
+    "staff": 2000,
+    "rosters": 1200,
+    "changes": 12025
   },
   "perfHistory": [
     {
@@ -482,6 +482,14 @@
     {
       "time": "14:03",
       "kb": 28304
+    },
+    {
+      "time": "14:04",
+      "kb": 5779
+    },
+    {
+      "time": "14:04",
+      "kb": 5763
     }
   ],
   "speedPerLevel": [
@@ -549,24 +557,21 @@
       "exportMs": 45
     }
   ],
-  "problems": [],
+  "problems": [
+    {
+      "time": "14:04",
+      "message": "Point s5a-2000dense: seed did NOT survive reload",
+      "detail": "seed={\"staff\":2000,\"teams\":100,\"workplaces\":1,\"rosters\":1200,\"active\":1200,\"archived\":0,\"opens\":25,\"changes\":12025,\"notif\":1000,\"apps\":200,\"drafts\":50} afterReload={\"staff\":2000,\"teams\":100,\"rostersActiveMem\":1200,\"companyWorkplaces\":1,\"companyRosters\":1200,\"drafts\":50,\"notif\":1000,\"apps\":134,\"archived\":0,\"dbBytes\":5900883,\"dbMode\":\"idb\",\"dbKeys\":7,\"opensActiveWp\":25,\"changesActiveWp\":12025,\"heapUsedMB\":23.4,\"heapLimitMB\":3586}",
+      "fix": "Loader/persist lost data."
+    },
+    {
+      "time": "14:10",
+      "message": "Point s5a-2000dense: counts changed during measurements",
+      "detail": "afterReload={\"staff\":2000,\"teams\":100,\"rostersActiveMem\":1200,\"companyWorkplaces\":1,\"companyRosters\":1200,\"drafts\":50,\"notif\":1000,\"apps\":134,\"archived\":0,\"dbBytes\":5900883,\"dbMode\":\"idb\",\"dbKeys\":7,\"opensActiveWp\":25,\"changesActiveWp\":12025,\"heapUsedMB\":23.4,\"heapLimitMB\":3586} final={\"staff\":0,\"teams\":0,\"rostersActiveMem\":0,\"companyWorkplaces\":1,\"companyRosters\":0,\"drafts\":0,\"notif\":0,\"apps\":0,\"archived\":0,\"dbBytes\":684,\"dbMode\":\"idb\",\"dbKeys\":3,\"opensActiveWp\":0,\"changesActiveWp\":0,\"heapUsedM",
+      "fix": "Investigate which loader/render mutated state."
+    }
+  ],
   "log": [
-    {
-      "time": "14:03",
-      "message": "Workplace 926/1000 seeded — staff 18520, rosters 11112"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 927/1000 seeded — staff 18540, rosters 11124"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 928/1000 seeded — staff 18560, rosters 11136"
-    },
-    {
-      "time": "14:03",
-      "message": "Workplace 929/1000 seeded — staff 18580, rosters 11148"
-    },
     {
       "time": "14:03",
       "message": "Workplace 930/1000 seeded — staff 18600, rosters 11160"
@@ -870,8 +875,24 @@
     {
       "time": "14:04",
       "message": "Building up — seeding…"
+    },
+    {
+      "time": "14:04",
+      "message": "Workplace 1/1 seeded — staff 2000, rosters 1200"
+    },
+    {
+      "time": "14:04",
+      "message": "Added notifications — 1000 of 1000"
+    },
+    {
+      "time": "14:04",
+      "message": "Added applications — 200 of 200"
+    },
+    {
+      "time": "14:04",
+      "message": "Added drafts — 50 of 50"
     }
   ],
-  "updatedAt": "2026-10-17T14:04:11.245+02:00",
+  "updatedAt": "2026-10-17T14:10:36.990+02:00",
   "history": []
 }
