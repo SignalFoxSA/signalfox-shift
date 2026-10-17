@@ -186,10 +186,14 @@
     {
       "label": "Export PNG (s3a-20000staff)",
       "value": "ok ms=5132 pngBytes=202800"
+    },
+    {
+      "label": "Calendar render (s3a-20000staff)",
+      "value": "9528ms"
     }
   ],
   "totals": {
-    "companies": 0,
+    "companies": 50,
     "staff": 20000,
     "rosters": 12000,
     "changes": 122000
@@ -218,6 +222,12 @@
       "loadMs": 1458,
       "renderMs": 4977,
       "exportMs": 46
+    },
+    {
+      "staff": 20000,
+      "loadMs": 1781,
+      "renderMs": 9528,
+      "exportMs": 56
     }
   ],
   "storageHistory": [
@@ -306,14 +316,17 @@
       "loadMs": 1458,
       "renderMs": 4977,
       "exportMs": 46
+    },
+    {
+      "level": "High",
+      "staff": 20000,
+      "loadMs": 1781,
+      "renderMs": 9528,
+      "exportMs": 56
     }
   ],
   "problems": [],
   "log": [
-    {
-      "time": "13:57",
-      "message": "Workplace 22/25 seeded — staff 8800, rosters 5280"
-    },
     {
       "time": "13:57",
       "message": "Workplace 23/25 seeded — staff 9200, rosters 5520"
@@ -629,8 +642,12 @@
     {
       "time": "13:58",
       "message": "Added drafts — 400 of 400"
+    },
+    {
+      "time": "13:59",
+      "message": "Point s3a-20000staff done — countsOk=true, crashes=0"
     }
   ],
-  "updatedAt": "2026-10-17T13:59:33.404+02:00",
+  "updatedAt": "2026-10-17T13:59:51.342+02:00",
   "history": []
 }
