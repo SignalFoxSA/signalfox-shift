@@ -2332,6 +2332,26 @@
     {
       "time": "09:33",
       "message": "On Duty render skipped (state exceeds localStorage)"
+    },
+    {
+      "time": "09:47",
+      "message": "FIX 2: Stats MISS 270004ms → HIT 47ms (equal=true, bust=true, fresh=true)"
+    },
+    {
+      "time": "09:47",
+      "message": "Inbox render skipped (state exceeds localStorage)"
+    },
+    {
+      "time": "09:47",
+      "message": "Stage 4 done — countsOk=true"
+    },
+    {
+      "time": "09:47",
+      "message": "Problem: localStorage quota exceeded — persist FAILED (sfshift_company:Failed to execute 'setItem' on 'Storage': Setting the value of 'sfshift_company' exceeded the quota.), BUT the storage-full banner SHOWED and NO data was lost (Fix 1 HELD)"
+    },
+    {
+      "time": "09:47",
+      "message": "Problem: Company Stats FIRST compute still slow (270004ms at 2000 staff) — KNOWN REMAINING LIMIT; repeat views instant (Fix 2 held, HIT 47ms)"
     }
   ],
   "metrics": [
@@ -2382,6 +2402,18 @@
     {
       "label": "FIX 2 — Stats MISS (first view)",
       "value": "270004ms"
+    },
+    {
+      "label": "FIX 2 — Stats HIT (repeat view)",
+      "value": "47ms deep-equal=true"
+    },
+    {
+      "label": "FIX 2 — Stats cache bust + cached==fresh",
+      "value": "bust=true freshEqual=true"
+    },
+    {
+      "label": "Rules engine",
+      "value": "ok ms=24 violDays=undefined"
     }
   ],
   "progress": {
@@ -2401,7 +2433,7 @@
     "rosters": 3600,
     "changes": 40000
   },
-  "updatedAt": "2026-10-17T09:47:26.364+02:00",
+  "updatedAt": "2026-10-17T09:47:44.979+02:00",
   "breakdown": {
     "staffPerWorkplace": [
       {
@@ -2620,6 +2652,12 @@
       "loadMs": 2302,
       "renderMs": 1543,
       "exportMs": null
+    },
+    {
+      "staff": 2000,
+      "loadMs": null,
+      "renderMs": 3016,
+      "exportMs": null
     }
   ],
   "speedPerLevel": [
@@ -2643,6 +2681,13 @@
       "loadMs": 2302,
       "renderMs": 1543,
       "exportMs": null
+    },
+    {
+      "level": "Medium",
+      "staff": 2000,
+      "loadMs": null,
+      "renderMs": 3016,
+      "exportMs": null
     }
   ],
   "problems": [
@@ -2656,6 +2701,18 @@
       "time": "09:33",
       "message": "Company Stats FIRST compute still slow (45689ms at 1000 staff) — KNOWN REMAINING LIMIT; repeat views instant (Fix 2 held, HIT 9ms)",
       "detail": "fix2={\"missMs\":45689,\"hitMs\":9,\"equal\":true,\"bustOk\":true,\"freshEqual\":true,\"missTotal\":15500,\"bustMs\":45317}",
+      "fix": "Speeding up the FIRST computation (e.g. incremental per-roster aggregates) is a future optimization, not part of Fix 2. Repeat views are instant via the cache."
+    },
+    {
+      "time": "09:47",
+      "message": "localStorage quota exceeded — persist FAILED (sfshift_company:Failed to execute 'setItem' on 'Storage': Setting the value of 'sfshift_company' exceeded the quota.), BUT the storage-full banner SHOWED and NO data was lost (Fix 1 HELD)",
+      "detail": "persist={\"ok\":false,\"ms\":126,\"bytes\":12429591,\"failed\":\"sfshift_company:Failed to execute 'setItem' on 'Storage': Setting the value of 'sfshift_company' exceeded the quota.\"} fix1={\"persistOk\":false,\"bannerChecked\":true,\"bannerShown\":true,\"flagSet\":true,\"calSurvived\":true,\"loadSavedSurvived\":true,\"saveSurvived\":true}",
+      "fix": "Known limit: localStorage ~5MB cap remains. Raising the cap needs an IndexedDB migration (bigger job, not done). The app now warns instead of losing data."
+    },
+    {
+      "time": "09:47",
+      "message": "Company Stats FIRST compute still slow (270004ms at 2000 staff) — KNOWN REMAINING LIMIT; repeat views instant (Fix 2 held, HIT 47ms)",
+      "detail": "fix2={\"missMs\":270004,\"hitMs\":47,\"equal\":true,\"bustOk\":true,\"freshEqual\":true,\"missTotal\":31000,\"bustMs\":269015}",
       "fix": "Speeding up the FIRST computation (e.g. incremental per-roster aggregates) is a future optimization, not part of Fix 2. Repeat views are instant via the cache."
     }
   ]
