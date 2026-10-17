@@ -1,6 +1,6 @@
 {
-  "status": "running",
-  "stage": "Stage 5 of 7 — s5d-40000dense",
+  "status": "done",
+  "stage": "Stopped early by Ian \u2014 results so far (Stage 5 of 7)",
   "progress": {
     "current": 5,
     "total": 7
@@ -633,13 +633,13 @@
     {
       "time": "14:10",
       "message": "Point s5a-2000dense: counts changed during measurements",
-      "detail": "afterReload={\"staff\":2000,\"teams\":100,\"rostersActiveMem\":1200,\"companyWorkplaces\":1,\"companyRosters\":1200,\"drafts\":50,\"notif\":1000,\"apps\":134,\"archived\":0,\"dbBytes\":5900883,\"dbMode\":\"idb\",\"dbKeys\":7,\"opensActiveWp\":25,\"changesActiveWp\":12025,\"heapUsedMB\":23.4,\"heapLimitMB\":3586} final={\"staff\":0,\"teams\":0,\"rostersActiveMem\":0,\"companyWorkplaces\":1,\"companyRosters\":0,\"drafts\":0,\"notif\":0,\"apps\":0,\"archived\":0,\"dbBytes\":684,\"dbMode\":\"idb\",\"dbKeys\":3,\"opensActiveWp\":0,\"changesActiveWp\":0,\"heapUsedM [HARNESS ARTIFACT — CORRECTION: recovery opened a fresh browser context, so stateFinal measured an empty app, not app data loss. The real s5a findings are the staff-list crash + the pending-apps prune. Harness fixed in v2: recovery now reuses the same context.]",
+      "detail": "afterReload={\"staff\":2000,\"teams\":100,\"rostersActiveMem\":1200,\"companyWorkplaces\":1,\"companyRosters\":1200,\"drafts\":50,\"notif\":1000,\"apps\":134,\"archived\":0,\"dbBytes\":5900883,\"dbMode\":\"idb\",\"dbKeys\":7,\"opensActiveWp\":25,\"changesActiveWp\":12025,\"heapUsedMB\":23.4,\"heapLimitMB\":3586} final={\"staff\":0,\"teams\":0,\"rostersActiveMem\":0,\"companyWorkplaces\":1,\"companyRosters\":0,\"drafts\":0,\"notif\":0,\"apps\":0,\"archived\":0,\"dbBytes\":684,\"dbMode\":\"idb\",\"dbKeys\":3,\"opensActiveWp\":0,\"changesActiveWp\":0,\"heapUsedM [HARNESS ARTIFACT \u2014 CORRECTION: recovery opened a fresh browser context, so stateFinal measured an empty app, not app data loss. The real s5a findings are the staff-list crash + the pending-apps prune. Harness fixed in v2: recovery now reuses the same context.]",
       "fix": "Harness: recover() must create the new page in the SAME browser context (shared IndexedDB), not a fresh context."
     },
     {
       "time": "15:10",
       "message": "Point s5b-4000dense: counts changed during measurements",
-      "detail": "afterReload={\"staff\":4000,\"teams\":200,\"rostersActiveMem\":2400,\"companyWorkplaces\":1,\"companyRosters\":2400,\"drafts\":100,\"notif\":2000,\"apps\":400,\"archived\":0,\"dbBytes\":11918422,\"dbMode\":\"idb\",\"dbKeys\":7,\"opensActiveWp\":50,\"changesActiveWp\":24050,\"heapUsedMB\":19.6,\"heapLimitMB\":3586} final={\"staff\":0,\"teams\":0,\"rostersActiveMem\":0,\"companyWorkplaces\":0,\"companyRosters\":0,\"drafts\":0,\"notif\":0,\"apps\":0,\"archived\":0,\"dbBytes\":127,\"dbMode\":\"idb\",\"dbKeys\":2,\"opensActiveWp\":0,\"changesActiveWp\":0,\"heapUse [HARNESS ARTIFACT — CORRECTION: same fresh-context recovery artifact as s5a (stateFinal measured an empty app). Real s5b finding: Staff list hung ~60 min then crashed (renderStaffTab at 4000 staff in one workplace). Harness fixed in v2 with same-context recovery + 60s cap.]",
+      "detail": "afterReload={\"staff\":4000,\"teams\":200,\"rostersActiveMem\":2400,\"companyWorkplaces\":1,\"companyRosters\":2400,\"drafts\":100,\"notif\":2000,\"apps\":400,\"archived\":0,\"dbBytes\":11918422,\"dbMode\":\"idb\",\"dbKeys\":7,\"opensActiveWp\":50,\"changesActiveWp\":24050,\"heapUsedMB\":19.6,\"heapLimitMB\":3586} final={\"staff\":0,\"teams\":0,\"rostersActiveMem\":0,\"companyWorkplaces\":0,\"companyRosters\":0,\"drafts\":0,\"notif\":0,\"apps\":0,\"archived\":0,\"dbBytes\":127,\"dbMode\":\"idb\",\"dbKeys\":2,\"opensActiveWp\":0,\"changesActiveWp\":0,\"heapUse [HARNESS ARTIFACT \u2014 CORRECTION: same fresh-context recovery artifact as s5a (stateFinal measured an empty app). Real s5b finding: Staff list hung ~60 min then crashed (renderStaffTab at 4000 staff in one workplace). Harness fixed in v2 with same-context recovery + 60s cap.]",
       "fix": "Harness: same-context recovery + 60s race cap on renderStaffTab. App: renderStaffTab needs virtualisation/pagination."
     },
     {
@@ -664,325 +664,329 @@
   "log": [
     {
       "time": "14:04",
-      "message": "Building up — seeding…"
+      "message": "Building up \u2014 seeding\u2026"
     },
     {
       "time": "14:04",
-      "message": "Workplace 1/1 seeded — staff 2000, rosters 1200"
+      "message": "Workplace 1/1 seeded \u2014 staff 2000, rosters 1200"
     },
     {
       "time": "14:04",
-      "message": "Added notifications — 1000 of 1000"
+      "message": "Added notifications \u2014 1000 of 1000"
     },
     {
       "time": "14:04",
-      "message": "Added applications — 200 of 200"
+      "message": "Added applications \u2014 200 of 200"
     },
     {
       "time": "14:04",
-      "message": "Added drafts — 50 of 50"
+      "message": "Added drafts \u2014 50 of 50"
     },
     {
       "time": "14:10",
-      "message": "Point s5a-2000dense done — countsOk=false, crashes=1"
+      "message": "Point s5a-2000dense done \u2014 countsOk=false, crashes=1"
     },
     {
       "time": "14:10",
-      "message": "Building up — seeding…"
+      "message": "Building up \u2014 seeding\u2026"
     },
     {
       "time": "14:10",
-      "message": "Workplace 1/1 seeded — staff 4000, rosters 2400"
+      "message": "Workplace 1/1 seeded \u2014 staff 4000, rosters 2400"
     },
     {
       "time": "14:10",
-      "message": "Added notifications — 1000 of 2000"
+      "message": "Added notifications \u2014 1000 of 2000"
     },
     {
       "time": "14:10",
-      "message": "Added notifications — 2000 of 2000"
+      "message": "Added notifications \u2014 2000 of 2000"
     },
     {
       "time": "14:10",
-      "message": "Added applications — 400 of 400"
+      "message": "Added applications \u2014 400 of 400"
     },
     {
       "time": "14:10",
-      "message": "Added drafts — 100 of 100"
+      "message": "Added drafts \u2014 100 of 100"
     },
     {
       "time": "15:10",
-      "message": "Point s5b-4000dense done — countsOk=false, crashes=1"
+      "message": "Point s5b-4000dense done \u2014 countsOk=false, crashes=1"
     },
     {
       "time": "15:10",
-      "message": "Building up — seeding…"
+      "message": "Building up \u2014 seeding\u2026"
     },
     {
       "time": "15:10",
-      "message": "Workplace 1/1 seeded — staff 8000, rosters 4800"
+      "message": "Workplace 1/1 seeded \u2014 staff 8000, rosters 4800"
     },
     {
       "time": "15:10",
-      "message": "Added notifications — 1000 of 4000"
+      "message": "Added notifications \u2014 1000 of 4000"
     },
     {
       "time": "15:10",
-      "message": "Added notifications — 2000 of 4000"
+      "message": "Added notifications \u2014 2000 of 4000"
     },
     {
       "time": "15:10",
-      "message": "Added notifications — 3000 of 4000"
+      "message": "Added notifications \u2014 3000 of 4000"
     },
     {
       "time": "15:10",
-      "message": "Added notifications — 4000 of 4000"
+      "message": "Added notifications \u2014 4000 of 4000"
     },
     {
       "time": "15:10",
-      "message": "Added applications — 400 of 800"
+      "message": "Added applications \u2014 400 of 800"
     },
     {
       "time": "15:10",
-      "message": "Added applications — 800 of 800"
+      "message": "Added applications \u2014 800 of 800"
     },
     {
       "time": "15:10",
-      "message": "Added drafts — 100 of 200"
+      "message": "Added drafts \u2014 100 of 200"
     },
     {
       "time": "15:10",
-      "message": "Added drafts — 200 of 200"
+      "message": "Added drafts \u2014 200 of 200"
     },
     {
       "time": "15:16",
-      "message": "Building up — seeding…"
+      "message": "Building up \u2014 seeding\u2026"
     },
     {
       "time": "15:16",
-      "message": "Workplace 1/1 seeded — staff 8000, rosters 4800"
+      "message": "Workplace 1/1 seeded \u2014 staff 8000, rosters 4800"
     },
     {
       "time": "15:16",
-      "message": "Added notifications — 1000 of 4000"
+      "message": "Added notifications \u2014 1000 of 4000"
     },
     {
       "time": "15:16",
-      "message": "Added notifications — 2000 of 4000"
+      "message": "Added notifications \u2014 2000 of 4000"
     },
     {
       "time": "15:16",
-      "message": "Added notifications — 3000 of 4000"
+      "message": "Added notifications \u2014 3000 of 4000"
     },
     {
       "time": "15:16",
-      "message": "Added notifications — 4000 of 4000"
+      "message": "Added notifications \u2014 4000 of 4000"
     },
     {
       "time": "15:16",
-      "message": "Added applications — 400 of 800"
+      "message": "Added applications \u2014 400 of 800"
     },
     {
       "time": "15:16",
-      "message": "Added applications — 800 of 800"
+      "message": "Added applications \u2014 800 of 800"
     },
     {
       "time": "15:16",
-      "message": "Added drafts — 100 of 200"
+      "message": "Added drafts \u2014 100 of 200"
     },
     {
       "time": "15:16",
-      "message": "Added drafts — 200 of 200"
+      "message": "Added drafts \u2014 200 of 200"
     },
     {
       "time": "16:13",
-      "message": "Resumed — s5a/s5b/s5c done, running s5d-40000dense (Stage 5 remainder), then Stages 6–7."
+      "message": "Resumed \u2014 s5a/s5b/s5c done, running s5d-40000dense (Stage 5 remainder), then Stages 6\u20137."
     },
     {
       "time": "16:13",
-      "message": "Building up — seeding…"
+      "message": "Building up \u2014 seeding\u2026"
     },
     {
       "time": "16:13",
-      "message": "Workplace 1/5 seeded — staff 8000, rosters 4800"
+      "message": "Workplace 1/5 seeded \u2014 staff 8000, rosters 4800"
     },
     {
       "time": "16:13",
-      "message": "Workplace 2/5 seeded — staff 16000, rosters 9600"
+      "message": "Workplace 2/5 seeded \u2014 staff 16000, rosters 9600"
     },
     {
       "time": "16:13",
-      "message": "Workplace 3/5 seeded — staff 24000, rosters 14400"
+      "message": "Workplace 3/5 seeded \u2014 staff 24000, rosters 14400"
     },
     {
       "time": "16:13",
-      "message": "Workplace 4/5 seeded — staff 32000, rosters 19200"
+      "message": "Workplace 4/5 seeded \u2014 staff 32000, rosters 19200"
     },
     {
       "time": "16:13",
-      "message": "Workplace 5/5 seeded — staff 40000, rosters 24000"
+      "message": "Workplace 5/5 seeded \u2014 staff 40000, rosters 24000"
     },
     {
       "time": "16:13",
-      "message": "Added notifications — 1000 of 8000"
+      "message": "Added notifications \u2014 1000 of 8000"
     },
     {
       "time": "16:13",
-      "message": "Added notifications — 2000 of 8000"
+      "message": "Added notifications \u2014 2000 of 8000"
     },
     {
       "time": "16:13",
-      "message": "Added notifications — 3000 of 8000"
+      "message": "Added notifications \u2014 3000 of 8000"
     },
     {
       "time": "16:13",
-      "message": "Added notifications — 4000 of 8000"
+      "message": "Added notifications \u2014 4000 of 8000"
     },
     {
       "time": "16:13",
-      "message": "Added notifications — 5000 of 8000"
+      "message": "Added notifications \u2014 5000 of 8000"
     },
     {
       "time": "16:13",
-      "message": "Added notifications — 6000 of 8000"
+      "message": "Added notifications \u2014 6000 of 8000"
     },
     {
       "time": "16:13",
-      "message": "Added notifications — 7000 of 8000"
+      "message": "Added notifications \u2014 7000 of 8000"
     },
     {
       "time": "16:13",
-      "message": "Added notifications — 8000 of 8000"
+      "message": "Added notifications \u2014 8000 of 8000"
     },
     {
       "time": "16:13",
-      "message": "Added applications — 400 of 1600"
+      "message": "Added applications \u2014 400 of 1600"
     },
     {
       "time": "16:13",
-      "message": "Added applications — 800 of 1600"
+      "message": "Added applications \u2014 800 of 1600"
     },
     {
       "time": "16:13",
-      "message": "Added applications — 1200 of 1600"
+      "message": "Added applications \u2014 1200 of 1600"
     },
     {
       "time": "16:13",
-      "message": "Added applications — 1600 of 1600"
+      "message": "Added applications \u2014 1600 of 1600"
     },
     {
       "time": "16:13",
-      "message": "Added drafts — 100 of 400"
+      "message": "Added drafts \u2014 100 of 400"
     },
     {
       "time": "16:13",
-      "message": "Added drafts — 200 of 400"
+      "message": "Added drafts \u2014 200 of 400"
     },
     {
       "time": "16:13",
-      "message": "Added drafts — 300 of 400"
+      "message": "Added drafts \u2014 300 of 400"
     },
     {
       "time": "16:13",
-      "message": "Added drafts — 400 of 400"
+      "message": "Added drafts \u2014 400 of 400"
     },
     {
       "time": "17:57",
-      "message": "Resumed — 3rd coordinator picking up at s5d, then Stage 6 + 7."
+      "message": "Resumed \u2014 3rd coordinator picking up at s5d, then Stage 6 + 7."
     },
     {
       "time": "17:57",
-      "message": "Building up — seeding…"
+      "message": "Building up \u2014 seeding\u2026"
     },
     {
       "time": "17:57",
-      "message": "Workplace 1/5 seeded — staff 8000, rosters 4800"
+      "message": "Workplace 1/5 seeded \u2014 staff 8000, rosters 4800"
     },
     {
       "time": "17:57",
-      "message": "Workplace 2/5 seeded — staff 16000, rosters 9600"
+      "message": "Workplace 2/5 seeded \u2014 staff 16000, rosters 9600"
     },
     {
       "time": "17:57",
-      "message": "Workplace 3/5 seeded — staff 24000, rosters 14400"
+      "message": "Workplace 3/5 seeded \u2014 staff 24000, rosters 14400"
     },
     {
       "time": "17:57",
-      "message": "Workplace 4/5 seeded — staff 32000, rosters 19200"
+      "message": "Workplace 4/5 seeded \u2014 staff 32000, rosters 19200"
     },
     {
       "time": "17:57",
-      "message": "Workplace 5/5 seeded — staff 40000, rosters 24000"
+      "message": "Workplace 5/5 seeded \u2014 staff 40000, rosters 24000"
     },
     {
       "time": "17:57",
-      "message": "Added notifications — 1000 of 8000"
+      "message": "Added notifications \u2014 1000 of 8000"
     },
     {
       "time": "17:57",
-      "message": "Added notifications — 2000 of 8000"
+      "message": "Added notifications \u2014 2000 of 8000"
     },
     {
       "time": "17:57",
-      "message": "Added notifications — 3000 of 8000"
+      "message": "Added notifications \u2014 3000 of 8000"
     },
     {
       "time": "17:57",
-      "message": "Added notifications — 4000 of 8000"
+      "message": "Added notifications \u2014 4000 of 8000"
     },
     {
       "time": "17:57",
-      "message": "Added notifications — 5000 of 8000"
+      "message": "Added notifications \u2014 5000 of 8000"
     },
     {
       "time": "17:57",
-      "message": "Added notifications — 6000 of 8000"
+      "message": "Added notifications \u2014 6000 of 8000"
     },
     {
       "time": "17:57",
-      "message": "Added notifications — 7000 of 8000"
+      "message": "Added notifications \u2014 7000 of 8000"
     },
     {
       "time": "17:57",
-      "message": "Added notifications — 8000 of 8000"
+      "message": "Added notifications \u2014 8000 of 8000"
     },
     {
       "time": "17:57",
-      "message": "Added applications — 400 of 1600"
+      "message": "Added applications \u2014 400 of 1600"
     },
     {
       "time": "17:57",
-      "message": "Added applications — 800 of 1600"
+      "message": "Added applications \u2014 800 of 1600"
     },
     {
       "time": "17:57",
-      "message": "Added applications — 1200 of 1600"
+      "message": "Added applications \u2014 1200 of 1600"
     },
     {
       "time": "17:57",
-      "message": "Added applications — 1600 of 1600"
+      "message": "Added applications \u2014 1600 of 1600"
     },
     {
       "time": "17:57",
-      "message": "Added drafts — 100 of 400"
+      "message": "Added drafts \u2014 100 of 400"
     },
     {
       "time": "17:57",
-      "message": "Added drafts — 200 of 400"
+      "message": "Added drafts \u2014 200 of 400"
     },
     {
       "time": "17:57",
-      "message": "Added drafts — 300 of 400"
+      "message": "Added drafts \u2014 300 of 400"
     },
     {
       "time": "17:57",
-      "message": "Added drafts — 400 of 400"
+      "message": "Added drafts \u2014 400 of 400"
     },
     {
       "time": "18:02",
-      "message": "Point s5d-40000dense done — countsOk=true, crashes=1"
+      "message": "Point s5d-40000dense done \u2014 countsOk=true, crashes=1"
+    },
+    {
+      "time": "18:15",
+      "message": "Test stopped by Ian \u2014 results so far (Stage 5 of 7). No further runs."
     }
   ],
-  "updatedAt": "2026-10-17T18:02:50.374+02:00",
+  "updatedAt": "2026-10-17T18:15:06.298682+02:00",
   "history": []
 }
