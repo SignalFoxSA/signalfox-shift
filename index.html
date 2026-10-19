@@ -1656,7 +1656,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261019-2009';
+var BUILD='20261019-2010';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -2499,7 +2499,7 @@ var S = {
 };
 
 /* ---------- date helpers (local-time safe) ---------- */
-/* parseISO NEVER throws (BUILD 20261019-2009): the old version did
+/* parseISO NEVER throws (BUILD 20261019-2010): the old version did
    s.split('-') unguarded, so a roster with NO startISO (undefined)
    crashed every caller — renderToday, rosterRow, Stats, etc.
    (pre-existing crash, not a regression; real rosters always carry
@@ -2818,7 +2818,7 @@ function calRosterDay(R,y,m,d){
     return {dayIdx:d-1, date:date};
   }
   if(!R.startISO || !R.days) return null;
-  /* BUILD 20261019-2009: a malformed startISO parses to Invalid Date
+  /* BUILD 20261019-2010: a malformed startISO parses to Invalid Date
      (parseISO never throws) — an undated roster covers no day. */
   var _sd=parseISO(R.startISO);
   if(isNaN(_sd.getTime())) return null;
@@ -4436,7 +4436,7 @@ DB.boot = function () {
     }
   } catch (e) {}
   DB.cache = snap;
-  /* BUILD 20261019-2009: the migration marker (written by _migrate)
+  /* BUILD 20261019-2010: the migration marker (written by _migrate)
      may already be in the localStorage mirror — if so, migration
      happened, even before IndexedDB finishes opening. */
   try { if (snap['sfshift_migrated'] === '1') DB.migrated = true; } catch (e) {}
@@ -4496,7 +4496,7 @@ DB._idbPutMany = function (keys, snap) {
 /* Migration: localStorage -> IndexedDB, write-verify. localStorage
    copies are kept (fallback/mirror) whatever the outcome. */
 DB._migrate = function () {
-  /* BUILD 20261019-2009: migrate ONLY the keys that were in
+  /* BUILD 20261019-2010: migrate ONLY the keys that were in
      localStorage at boot (DB._boot) — NOT the whole DB.cache.
      The old code snapshotted DB.cache, but the app writes keys
      into the cache during the boot window (e.g. persistBase for a
@@ -4516,7 +4516,7 @@ DB._migrate = function () {
     var ok = Object.keys(map).length === keys.length;
     if (ok) { for (var i = 0; i < keys.length; i++) if (map[keys[i]] !== snap[keys[i]]) { ok = false; break; } }
     if (ok) { DB.mode = 'idb'; if (keys.length) { DB.migrated = true;
-      /* BUILD 20261019-2009: persist the migration marker so the
+      /* BUILD 20261019-2010: persist the migration marker so the
          flag stays accurate across reloads. Before this fix, a
          first-visit SW controllerchange reload took the reconcile
          path, which never set the flag, so DB.migrated read false
@@ -4535,7 +4535,7 @@ DB._migrate = function () {
    untouched since boot; the user's newer in-window edits win for keys
    they already changed (their queued write then lands in IndexedDB). */
 DB._reconcile = function (entries) {
-  /* BUILD 20261019-2009: if the IndexedDB entries include the
+  /* BUILD 20261019-2010: if the IndexedDB entries include the
      migration marker (written by _migrate), a migration happened —
      set the flag. Deliberately NOT "entries exist => migrated":
      a fresh user with nothing to migrate gets normal writes landing
@@ -4609,7 +4609,7 @@ DB.set = function (k, v) {
     else DB.bytes += DB._entryBytes(k, v);
     if (DB.mode === 'local') {
       /* Fallback: localStorage IS the store — a failure here is real.
-         BUILD 20261019-2009: on failure, REVERT the cache entry to
+         BUILD 20261019-2010: on failure, REVERT the cache entry to
          the old value (or drop it if there was none) — before this
          fix the new value stayed in DB.cache, so DB.get returned a
          value that was never stored, unlike the IndexedDB cap path
@@ -4941,7 +4941,7 @@ function draftWorkplaceId(d){ return (d && d.workplaceId) || activeWorkplaceId()
 function draftBelongsTo(d, wid){ return !!d && draftWorkplaceId(d)===wid; }
 function draftsForWorkplace(wid){ return (S.drafts||[]).filter(function(d){ return draftBelongsTo(d, wid); }); }
 function loadDrafts(){
-  /* DRAFTS LOADER GUARD (BUILD 20261019-2009): same guard pattern as
+  /* DRAFTS LOADER GUARD (BUILD 20261019-2010): same guard pattern as
      companyLoad() (Fix 1), loadShiftApps() / loadNotifications()
      (Fix A), and loadSaved()'s rosters guard (BUILD 2006). The old
      code re-read S.drafts from storage UNCONDITIONALLY — if storage
@@ -8325,7 +8325,7 @@ function openArchivedRoster(aid){
   else if(R.startISO){ try{ var d=parseISO(R.startISO); y=d.getFullYear(); m=d.getMonth(); }catch(e){} }
   if(y==null||m==null){ toast('That archived roster has no date.'); return; }
   S._archiveView={aid:aid, unit:JSON.parse(JSON.stringify(unit)), vehicleId:R.vehicleId||null, y:y, m:m,
-    /* BUILD 20261019-2009: roster names ALREADY contain the month
+    /* BUILD 20261019-2010: roster names ALREADY contain the month
        ("Team B · September 2025" — built that way when the roster
        was created), so appending it again gave "Team B · Sep 2025 ·
        September 2025". Strip a trailing "· <Month> <Year>" suffix
@@ -8626,7 +8626,7 @@ function companyHeatmapCell(wp, dateISO){
   });
   if(!total) return {total:0, filled:0, open:0, level:'nodata'};
   var openRate=open/total;
-  var level=(openRate===0)?'full':(openRate>0.5?'critical':'short');
+  var level=(openRate===0)?'full':(openRate>=0.5?'critical':'short');
   return {total:total, filled:filled, open:open, level:level};
 }
 function companyHeatmapHtml(){
@@ -10799,7 +10799,7 @@ function renderToday(){
   var rows=[], seenVehicle={};
   S.rosters.forEach(function(u){
     var R=u.roster;
-    /* BUILD 20261019-2009: a roster with no/malformed startISO is
+    /* BUILD 20261019-2010: a roster with no/malformed startISO is
        undated — skip it here (it covers no day) instead of crashing. */
     var _sd=parseISO(R.startISO);
     if(isNaN(_sd.getTime())) return;
@@ -10830,7 +10830,7 @@ function renderToday(){
 function rosterRow(u){
   var R=u.roster, start=parseISO(R.startISO);
   var staff=R.crews.reduce(function(a,c){ return a+((c.members||[]).length); },0);
-  /* BUILD 20261019-2009: month rosters show their month; span rosters
+  /* BUILD 20261019-2010: month rosters show their month; span rosters
      with no/malformed startISO are undated — show that, never NaN dates. */
   var spanTxt=isNaN(start.getTime())
     ? 'No start date'
