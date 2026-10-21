@@ -43,9 +43,11 @@
   .stage.run .ms{color:var(--gold);}
   .stage.pass .ms{color:var(--green);}
   .stage.fail .ms{color:var(--red);}
-  #frameCard{display:none;}
-  #frameCard.show{display:block;}
-  #appFrame{width:100%; height:72vh; border:1px solid var(--line); border-radius:12px; background:#000;}
+  #appFrame{width:100%; height:72vh; border:1px solid var(--line); border-radius:12px; background:#000; display:block;}
+  #frameSlot{position:relative;}
+  #framePlaceholder{position:absolute; inset:0; display:grid; place-items:center; text-align:center;
+    border:1px dashed #33333f; border-radius:12px; color:var(--dim); font-size:14px; line-height:1.5; padding:20px; background:#08080b;}
+  #frameSlot.hasFrame #framePlaceholder{display:none;}
   #reportCard{display:none;}
   #reportCard.show{display:block;}
   #reportText{white-space:pre-wrap; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12.5px;
@@ -58,6 +60,34 @@
   .metric span:last-child{font-weight:700; text-align:right;}
   .warn{color:#ffb3b3;}
   input[type=file]{display:none;}
+  /* watch window */
+  .watchhead{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .stopbtn{display:none; background:var(--red); color:#fff; border:0; border-radius:999px;
+    padding:9px 16px; font-size:14px; font-weight:900; cursor:pointer; flex:none;}
+  .stopbtn.show{display:block;}
+  #nowBar{display:flex; gap:9px; align-items:flex-start; background:#0b0b10; border:1px solid var(--line);
+    border-radius:12px; padding:10px 12px; margin:12px 0 10px; font-size:13.5px; line-height:1.45; color:var(--tx);}
+  #nowDot{width:10px; height:10px; border-radius:50%; background:#55555f; flex:none; margin-top:4px;}
+  #nowDot.live{background:var(--gold); animation:pulse 1s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.25;}}
+  /* history + graphs */
+  .brow{margin:11px 0;}
+  .brow .blab{display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;}
+  .brow .blab b{font-weight:700;}
+  .btrack{background:#0b0b10; border-radius:6px; height:14px; margin:3px 0; overflow:hidden;}
+  .bfill{height:100%; border-radius:6px; min-width:2px;}
+  .bfill.base{background:#5b7a99;}
+  .bfill.latest{background:var(--gold);}
+  .bval{font-size:11.5px; color:var(--dim);}
+  .chip{display:inline-block; border-radius:999px; padding:2px 9px; font-size:11.5px; font-weight:800; margin-left:6px;}
+  .chip.good{background:#12261a; color:var(--green);}
+  .chip.bad{background:#2a0f0f; color:#ff9c9c;}
+  .chip.same{background:#1b1b23; color:var(--dim);}
+  .runitem{padding:9px 2px; border-bottom:1px solid #1b1b23; font-size:13px;}
+  .runitem:last-child{border-bottom:0;}
+  .runitem .r1{display:flex; justify-content:space-between; gap:10px;}
+  .runitem .r2{color:var(--dim); font-size:12px; margin-top:2px; line-height:1.45;}
+  .clearbtn{background:none; border:0; color:var(--dim); text-decoration:underline; font-size:12.5px; cursor:pointer; padding:4px 0;}
 </style>
 </head>
 <body>
@@ -93,14 +123,27 @@
     <button class="bigbtn" id="btnStop">■ STOP — halt &amp; restore my data</button>
   </div>
 
+  <div class="card" id="frameCard">
+    <div class="watchhead">
+      <h3 style="margin:0;">📺 Watch it work</h3>
+      <button class="stopbtn" id="btnStop2">■ STOP</button>
+    </div>
+    <div id="nowBar"><span id="nowDot"></span><span id="nowText">The app appears here during a test — you’ll watch every screen it opens, as it opens it.</span></div>
+    <div id="frameSlot">
+      <div id="framePlaceholder"><div>🦊<br>The app screen appears here<br>when a test starts.</div></div>
+      <iframe id="appFrame" sandbox="allow-scripts allow-same-origin allow-modals allow-forms" title="Shift under test"></iframe>
+    </div>
+    <p style="margin-bottom:0;">This is the real Shift app, live. The test drives it exactly like a person tapping — watch the screens change as each stage runs.</p>
+  </div>
+
   <div class="card" id="stageCard">
     <h3>Stages</h3>
     <div id="stages"></div>
   </div>
 
-  <div class="card" id="frameCard">
-    <h3>The app, being tortured</h3>
-    <iframe id="appFrame" sandbox="allow-scripts allow-same-origin allow-modals allow-forms" title="Shift under test"></iframe>
+  <div class="card" id="historyCard">
+    <h3>📊 History — is it getting faster?</h3>
+    <div id="historyBody"><p>Loading your saved runs…</p></div>
   </div>
 
   <div class="card" id="reportCard">
@@ -143,12 +186,26 @@ var stageEls = {};
     stageEls[sd[0]] = { row: row, ic: row.querySelector('.ic'), dt: row.querySelector('.dt'), ms: row.querySelector('.ms') };
   });
 })();
+var stageNames = {};
+stageDefs.forEach(function(sd){ stageNames[sd[0]] = sd[1]; });
 function stSet(key, state, detail, msText){
   var s = stageEls[key]; if (!s) return;
   s.row.className = 'stage' + (state ? ' ' + state : '');
   s.ic.textContent = state === 'run' ? '▶' : state === 'pass' ? '✓' : state === 'fail' ? '✗' : state === 'stop' ? '■' : '·';
   if (detail != null) s.dt.textContent = detail;
   if (msText != null) s.ms.textContent = msText;
+  if (state === 'run') {
+    var nt = document.getElementById('nowText');
+    if (nt) nt.textContent = 'Now: ' + (stageNames[key] || key) + (detail ? ' — ' + detail : '');
+    var nd = document.getElementById('nowDot');
+    if (nd) nd.classList.add('live');
+  }
+}
+function nowSay(text, live){
+  var nt = document.getElementById('nowText');
+  if (nt) nt.textContent = text;
+  var nd = document.getElementById('nowDot');
+  if (nd) nd.classList.toggle('live', !!live);
 }
 function fmtMs(ms){ return ms >= 1000 ? (ms / 1000).toFixed(2) + 's' : Math.round(ms) + 'ms'; }
 function log(line){ report.push(line); }
@@ -158,11 +215,15 @@ function checkStop(){ if (stopWanted) throw new Error('__STOPPED__'); }
 /* ---------------- raw IndexedDB helpers ---------------- */
 function idbOpen(name, makeKv){
   return new Promise(function(res, rej){
-    var req = indexedDB.open(name, 1);
+    var version = name === GUARD_DB ? 2 : 1;
+    var req = indexedDB.open(name, version);
     req.onupgradeneeded = function(){
       var db = req.result;
       if (makeKv && !db.objectStoreNames.contains('kv')) db.createObjectStore('kv', { keyPath: 'k' });
-      if (name === GUARD_DB && !db.objectStoreNames.contains('snap')) db.createObjectStore('snap', { keyPath: 'id' });
+      if (name === GUARD_DB) {
+        if (!db.objectStoreNames.contains('snap')) db.createObjectStore('snap', { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('runs')) db.createObjectStore('runs', { keyPath: 'id' });
+      }
     };
     req.onsuccess = function(){ res(req.result); };
     req.onerror = function(){ rej(req.error); };
@@ -284,16 +345,147 @@ document.getElementById('restoreFile').addEventListener('change', async function
   this.value = '';
 });
 
+/* ---------------- run history (lives in the guard vault — the wipe can't touch it) ---------------- */
+var CMP_STAGES = [['boot', 'Boot'], ['seed', 'Seed'], ['reload', 'Save + reload'], ['staff', 'Staff list'], ['cal', 'Calendar'], ['switch', 'Team switch'], ['export', 'Export']];
+async function saveRun(rec){
+  rec.id = 'run-' + rec.ts;
+  var gdb = await idbOpen(GUARD_DB, false);
+  await new Promise(function(res, rej){
+    var tx = gdb.transaction('runs', 'readwrite');
+    tx.objectStore('runs').put(rec);
+    tx.oncomplete = res; tx.onerror = function(){ rej(tx.error); };
+  });
+  gdb.close();
+}
+async function loadRuns(){
+  try {
+    var gdb = await idbOpen(GUARD_DB, false);
+    var all = await new Promise(function(res){
+      if (!gdb.objectStoreNames.contains('runs')) { res([]); return; }
+      var r = gdb.transaction('runs', 'readonly').objectStore('runs').getAll();
+      r.onsuccess = function(){ res(r.result || []); };
+      r.onerror = function(){ res([]); };
+    });
+    gdb.close();
+    return all.sort(function(a, b){ return a.ts - b.ts; });
+  } catch (e) { return []; }
+}
+async function clearRuns(){
+  try {
+    var gdb = await idbOpen(GUARD_DB, false);
+    await new Promise(function(res){
+      var tx = gdb.transaction('runs', 'readwrite');
+      tx.objectStore('runs').clear();
+      tx.oncomplete = res; tx.onerror = res;
+    });
+    gdb.close();
+  } catch (e) {}
+}
+function pickBaseline(runsAtSize){
+  var complete = runsAtSize.filter(function(r){ return r.status === 'complete'; });
+  return complete.length ? complete[0] : runsAtSize[0];
+}
+function pickLatest(runsAtSize){
+  var complete = runsAtSize.filter(function(r){ return r.status === 'complete'; });
+  return complete.length ? complete[complete.length - 1] : runsAtSize[runsAtSize.length - 1];
+}
+function pctChip(base, latest){
+  if (!base) return '';
+  var pct = (latest - base) / base * 100;
+  if (pct <= -1) return '<span class="chip good">▼ ' + Math.abs(Math.round(pct)) + '% faster</span>';
+  if (pct >= 1) return '<span class="chip bad">▲ ' + Math.round(pct) + '% slower</span>';
+  return '<span class="chip same">≈ no change</span>';
+}
+async function renderHistory(){
+  var host = document.getElementById('historyBody');
+  if (!host) return;
+  var runs = await loadRuns();
+  if (!runs.length) {
+    host.innerHTML = '<p>No runs saved yet. Your first run becomes the baseline — every run after it is compared against where you started.</p>';
+    return;
+  }
+  var atSize = runs.filter(function(r){ return r.size === size; });
+  var html = '';
+  if (!atSize.length) {
+    html += '<p>No runs at <b>' + size.toLocaleString('en-ZA') + ' staff</b> yet — pick this size and run a test to start its history.</p>';
+  } else {
+    var base = pickBaseline(atSize), latest = pickLatest(atSize);
+    var baseDate = new Date(base.ts).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
+    if (base.id === latest.id) {
+      html += '<p>Baseline for <b>' + size.toLocaleString('en-ZA') + ' staff</b>: the run of <b>' + baseDate +
+        '</b> (build ' + base.build + '). Run it again after the next app build and you’ll see, stage by stage, what got faster or slower.</p>';
+      CMP_STAGES.forEach(function(cs){
+        var v = base.times ? base.times[cs[0]] : null;
+        if (v == null) return;
+        html += '<div class="brow"><div class="blab"><b>' + cs[1] + '</b><span>' + fmtMs(v) + '</span></div>' +
+          '<div class="btrack"><div class="bfill latest" style="width:100%"></div></div></div>';
+      });
+    } else {
+      var latestDate = new Date(latest.ts).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
+      html += '<p><b>' + size.toLocaleString('en-ZA') + ' staff</b> — latest run (' + latestDate + ', build ' + latest.build +
+        ') vs your first run (' + baseDate + ', build ' + base.build + '). <span style="color:#5b7a99;">■</span> first run · <span style="color:var(--gold);">■</span> latest.</p>';
+      CMP_STAGES.forEach(function(cs){
+        var b = base.times ? base.times[cs[0]] : null;
+        var l = latest.times ? latest.times[cs[0]] : null;
+        if (b == null || l == null) return;
+        var mx = Math.max(b, l) || 1;
+        html += '<div class="brow"><div class="blab"><b>' + cs[1] + '</b><span>' + fmtMs(b) + ' → ' + fmtMs(l) + pctChip(b, l) + '</span></div>' +
+          '<div class="btrack"><div class="bfill base" style="width:' + Math.max(2, b / mx * 100) + '%"></div></div>' +
+          '<div class="btrack"><div class="bfill latest" style="width:' + Math.max(2, l / mx * 100) + '%"></div></div></div>';
+      });
+    }
+  }
+  html += '<h3 style="margin:16px 0 4px; font-size:14px;">All saved runs</h3>';
+  runs.slice().reverse().slice(0, 12).forEach(function(r){
+    var tot = 0, parts = [];
+    CMP_STAGES.forEach(function(cs){
+      var v = r.times ? r.times[cs[0]] : null;
+      if (v != null) { tot += v; parts.push(cs[1] + ' ' + fmtMs(v)); }
+    });
+    var stat = r.status === 'complete' ? '✓ complete' : r.status === 'stopped' ? '■ stopped early' : '✗ failed';
+    html += '<div class="runitem"><div class="r1"><span><b>' + new Date(r.ts).toLocaleString('en-ZA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) +
+      '</b> · ' + r.size.toLocaleString('en-ZA') + ' staff</span><span>' + stat + '</span></div>' +
+      '<div class="r2">Build ' + r.build + ' · stages total ' + fmtMs(tot) + (parts.length ? '<br>' + parts.join(' · ') : '') + '</div></div>';
+  });
+  html += '<button class="clearbtn" onclick="clearHistory()">Clear saved history</button>';
+  host.innerHTML = html;
+}
+async function clearHistory(){
+  if (!confirm('Delete all saved torture-test runs? The baselines go too — the next run starts a fresh baseline.')) return;
+  await clearRuns();
+  renderHistory();
+}
+async function comparisonLines(forSize, thisTimes, thisTs){
+  var runs = await loadRuns();
+  var atSize = runs.filter(function(r){ return r.size === forSize && r.ts < thisTs; });
+  if (!atSize.length) return [];
+  var base = pickBaseline(atSize);
+  if (!base || !base.times) return [];
+  var baseDate = new Date(base.ts).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
+  var lines = ['', 'Compared with your first ' + forSize.toLocaleString('en-ZA') + '-staff run (' + baseDate + ', build ' + base.build + '):'];
+  CMP_STAGES.forEach(function(cs){
+    var b = base.times[cs[0]], l = thisTimes[cs[0]];
+    if (b == null || l == null) return;
+    var pct = (l - b) / b * 100;
+    var word = pct <= -1 ? Math.abs(Math.round(pct)) + '% FASTER' : pct >= 1 ? Math.round(pct) + '% SLOWER' : 'no change';
+    lines.push('  ' + cs[1] + ': ' + fmtMs(b) + ' → ' + fmtMs(l) + ' (' + word + ')');
+  });
+  return lines.length > 2 ? lines : [];
+}
+
 /* ---------------- frame handling ---------------- */
 var frame = document.getElementById('appFrame');
 function killFrame(){
   try { frame.src = 'about:blank'; } catch (e) {}
   if (frame.parentNode) frame.remove();
+  var slot = document.getElementById('frameSlot');
+  if (slot) slot.classList.remove('hasFrame');
 }
 function mountFrame(){
-  var card = document.getElementById('frameCard');
-  if (!frame.parentNode) card.appendChild(frame);
-  card.classList.add('show');
+  var slot = document.getElementById('frameSlot');
+  if (!frame.parentNode || frame.parentNode !== slot) slot.appendChild(frame);
+  slot.classList.add('hasFrame');
+  document.getElementById('frameCard').classList.add('show');
 }
 function waitFrameLoad(){
   return new Promise(function(res){
@@ -383,9 +575,11 @@ document.querySelectorAll('#sizeSeg button').forEach(function(b){
   b.addEventListener('click', function(){
     document.querySelectorAll('#sizeSeg button').forEach(function(x){ x.classList.remove('sel'); });
     b.classList.add('sel'); size = parseInt(b.getAttribute('data-n'), 10);
+    renderHistory();
   });
 });
 document.getElementById('btnStop').addEventListener('click', function(){ stopWanted = true; });
+document.getElementById('btnStop2').addEventListener('click', function(){ stopWanted = true; });
 document.getElementById('btnStart').addEventListener('click', function(){ run(); });
 
 async function run(){
@@ -396,8 +590,9 @@ async function run(){
   stageDefs.forEach(function(sd){ stSet(sd[0], '', '', ''); });
   setControls(false);
   document.getElementById('btnStop').classList.add('show');
+  document.getElementById('btnStop2').classList.add('show');
   document.getElementById('reportCard').classList.remove('show');
-  var snap = null, restored = false, stoppedEarly = false;
+  var snap = null, restored = false, stoppedEarly = false, failedFlag = false, times = {};
   try {
     snap = await takeSnapshot();
     downloadBackup(snap);
@@ -406,6 +601,11 @@ async function run(){
     checkStop();
 
     mountFrame();
+    nowSay('Starting — loading the app on a clean slate…', true);
+    setTimeout(function(){
+      var fc = document.getElementById('frameCard');
+      if (fc) fc.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 350);
     /* STAGE boot */
     stSet('boot', 'run', 'Loading the real app on a clean slate…');
     var t0 = performance.now();
@@ -418,6 +618,7 @@ async function run(){
     var bootMs = performance.now() - t0;
     stSet('boot', 'pass', 'App up, build ' + buildUnderTest, fmtMs(bootMs));
     log('Boot: ' + fmtMs(bootMs) + ' (build ' + buildUnderTest + ')');
+    times.boot = Math.round(bootMs);
     checkStop();
 
     /* STAGE seed */
@@ -427,6 +628,7 @@ async function run(){
     var seedMs = performance.now() - t0;
     stSet('seed', 'pass', size.toLocaleString('en-ZA') + ' staff, 2 teams, 8 crews, 2 rosters', fmtMs(seedMs));
     log('Seed: ' + size + ' staff in ' + fmtMs(seedMs));
+    times.seed = Math.round(seedMs);
     checkStop();
 
     /* STAGE reload */
@@ -451,6 +653,7 @@ async function run(){
     if (back !== size) throw new Error('After reload the app shows ' + back + ' staff, not ' + size + '.');
     stSet('reload', 'pass', 'Reloaded with all ' + size.toLocaleString('en-ZA') + ' staff intact', fmtMs(reloadMs));
     log('Save + reload: ' + fmtMs(reloadMs) + ', staff intact');
+    times.reload = Math.round(reloadMs);
     checkStop();
 
     /* STAGE staff list */
@@ -461,6 +664,7 @@ async function run(){
     var staffMs = performance.now() - t0;
     stSet('staff', 'pass', size.toLocaleString('en-ZA') + ' staff on the staff screen', fmtMs(staffMs));
     log('Staff list: ' + fmtMs(staffMs));
+    times.staff = Math.round(staffMs);
     checkStop();
 
     /* STAGE calendar */
@@ -471,6 +675,7 @@ async function run(){
     var calMs = performance.now() - t0;
     stSet('cal', 'pass', 'Month calendar for Torture Team 1', fmtMs(calMs));
     log('Calendar render: ' + fmtMs(calMs));
+    times.cal = Math.round(calMs);
     checkStop();
 
     /* STAGE team switch */
@@ -485,6 +690,7 @@ async function run(){
     var sw2 = performance.now() - t0;
     stSet('switch', 'pass', 'Team 1 → Team 2 → Team 1', fmtMs(sw1) + ' / ' + fmtMs(sw2));
     log('Team switch: ' + fmtMs(sw1) + ' there, ' + fmtMs(sw2) + ' back');
+    times.switch = Math.round(sw1); times.switchBack = Math.round(sw2);
     checkStop();
 
     /* STAGE export */
@@ -496,6 +702,7 @@ async function run(){
     var expMs = performance.now() - t0;
     stSet('export', 'pass', 'Workbook built · CSV ' + Math.round(csv.length / 1024) + ' KB', fmtMs(expMs));
     log('Export build: ' + fmtMs(expMs) + ' (CSV ' + Math.round(csv.length / 1024) + ' KB)');
+    times.export = Math.round(expMs);
     checkStop();
   } catch (e) {
     if (e && e.message === '__STOPPED__') {
@@ -506,6 +713,7 @@ async function run(){
         if (s.row.className.indexOf('run') >= 0) stSet(sd[0], 'stop', 'Halted here', '');
       });
     } else {
+      failedFlag = true;
       log('FAILED: ' + (e && e.message ? e.message : String(e)));
       stageDefs.forEach(function(sd){
         var s = stageEls[sd[0]];
@@ -531,8 +739,21 @@ async function run(){
       }
     }
     document.getElementById('btnStop').classList.remove('show');
+    document.getElementById('btnStop2').classList.remove('show');
+    nowSay(stoppedEarly ? 'Stopped — your real data is back.' : 'Test over — your real data is back.', false);
     running = false;
     setControls(true);
+    /* save this run to the vault, then compare it with the baseline */
+    var runTs = Date.now();
+    try {
+      await saveRun({ ts: runTs, size: size, build: buildUnderTest,
+        status: stoppedEarly ? 'stopped' : (failedFlag ? 'failed' : 'complete'),
+        times: times, restored: restored });
+    } catch (e3) {}
+    var cmpLines = [];
+    try { cmpLines = await comparisonLines(size, times, runTs); } catch (e4) {}
+    if (cmpLines.length) cmpLines.forEach(function(l){ log(l); });
+    renderHistory();
     var head = stoppedEarly ? 'TORTURE TEST — STOPPED EARLY' : 'TORTURE TEST — COMPLETE';
     var text = head + '\nDevice: this phone/browser · Size: ' + size.toLocaleString('en-ZA') +
       ' staff · Build: ' + buildUnderTest + '\n' + new Date().toLocaleString('en-ZA') + '\n\n' +
@@ -552,6 +773,7 @@ async function run(){
 
 /* ---------------- boot: guard check + old results ---------------- */
 (async function init(){
+  renderHistory();
   var snap = await readGuardSnapshot();
   if (snap) {
     document.getElementById('restoreBanner').classList.add('show');
