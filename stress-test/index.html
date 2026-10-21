@@ -1,390 +1,581 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0a0a0a">
-<title>SignalFox Shift — Stress Test Live</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Torture Test — SignalFox Shift</title>
+<meta name="theme-color" content="#000000">
 <style>
-  :root{
-    --bg:#0a0a0a; --card:#161616; --card2:#1e1e1e; --line:#2c2c2c;
-    --text:#f5f5f5; --muted:#a8a29e; --gold:#FFC13E; --blue:#4DABF7;
-    --green:#51CF66; --red:#FF8787;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
-    -webkit-text-size-adjust:100%}
-  .wrap{max-width:640px;margin:0 auto;padding:16px 14px 40px}
-  h1{font-size:22px;margin:6px 0 2px;line-height:1.25}
-  .sub{color:var(--muted);font-size:13px;margin:0 0 14px}
-  .banner{border-radius:12px;padding:14px 16px;font-size:17px;font-weight:700;
-    text-align:center;margin:0 0 14px;border:2px solid transparent}
-  .banner.waiting{background:#2a2110;color:var(--gold);border-color:var(--gold)}
-  .banner.running{background:#0d1d2b;color:var(--blue);border-color:var(--blue)}
-  .banner.done{background:#12261a;color:var(--green);border-color:var(--green)}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;
-    padding:14px 16px;margin:0 0 12px}
-  .card h2{font-size:15px;margin:0 0 10px;color:var(--gold);letter-spacing:.2px}
-  .stage{font-size:16px;font-weight:600;margin:0 0 8px;line-height:1.35}
-  .bigpct{font-size:44px;font-weight:800;color:var(--gold);margin:0 0 4px;line-height:1}
-  .bar{height:14px;background:var(--card2);border:1px solid var(--line);
-    border-radius:999px;overflow:hidden}
-  .barfill{height:100%;background:var(--gold);width:0%;transition:width .4s}
-  .barlabel{font-size:12px;color:var(--muted);margin-top:6px}
-  .thr{display:flex;justify-content:space-between;align-items:center;
-    padding:10px 0;border-bottom:1px solid var(--line);gap:10px}
-  .thr:last-child{border-bottom:none}
-  .thr .lbl{font-size:15px;font-weight:600}
-  .thr .val{font-size:14px;color:var(--muted);text-align:right;word-break:break-word}
-  .thr .val.found{color:var(--text)}
-  table{width:100%;border-collapse:collapse;font-size:14px}
-  td{padding:8px 0;border-bottom:1px solid var(--line);vertical-align:top}
-  td:last-child{text-align:right;color:var(--text);padding-left:10px;word-break:break-word}
-  tr:last-child td{border-bottom:none}
-  .empty{color:var(--muted);font-size:14px;margin:0}
-  #log{max-height:280px;overflow-y:auto;font-size:13px;line-height:1.5}
-  .logline{padding:6px 0;border-bottom:1px solid var(--line)}
-  .logline:last-child{border-bottom:none}
-  .logtime{color:var(--gold);font-weight:600;margin-right:6px}
-  .foot{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);
-    margin-top:4px}
-  .dot{width:10px;height:10px;border-radius:50%;background:var(--green);
-    display:inline-block;flex:none}
-  .dot.pulse{animation:pulse 1.4s ease-in-out infinite}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
-  .dot.off{background:var(--red);animation:none}
-  .totals{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .total{background:var(--card2);border:1px solid var(--line);border-radius:10px;
-    padding:12px 10px;text-align:center}
-  .total-num{font-size:26px;font-weight:800;color:var(--gold);line-height:1.15;
-    word-break:break-word}
-  .total-lbl{font-size:12px;color:var(--muted);margin-top:4px}
-  .graphwrap{width:100%;overflow:hidden}
-  .graphwrap svg{width:100%;height:auto;display:block}
-  .chart-sub{font-size:13px;font-weight:700;color:var(--text);margin:12px 0 6px}
-  .chart-sub:first-child{margin-top:0}
-  .btnrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 12px}
-  .bigbtn{border:none;border-radius:12px;padding:15px 10px;font-size:16px;
-    font-weight:700;cursor:pointer;line-height:1.25}
-  .bigbtn.gold{background:var(--gold);color:#1a1a1a}
-  .bigbtn.dark{background:var(--card2);color:var(--text);border:1px solid var(--line)}
-  .trigmsg{font-size:13px;color:var(--muted);text-align:center;margin:0 0 12px;min-height:18px}
-  th{font-size:12px;color:var(--muted);text-align:left;padding:8px 0;border-bottom:1px solid var(--line);font-weight:600}
-  th.num{text-align:right}
-  .speedtbl td.num{text-align:right}
-  .speednote{font-size:12px;color:var(--muted);margin:8px 0 0;line-height:1.5}
-  .prob{padding:10px 0;border-bottom:1px solid var(--line)}
-  .prob:last-child{border-bottom:none}
-  .prob-detail{font-size:13px;line-height:1.5;word-break:break-word;white-space:pre-wrap;margin-top:4px}
-  .prob-fix{font-size:13px;line-height:1.5;word-break:break-word;margin-top:4px;color:var(--muted)}
-  .prob-fix b{color:var(--gold)}
-  a{color:var(--blue)}
+  :root{ --bg:#050507; --card:#121218; --line:#26262f; --gold:#FFC13E; --blue:#45A5FF;
+    --red:#FF5252; --green:#51CF66; --tx:#F2F2F5; --dim:#9A9AA5; }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{margin:0; background:var(--bg); color:var(--tx);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  .wrap{max-width:640px; margin:0 auto; padding:20px 16px 40px;}
+  h1{font-size:24px; margin:4px 0 2px;}
+  .sub{color:var(--dim); font-size:14px; line-height:1.45;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; margin-top:14px;}
+  .card h3{margin:0 0 8px; font-size:16px;}
+  .card p{color:var(--dim); font-size:13.5px; line-height:1.5; margin:6px 0;}
+  .card p b{color:var(--tx);}
+  #restoreBanner{display:none; background:#2a0f0f; border:1px solid #5c1d1d; border-radius:16px; padding:16px; margin-top:14px;}
+  #restoreBanner.show{display:block;}
+  #restoreBanner h3{margin:0 0 6px; color:#ffb3b3;}
+  #restoreBanner p{color:#e8c9c9; font-size:13.5px; line-height:1.5; margin:4px 0 10px;}
+  .seg{display:flex; gap:8px; margin:10px 0 4px;}
+  .seg button{flex:1; background:#0b0b10; color:var(--dim); border:1px solid var(--line); border-radius:12px;
+    padding:12px 6px; font-size:14px; font-weight:700; cursor:pointer;}
+  .seg button.sel{color:#000; background:var(--gold); border-color:var(--gold);}
+  .seg button small{display:block; font-weight:400; font-size:11px; margin-top:2px; opacity:.75;}
+  .bigbtn{display:block; width:100%; border:0; border-radius:14px; padding:17px; font-size:18px; font-weight:900;
+    cursor:pointer; margin-top:12px; letter-spacing:.3px;}
+  #btnStart{background:var(--gold); color:#000;}
+  #btnStart:disabled{opacity:.45; cursor:default;}
+  #btnStop{background:var(--red); color:#fff; display:none;}
+  #btnStop.show{display:block;}
+  .stage{display:flex; gap:10px; padding:10px 2px; border-bottom:1px solid #1b1b23; align-items:flex-start;}
+  .stage:last-child{border-bottom:0;}
+  .stage .ic{width:22px; text-align:center; flex:none; font-size:15px; line-height:1.3;}
+  .stage .tx{flex:1; min-width:0;}
+  .stage .nm{font-weight:700; font-size:14.5px;}
+  .stage .dt{color:var(--dim); font-size:12.5px; margin-top:1px; line-height:1.4; word-break:break-word;}
+  .stage .ms{font-weight:800; font-size:14px; flex:none; color:var(--dim);}
+  .stage.run .ms{color:var(--gold);}
+  .stage.pass .ms{color:var(--green);}
+  .stage.fail .ms{color:var(--red);}
+  #frameCard{display:none;}
+  #frameCard.show{display:block;}
+  #appFrame{width:100%; height:72vh; border:1px solid var(--line); border-radius:12px; background:#000;}
+  #reportCard{display:none;}
+  #reportCard.show{display:block;}
+  #reportText{white-space:pre-wrap; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12.5px;
+    background:#0b0b10; border:1px solid var(--line); border-radius:12px; padding:12px; line-height:1.55; color:#d8d8de;}
+  .dlbtn{background:#0b0b10; color:var(--gold); border:1px solid #3a3a28; border-radius:999px;
+    padding:10px 16px; font-size:13.5px; font-weight:700; cursor:pointer; margin-top:10px;}
+  details{margin-top:14px;}
+  summary{cursor:pointer; color:var(--dim); font-size:14px; font-weight:700; padding:6px 0;}
+  .metric{display:flex; justify-content:space-between; gap:12px; padding:7px 2px; border-bottom:1px solid #1b1b23; font-size:13.5px;}
+  .metric span:last-child{font-weight:700; text-align:right;}
+  .warn{color:#ffb3b3;}
+  input[type=file]{display:none;}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>SignalFox Shift — Stress Test Live</h1>
-  <p class="sub">Watch the stress test as it runs. No login needed.</p>
+  <h1>🧪 Torture Test</h1>
+  <div class="sub">SignalFox Shift, pushed to its limits — right here on this device.
+  Build under test: <b id="buildLine">—</b></div>
 
-  <div id="banner" class="banner waiting">Waiting…</div>
-
-  <div class="btnrow">
-    <button type="button" class="bigbtn gold" id="btn-func">Run functionality test</button>
-    <button type="button" class="bigbtn dark" id="btn-stress">Run stress test</button>
-  </div>
-  <p class="trigmsg" id="trigmsg"></p>
-
-  <div class="card">
-    <h2>Progress</h2>
-    <p class="bigpct" id="bigpct">0%</p>
-    <p class="stage" id="stage">Waiting for the stress test to start</p>
-    <div class="bar"><div class="barfill" id="barfill"></div></div>
-    <p class="barlabel" id="barlabel">Stage 0 of 7 — 0%</p>
+  <div id="restoreBanner">
+    <h3>⚠ A previous test was interrupted</h3>
+    <p>Your real Shift data is sitting in a safety snapshot, untouched. Restore it before using Shift again.</p>
+    <button class="bigbtn" style="background:var(--red); color:#fff; margin-top:4px;" onclick="restoreFromGuard()">Restore my data now</button>
+    <p style="margin-top:10px;">Snapshot lost? <label for="restoreFile" style="text-decoration:underline; cursor:pointer;">Restore from the safety backup file</label> that downloaded when the test started.</p>
+    <input type="file" id="restoreFile" accept="application/json,.json">
   </div>
 
   <div class="card">
-    <h2>System totals</h2>
-    <div class="totals">
-      <div class="total"><div class="total-num" id="tot-companies">—</div><div class="total-lbl">Companies</div></div>
-      <div class="total"><div class="total-num" id="tot-staff">—</div><div class="total-lbl">Staff rostered</div></div>
-      <div class="total"><div class="total-num" id="tot-rosters">—</div><div class="total-lbl">Active rosters</div></div>
-      <div class="total"><div class="total-num" id="tot-changes">—</div><div class="total-lbl">Changes</div></div>
+    <h3>How this works</h3>
+    <p>1. The dashboard takes a <b>full snapshot</b> of your Shift data and downloads a safety backup file.</p>
+    <p>2. It wipes the slate, loads the <b>real app</b> below, fills it with thousands of fake staff, and times the things that used to hurt: saving, reloading, the staff list, the calendar, switching teams, exporting.</p>
+    <p>3. When it finishes — or when you hit <b>STOP</b> — your real data is <b>put back exactly as it was</b> and verified.</p>
+    <p class="warn">While a test runs, don’t open Shift in another tab. During the heaviest checks the page may freeze for a few seconds — that’s the test working. STOP lands as soon as it can breathe; closing this tab always works too, and the snapshot above will be waiting here.</p>
+  </div>
+
+  <div class="card">
+    <h3>Test size</h3>
+    <div class="seg" id="sizeSeg">
+      <button data-n="500">500<small>warm-up</small></button>
+      <button data-n="2000" class="sel">2,000<small>serious</small></button>
+      <button data-n="10000">10,000<small>Netcare scale</small></button>
     </div>
+    <button class="bigbtn" id="btnStart">▶ Start torture test</button>
+    <button class="bigbtn" id="btnStop">■ STOP — halt &amp; restore my data</button>
   </div>
 
-  <div class="card">
-    <h2>Performance vs size</h2>
-    <p class="chart-sub">Load time</p>
-    <div class="graphwrap" id="perf-load"><p class="empty">Waiting for data…</p></div>
-    <p class="chart-sub">Render time</p>
-    <div class="graphwrap" id="perf-render"><p class="empty">Waiting for data…</p></div>
-    <p class="chart-sub">Export time</p>
-    <div class="graphwrap" id="perf-export"><p class="empty">Waiting for data…</p></div>
+  <div class="card" id="stageCard">
+    <h3>Stages</h3>
+    <div id="stages"></div>
   </div>
 
-  <div class="card">
-    <h2>Speed by level</h2>
-    <p class="empty" id="speed-empty">Waiting for data…</p>
-    <table id="speed-table" class="speedtbl" style="display:none"><thead><tr><th>Level</th><th class="num">Load</th><th class="num">Render</th><th class="num">Export</th></tr></thead><tbody id="speed-body"></tbody></table>
-    <p class="speednote" id="speed-note"></p>
+  <div class="card" id="frameCard">
+    <h3>The app, being tortured</h3>
+    <iframe id="appFrame" sandbox="allow-scripts allow-same-origin allow-modals allow-forms" title="Shift under test"></iframe>
   </div>
 
-  <div class="card">
-    <h2>Storage</h2>
-    <p class="chart-sub">localStorage usage over time</p>
-    <div class="graphwrap" id="storage-chart"><p class="empty">Waiting for data…</p></div>
+  <div class="card" id="reportCard">
+    <h3>Report</h3>
+    <div id="reportText"></div>
+    <button class="dlbtn" id="btnReport">Download report (.txt)</button>
   </div>
 
-  <div class="card">
-    <h2>The three lines</h2>
-    <div class="thr"><span class="lbl">Handles perfectly</span><span class="val" id="thr-perfect">—</span></div>
-    <div class="thr"><span class="lbl">Starts to glitch</span><span class="val" id="thr-glitch">—</span></div>
-    <div class="thr"><span class="lbl">Breaks</span><span class="val" id="thr-break">—</span></div>
-  </div>
-
-  <div class="card">
-    <h2>Metrics</h2>
-    <p class="empty" id="metrics-empty">No metrics yet.</p>
-    <table id="metrics-table" style="display:none"><tbody id="metrics-body"></tbody></table>
-  </div>
-
-  <div class="card">
-    <h2>Problems</h2>
-    <div id="problems-list"><p class="empty">No problems so far.</p></div>
-  </div>
-
-  <div class="card">
-    <h2>Devices active</h2>
-    <p class="empty">Not connected — device ping comes later.</p>
-  </div>
-
-  <div class="card">
-    <h2>Live event log</h2>
-    <div id="log"></div>
-  </div>
-
-  <div class="foot">
-    <span class="dot off" id="livedot"></span>
-    <span id="live-label">Connecting…</span>
-    <span id="updated" style="margin-left:auto"></span>
-  </div>
+  <details>
+    <summary>Previous results — the old bot run (stopped at stage 5 of 7)</summary>
+    <div id="oldResults" style="margin-top:8px;"><p class="sub">Loading…</p></div>
+  </details>
 </div>
 
 <script>
-const $ = id => document.getElementById(id);
-function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+'use strict';
+var APP_URL = '../';
+var GUARD_DB = 'signalfox-ttguard';
+var stageDefs = [
+  ['boot',   'Boot the app'],
+  ['seed',   'Seed fake staff'],
+  ['reload', 'Save + reload'],
+  ['staff',  'Staff list'],
+  ['cal',    'Calendar render'],
+  ['switch', 'Team switch'],
+  ['export', 'Export (Excel + CSV)'],
+  ['restore','Restore your real data']
+];
+var running = false, stopWanted = false, size = 2000, report = [], buildUnderTest = '—';
 
-function fmtNum(v){
-  if(v===null || v===undefined || isNaN(Number(v))) return "—";
-  return Number(v).toLocaleString("en-ZA");
+/* ---------------- stage UI ---------------- */
+var stageEls = {};
+(function buildStages(){
+  var host = document.getElementById('stages');
+  stageDefs.forEach(function(sd){
+    var row = document.createElement('div'); row.className = 'stage'; row.id = 'st-' + sd[0];
+    row.innerHTML = '<div class="ic">·</div><div class="tx"><div class="nm">' + sd[1] +
+      '</div><div class="dt"></div></div><div class="ms"></div>';
+    host.appendChild(row);
+    stageEls[sd[0]] = { row: row, ic: row.querySelector('.ic'), dt: row.querySelector('.dt'), ms: row.querySelector('.ms') };
+  });
+})();
+function stSet(key, state, detail, msText){
+  var s = stageEls[key]; if (!s) return;
+  s.row.className = 'stage' + (state ? ' ' + state : '');
+  s.ic.textContent = state === 'run' ? '▶' : state === 'pass' ? '✓' : state === 'fail' ? '✗' : state === 'stop' ? '■' : '·';
+  if (detail != null) s.dt.textContent = detail;
+  if (msText != null) s.ms.textContent = msText;
 }
-function fmtAxis(v){
-  if(v>=1000000) return (v/1000000).toFixed(1).replace(/\.0$/,"")+"M";
-  if(v>=1000) return (v/1000).toFixed(1).replace(/\.0$/,"")+"k";
-  return String(Math.round(v));
+function fmtMs(ms){ return ms >= 1000 ? (ms / 1000).toFixed(2) + 's' : Math.round(ms) + 'ms'; }
+function log(line){ report.push(line); }
+function tick(){ return new Promise(function(r){ setTimeout(r, 0); }); }
+function checkStop(){ if (stopWanted) throw new Error('__STOPPED__'); }
+
+/* ---------------- raw IndexedDB helpers ---------------- */
+function idbOpen(name, makeKv){
+  return new Promise(function(res, rej){
+    var req = indexedDB.open(name, 1);
+    req.onupgradeneeded = function(){
+      var db = req.result;
+      if (makeKv && !db.objectStoreNames.contains('kv')) db.createObjectStore('kv', { keyPath: 'k' });
+      if (name === GUARD_DB && !db.objectStoreNames.contains('snap')) db.createObjectStore('snap', { keyPath: 'id' });
+    };
+    req.onsuccess = function(){ res(req.result); };
+    req.onerror = function(){ rej(req.error); };
+  });
 }
-function renderTotals(d){
-  const t = d.totals || {};
-  $("tot-companies").textContent = fmtNum(t.companies);
-  $("tot-staff").textContent = fmtNum(t.staff);
-  $("tot-rosters").textContent = fmtNum(t.rosters);
-  $("tot-changes").textContent = fmtNum(t.changes);
+function kvAll(db){
+  return new Promise(function(res, rej){
+    if (!db.objectStoreNames.contains('kv')) { res([]); return; }
+    var r = db.transaction('kv', 'readonly').objectStore('kv').getAll();
+    r.onsuccess = function(){ res(r.result || []); };
+    r.onerror = function(){ rej(r.error); };
+  });
 }
-function fmtMs(v){
-  if(v===null || v===undefined || isNaN(Number(v))) return "—";
-  v = Number(v);
-  if(v>=1000) return (v/1000).toFixed(1).replace(/\.0$/,"")+"s";
-  return Math.round(v)+"ms";
+function kvWriteAll(db, entries){
+  return new Promise(function(res, rej){
+    var tx = db.transaction('kv', 'readwrite');
+    var st = tx.objectStore('kv');
+    st.clear();
+    (entries || []).forEach(function(e){ st.put({ k: e.k, v: e.v }); });
+    tx.oncomplete = function(){ res(); };
+    tx.onerror = function(){ rej(tx.error); };
+    tx.onabort = function(){ rej(tx.error); };
+  });
 }
-function fmtKB(v){
-  if(v===null || v===undefined || isNaN(Number(v))) return "—";
-  v = Number(v);
-  if(v>=1024) return (v/1024).toFixed(1).replace(/\.0$/,"")+" MB";
-  return Math.round(v)+" KB";
+function kvGet(db, key){
+  return new Promise(function(res){
+    if (!db.objectStoreNames.contains('kv')) { res(null); return; }
+    var r = db.transaction('kv', 'readonly').objectStore('kv').get(key);
+    r.onsuccess = function(){ res(r.result ? r.result.v : null); };
+    r.onerror = function(){ res(null); };
+  });
 }
-/* Line chart: x = staff count, y = one metric in ms.
-   One point still draws (dot + label) — never "Waiting for data…" when data exists. */
-function perfChart(pts, yKey, color, aria){
-  const data = pts.filter(p => p && typeof p.staff==="number" && typeof p[yKey]==="number");
-  if(!data.length) return null;
-  data.sort((a,b)=>a.staff-b.staff);
-  const W=600,H=150,L=56,R=10,T=8,B=24;
-  // Single point: pad the scales so the dot sits inside the chart, not in a corner.
-  const maxX = data.length===1 ? Math.max(1, data[0].staff*1.5) : Math.max(1,...data.map(p=>p.staff));
-  const maxY = data.length===1 ? Math.max(1, data[0][yKey]*1.5) : Math.max(1,...data.map(p=>p[yKey]));
-  const x=v=>L+(v/maxX)*(W-L-R);
-  const y=v=>T+(1-v/maxY)*(H-T-B);
-  let svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(aria)+'">';
-  for(let g=0;g<=2;g++){
-    const gv=maxY*g/2, gy=y(gv);
-    svg+='<line x1="'+L+'" y1="'+gy+'" x2="'+(W-R)+'" y2="'+gy+'" stroke="#2c2c2c" stroke-width="1"/>';
-    svg+='<text x="'+(L-6)+'" y="'+(gy+4)+'" font-size="11" fill="#a8a29e" text-anchor="end">'+esc(fmtMs(gv))+'</text>';
+
+/* ---------------- snapshot / wipe / restore ---------------- */
+async function takeSnapshot(){
+  var ls = {};
+  for (var i = 0; i < localStorage.length; i++){ var k = localStorage.key(i); ls[k] = localStorage.getItem(k); }
+  var db = await idbOpen('signalfox-shift', true);
+  var kv = await kvAll(db); db.close();
+  var snap = { ts: Date.now(), ls: ls, kv: kv };
+  var gdb = await idbOpen(GUARD_DB, false);
+  await new Promise(function(res, rej){
+    var tx = gdb.transaction('snap', 'readwrite');
+    tx.objectStore('snap').put({ id: 'current', snap: snap });
+    tx.oncomplete = res; tx.onerror = function(){ rej(tx.error); };
+  });
+  gdb.close();
+  return snap;
+}
+async function readGuardSnapshot(){
+  try {
+    var gdb = await idbOpen(GUARD_DB, false);
+    var rec = await new Promise(function(res){
+      if (!gdb.objectStoreNames.contains('snap')) { res(null); return; }
+      var r = gdb.transaction('snap', 'readonly').objectStore('snap').get('current');
+      r.onsuccess = function(){ res(r.result || null); };
+      r.onerror = function(){ res(null); };
+    });
+    gdb.close();
+    return rec ? rec.snap : null;
+  } catch (e) { return null; }
+}
+async function clearGuardSnapshot(){
+  try {
+    var gdb = await idbOpen(GUARD_DB, false);
+    await new Promise(function(res){
+      var tx = gdb.transaction('snap', 'readwrite');
+      tx.objectStore('snap').delete('current');
+      tx.oncomplete = res; tx.onerror = res;
+    });
+    gdb.close();
+  } catch (e) {}
+}
+function downloadBackup(snap){
+  var payload = { kind: 'signalfox-shift-tt-backup', ts: snap.ts, ls: snap.ls, kv: snap.kv };
+  var blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'shift-safety-backup-' + new Date(snap.ts).toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 8000);
+}
+async function wipeSlate(){
+  localStorage.clear();
+  var db = await idbOpen('signalfox-shift', true);
+  await kvWriteAll(db, []); db.close();
+}
+async function restoreSnapshot(snap){
+  killFrame();
+  var db = await idbOpen('signalfox-shift', true);
+  await kvWriteAll(db, snap.kv || []);
+  var baseBack = await kvGet(db, 'sfshift_base'); db.close();
+  localStorage.clear();
+  Object.keys(snap.ls || {}).forEach(function(k){ try { localStorage.setItem(k, snap.ls[k]); } catch (e) {} });
+  var expect = null;
+  (snap.kv || []).forEach(function(e){ if (e.k === 'sfshift_base') expect = e.v; });
+  return expect === null ? baseBack === null : baseBack === expect;
+}
+async function restoreFromGuard(){
+  var snap = await readGuardSnapshot();
+  if (!snap) { document.getElementById('restoreBanner').classList.remove('show'); return; }
+  var ok = await restoreSnapshot(snap);
+  await clearGuardSnapshot();
+  document.getElementById('restoreBanner').classList.remove('show');
+  setControls(true);
+  alert(ok ? 'Your real data is restored and verified.' : 'Data restored, but the verification read-back differed — open Shift and check your rosters; the safety backup file can also be restored from here.');
+}
+document.getElementById('restoreFile').addEventListener('change', async function(){
+  var f = this.files[0]; if (!f) return;
+  try {
+    var d = JSON.parse(await f.text());
+    if (!d || (!d.ls && !d.kv)) throw new Error('bad file');
+    var ok = await restoreSnapshot({ ts: d.ts || Date.now(), ls: d.ls || {}, kv: d.kv || [] });
+    await clearGuardSnapshot();
+    document.getElementById('restoreBanner').classList.remove('show');
+    setControls(true);
+    alert(ok ? 'Backup file restored and verified.' : 'Backup restored, but verification differed — please check Shift.');
+  } catch (e) { alert('Could not read that backup file.'); }
+  this.value = '';
+});
+
+/* ---------------- frame handling ---------------- */
+var frame = document.getElementById('appFrame');
+function killFrame(){
+  try { frame.src = 'about:blank'; } catch (e) {}
+  if (frame.parentNode) frame.remove();
+}
+function mountFrame(){
+  var card = document.getElementById('frameCard');
+  if (!frame.parentNode) card.appendChild(frame);
+  card.classList.add('show');
+}
+function waitFrameLoad(){
+  return new Promise(function(res){
+    var done = false;
+    frame.onload = function(){ if (!done) { done = true; res(); } };
+    setTimeout(function(){ if (!done) { done = true; res(); } }, 20000);
+  });
+}
+async function waitAppReady(timeoutMs){
+  var t0 = Date.now();
+  while (Date.now() - t0 < (timeoutMs || 30000)) {
+    checkStop();
+    try {
+      var w = frame.contentWindow;
+      if (w && w.DB && w.DB.mode && typeof w.enterApp === 'function' && w.S) return w;
+    } catch (e) {}
+    await new Promise(function(r){ setTimeout(r, 250); });
   }
-  const first=data[0].staff, last=data[data.length-1].staff;
-  const mid=data.length>2 ? data[Math.floor(data.length/2)].staff : null;
-  svg+='<text x="'+L+'" y="'+(H-6)+'" font-size="11" fill="#a8a29e">'+esc(fmtAxis(first))+' staff</text>';
-  if(mid!==null) svg+='<text x="'+(W/2)+'" y="'+(H-6)+'" font-size="11" fill="#a8a29e" text-anchor="middle">'+esc(fmtAxis(mid))+'</text>';
-  svg+='<text x="'+(W-R)+'" y="'+(H-6)+'" font-size="11" fill="#a8a29e" text-anchor="end">'+esc(fmtAxis(last))+' staff</text>';
-  if(data.length===1){
-    const p = data[0];
-    svg+='<circle cx="'+x(p.staff).toFixed(1)+'" cy="'+y(p[yKey]).toFixed(1)+'" r="5" fill="'+color+'"/>';
-    svg+='<text x="'+x(p.staff).toFixed(1)+'" y="'+(y(p[yKey])-10).toFixed(1)+'" font-size="12" fill="'+color+'" text-anchor="middle">'+esc(fmtMs(p[yKey]))+' at '+esc(fmtAxis(p.staff))+' staff</text>';
-  } else {
-    svg+='<polyline points="'+data.map(p=>x(p.staff).toFixed(1)+","+y(p[yKey]).toFixed(1)).join(" ")+'" fill="none" stroke="'+color+'" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
-    const li=data.length-1;
-    svg+='<circle cx="'+x(data[li].staff).toFixed(1)+'" cy="'+y(data[li][yKey]).toFixed(1)+'" r="4" fill="'+color+'"/>';
+  throw new Error('The app did not become ready in time.');
+}
+
+/* ---------------- seeder (same shapes as the app's own demo data) ---------------- */
+async function seed(w, N){
+  var S = w.S, t = Date.now();
+  var quals = [
+    { id: 'tq1', name: 'ALS', canCover: ['tq2', 'tq3', 'tq4'] },
+    { id: 'tq2', name: 'ILS', canCover: ['tq3', 'tq4'] },
+    { id: 'tq3', name: 'BLS', canCover: ['tq4'] },
+    { id: 'tq4', name: 'First Aider', canCover: [] }
+  ];
+  S.base.name = 'Torture Test Base';
+  S.base.quals = quals;
+  S.base.peoplePerShift = 2;
+  var crewColors = ['#FFC13E', '#4DABF7', '#51CF66', '#FF8787', '#B197FC', '#FFD43B', '#63E6BE', '#E599F7'];
+  var vehicles = [], allCrews = [];
+  for (var vi = 0; vi < 2; vi++) {
+    var v = { id: 'tv' + (vi + 1), name: 'Torture Team ' + (vi + 1), rotation: '224', coverage: 24,
+      color: crewColors[vi], shiftIds: ['D', 'N'], crews: [] };
+    for (var ci = 0; ci < 4; ci++) {
+      var letter = String.fromCharCode(65 + vi * 4 + ci);
+      var crew = { id: 'tc' + letter, vehicleId: v.id, name: letter, color: crewColors[(vi * 4 + ci) % 8], members: [], memberIds: [] };
+      v.crews.push(crew); allCrews.push(crew);
+    }
+    vehicles.push(v);
   }
-  svg+='</svg>';
-  return svg;
-}
-
-/* Line chart: localStorage usage (KB) over time.
-   One point still draws (dot + label) — never "Waiting for data…" when data exists. */
-function storageChart(pts){
-  const data = pts.filter(p => p && typeof p.kb==="number");
-  if(!data.length) return null;
-  const W=600,H=150,L=56,R=10,T=8,B=24;
-  const maxY = data.length===1 ? Math.max(1, data[0].kb*1.5) : Math.max(1,...data.map(p=>p.kb));
-  const x=i=> data.length===1 ? (L+W-R)/2 : L+(i/(data.length-1))*(W-L-R);
-  const y=v=>T+(1-v/maxY)*(H-T-B);
-  let svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="localStorage usage over time">';
-  for(let g=0;g<=2;g++){
-    const gv=maxY*g/2, gy=y(gv);
-    svg+='<line x1="'+L+'" y1="'+gy+'" x2="'+(W-R)+'" y2="'+gy+'" stroke="#2c2c2c" stroke-width="1"/>';
-    svg+='<text x="'+(L-6)+'" y="'+(gy+4)+'" font-size="11" fill="#a8a29e" text-anchor="end">'+esc(fmtKB(gv))+'</text>';
+  S.base.vehicles = vehicles;
+  S.base.crews = allCrews;
+  S.base.staff = [];
+  for (var i = 0; i < N; i += 500) {
+    checkStop();
+    var slice = [];
+    for (var j = i; j < Math.min(i + 500, N); j++) {
+      slice.push({ id: 'ts' + j, name: 'Test Person ' + (j + 1), empNo: 'T' + (1000 + j), qual: quals[j % 4].id });
+    }
+    S.base.staff = S.base.staff.concat(slice);
+    stSet('seed', 'run', 'Seeding fake staff… ' + S.base.staff.length.toLocaleString('en-ZA') + ' / ' + N.toLocaleString('en-ZA'));
+    await tick();
   }
-  const first=data[0].time||"", last=data[data.length-1].time||"";
-  const mid=data.length>2 ? (data[Math.floor(data.length/2)].time||"") : "";
-  svg+='<text x="'+L+'" y="'+(H-6)+'" font-size="11" fill="#a8a29e">'+esc(first)+'</text>';
-  if(mid) svg+='<text x="'+(W/2)+'" y="'+(H-6)+'" font-size="11" fill="#a8a29e" text-anchor="middle">'+esc(mid)+'</text>';
-  svg+='<text x="'+(W-R)+'" y="'+(H-6)+'" font-size="11" fill="#a8a29e" text-anchor="end">'+esc(last)+'</text>';
-  if(data.length===1){
-    const p = data[0];
-    svg+='<circle cx="'+x(0).toFixed(1)+'" cy="'+y(p.kb).toFixed(1)+'" r="5" fill="#FFC13E"/>';
-    svg+='<text x="'+x(0).toFixed(1)+'" y="'+(y(p.kb)-10).toFixed(1)+'" font-size="12" fill="#FFC13E" text-anchor="middle">'+esc(fmtKB(p.kb))+'</text>';
-  } else {
-    svg+='<polyline points="'+data.map((p,i)=>x(i).toFixed(1)+","+y(p.kb).toFixed(1)).join(" ")+'" fill="none" stroke="#FFC13E" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
-    const li=data.length-1;
-    svg+='<circle cx="'+x(li).toFixed(1)+'" cy="'+y(data[li].kb).toFixed(1)+'" r="4" fill="#FFC13E"/>';
+  /* 2 members per crew, like a real team */
+  for (var a = 0; a < 16 && a < N; a++) {
+    var crew2 = allCrews[a % allCrews.length];
+    var person = S.base.staff[a];
+    try { w.assignStaffToCrew(person.id, crew2.id); } catch (e) {}
+    if (crew2.members.indexOf(person.name) < 0) crew2.members.push(person.name);
   }
-  svg+='</svg>';
-  return svg;
+  var now = new Date(), y = now.getFullYear(), m = now.getMonth(), dim = w.daysInMonth(y, m);
+  S.rosters = [];
+  vehicles.forEach(function(v2, vix){
+    var snapCrews = JSON.parse(JSON.stringify(v2.crews));
+    var R = { id: 'tr' + (vix + 1), kind: 'month', vehicleId: v2.id,
+      name: v2.name + ' · ' + w.MN[m] + ' ' + y,
+      year: y, month: m, anchorAbs: 0,
+      startISO: y + '-' + String(m + 1).padStart(2, '0') + '-01', days: dim,
+      crews: snapCrews, rotation: '224', shiftIds: ['D', 'N'],
+      overrides: {}, memberOverrides: {}, leaveLog: [] };
+    S.rosters.push({ id: R.id, name: R.name, roster: R });
+  });
+  w.persistBase(); w.persist();
 }
 
-function renderPerf(d){
-  const ph = Array.isArray(d.perfHistory) ? d.perfHistory : [];
-  const set = (id, svg) => { $(id).innerHTML = svg || "<p class='empty'>Waiting for data…</p>"; };
-  set("perf-load", perfChart(ph, "loadMs", "#FFC13E", "Load time vs staff count"));
-  set("perf-render", perfChart(ph, "renderMs", "#4DABF7", "Render time vs staff count"));
-  set("perf-export", perfChart(ph, "exportMs", "#51CF66", "Export time vs staff count"));
+/* ---------------- the run ---------------- */
+function setControls(canStart){
+  document.getElementById('btnStart').disabled = !canStart;
+  document.querySelectorAll('#sizeSeg button').forEach(function(b){ b.disabled = !canStart; });
 }
-function renderStorage(d){
-  const sh = Array.isArray(d.storageHistory) ? d.storageHistory : [];
-  $("storage-chart").innerHTML = storageChart(sh) || "<p class='empty'>Waiting for data…</p>";
-}
+document.querySelectorAll('#sizeSeg button').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('#sizeSeg button').forEach(function(x){ x.classList.remove('sel'); });
+    b.classList.add('sel'); size = parseInt(b.getAttribute('data-n'), 10);
+  });
+});
+document.getElementById('btnStop').addEventListener('click', function(){ stopWanted = true; });
+document.getElementById('btnStart').addEventListener('click', function(){ run(); });
 
-function renderSpeed(d){
-  const rows = Array.isArray(d.speedPerLevel) ? d.speedPerLevel : [];
-  const empty = $("speed-empty"), tbl = $("speed-table"), note = $("speed-note");
-  if(!rows.length){
-    empty.style.display = "block"; tbl.style.display = "none"; note.textContent = "";
-    return;
+async function run(){
+  if (running) return;
+  var existing = await readGuardSnapshot();
+  if (existing) { document.getElementById('restoreBanner').classList.add('show'); return; }
+  running = true; stopWanted = false; report = [];
+  stageDefs.forEach(function(sd){ stSet(sd[0], '', '', ''); });
+  setControls(false);
+  document.getElementById('btnStop').classList.add('show');
+  document.getElementById('reportCard').classList.remove('show');
+  var snap = null, restored = false, stoppedEarly = false;
+  try {
+    snap = await takeSnapshot();
+    downloadBackup(snap);
+    log('Snapshot taken: ' + Object.keys(snap.ls).length + ' device keys, ' + snap.kv.length + ' stored records. Safety backup file downloaded.');
+    await wipeSlate();
+    checkStop();
+
+    mountFrame();
+    /* STAGE boot */
+    stSet('boot', 'run', 'Loading the real app on a clean slate…');
+    var t0 = performance.now();
+    frame.src = APP_URL;
+    await waitFrameLoad();
+    var w = await waitAppReady();
+    try { buildUnderTest = w.BUILD || '—'; } catch (e) {}
+    document.getElementById('buildLine').textContent = buildUnderTest;
+    w.enterApp();
+    var bootMs = performance.now() - t0;
+    stSet('boot', 'pass', 'App up, build ' + buildUnderTest, fmtMs(bootMs));
+    log('Boot: ' + fmtMs(bootMs) + ' (build ' + buildUnderTest + ')');
+    checkStop();
+
+    /* STAGE seed */
+    stSet('seed', 'run', 'Seeding ' + size.toLocaleString('en-ZA') + ' fake staff…');
+    t0 = performance.now();
+    await seed(w, size);
+    var seedMs = performance.now() - t0;
+    stSet('seed', 'pass', size.toLocaleString('en-ZA') + ' staff, 2 teams, 8 crews, 2 rosters', fmtMs(seedMs));
+    log('Seed: ' + size + ' staff in ' + fmtMs(seedMs));
+    checkStop();
+
+    /* STAGE reload */
+    stSet('reload', 'run', 'Waiting for the save to land, then reloading…');
+    t0 = performance.now();
+    var landed = false;
+    for (var p = 0; p < 80 && !landed; p++) {
+      checkStop();
+      var db = await idbOpen('signalfox-shift', true);
+      var units = await kvGet(db, 'sfshift_units'); db.close();
+      if (units && units.indexOf('tr1') >= 0) landed = true;
+      else await new Promise(function(r){ setTimeout(r, 250); });
+    }
+    if (!landed) throw new Error('The seeded roster never reached storage.');
+    frame.src = APP_URL;
+    await waitFrameLoad();
+    w = await waitAppReady();
+    w.enterApp();
+    var back = 0;
+    try { back = (w.S.base.staff || []).length; } catch (e) {}
+    var reloadMs = performance.now() - t0;
+    if (back !== size) throw new Error('After reload the app shows ' + back + ' staff, not ' + size + '.');
+    stSet('reload', 'pass', 'Reloaded with all ' + size.toLocaleString('en-ZA') + ' staff intact', fmtMs(reloadMs));
+    log('Save + reload: ' + fmtMs(reloadMs) + ', staff intact');
+    checkStop();
+
+    /* STAGE staff list */
+    stSet('staff', 'run', 'Opening the staff screen…');
+    t0 = performance.now();
+    w.switchTab('staff');
+    await new Promise(function(r){ w.requestAnimationFrame(function(){ w.requestAnimationFrame(r); }); });
+    var staffMs = performance.now() - t0;
+    stSet('staff', 'pass', size.toLocaleString('en-ZA') + ' staff on the staff screen', fmtMs(staffMs));
+    log('Staff list: ' + fmtMs(staffMs));
+    checkStop();
+
+    /* STAGE calendar */
+    stSet('cal', 'run', 'Opening the month calendar…');
+    t0 = performance.now();
+    w.openRoster('tr1');
+    await new Promise(function(r){ w.requestAnimationFrame(function(){ w.requestAnimationFrame(r); }); });
+    var calMs = performance.now() - t0;
+    stSet('cal', 'pass', 'Month calendar for Torture Team 1', fmtMs(calMs));
+    log('Calendar render: ' + fmtMs(calMs));
+    checkStop();
+
+    /* STAGE team switch */
+    stSet('switch', 'run', 'Switching teams…');
+    t0 = performance.now();
+    w.openRoster('tr2');
+    await new Promise(function(r){ w.requestAnimationFrame(function(){ r(); }); });
+    var sw1 = performance.now() - t0;
+    t0 = performance.now();
+    w.openRoster('tr1');
+    await new Promise(function(r){ w.requestAnimationFrame(function(){ r(); }); });
+    var sw2 = performance.now() - t0;
+    stSet('switch', 'pass', 'Team 1 → Team 2 → Team 1', fmtMs(sw1) + ' / ' + fmtMs(sw2));
+    log('Team switch: ' + fmtMs(sw1) + ' there, ' + fmtMs(sw2) + ' back');
+    checkStop();
+
+    /* STAGE export */
+    stSet('export', 'run', 'Building the Excel + CSV exports…');
+    t0 = performance.now();
+    var E = w.expData();
+    var wb = w.expBuildWorkbook(E, 'shifts');
+    var csv = w.XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
+    var expMs = performance.now() - t0;
+    stSet('export', 'pass', 'Workbook built · CSV ' + Math.round(csv.length / 1024) + ' KB', fmtMs(expMs));
+    log('Export build: ' + fmtMs(expMs) + ' (CSV ' + Math.round(csv.length / 1024) + ' KB)');
+    checkStop();
+  } catch (e) {
+    if (e && e.message === '__STOPPED__') {
+      stoppedEarly = true;
+      log('Stopped by you. Partial results above.');
+      stageDefs.forEach(function(sd){
+        var s = stageEls[sd[0]];
+        if (s.row.className.indexOf('run') >= 0) stSet(sd[0], 'stop', 'Halted here', '');
+      });
+    } else {
+      log('FAILED: ' + (e && e.message ? e.message : String(e)));
+      stageDefs.forEach(function(sd){
+        var s = stageEls[sd[0]];
+        if (s.row.className.indexOf('run') >= 0) stSet(sd[0], 'fail', (e && e.message) || 'Error', '');
+      });
+    }
+  } finally {
+    if (snap) {
+      stSet('restore', 'run', 'Putting your real data back…');
+      try {
+        var ok = await restoreSnapshot(snap);
+        restored = ok;
+        await clearGuardSnapshot();
+        stSet('restore', ok ? 'pass' : 'fail',
+          ok ? 'Snapshot restored and read-back verified' : 'Restored, but the read-back differed — check Shift, or restore the safety backup file from the red banner',
+          '');
+        log('Restore: ' + (ok ? 'done, verified' : 'done, verification differed'));
+        if (!ok) document.getElementById('restoreBanner').classList.add('show');
+      } catch (e2) {
+        stSet('restore', 'fail', 'Restore error: ' + (e2 && e2.message) + ' — use the red banner above', '');
+        log('Restore FAILED: ' + (e2 && e2.message));
+        document.getElementById('restoreBanner').classList.add('show');
+      }
+    }
+    document.getElementById('btnStop').classList.remove('show');
+    running = false;
+    setControls(true);
+    var head = stoppedEarly ? 'TORTURE TEST — STOPPED EARLY' : 'TORTURE TEST — COMPLETE';
+    var text = head + '\nDevice: this phone/browser · Size: ' + size.toLocaleString('en-ZA') +
+      ' staff · Build: ' + buildUnderTest + '\n' + new Date().toLocaleString('en-ZA') + '\n\n' +
+      report.join('\n') + '\n\nReal data restored: ' + (restored ? 'yes, verified' : 'see notes');
+    document.getElementById('reportText').textContent = text;
+    document.getElementById('reportCard').classList.add('show');
+    document.getElementById('btnReport').onclick = function(){
+      var blob = new Blob([text], { type: 'text/plain' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'torture-test-report.txt';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); }, 8000);
+    };
   }
-  empty.style.display = "none"; tbl.style.display = "table";
-  const order = {Low:0, Medium:1, High:2};
-  const sorted = rows.slice().sort((a,b)=> (order[a.level]??9) - (order[b.level]??9));
-  $("speed-body").innerHTML = sorted.map(r =>
-    "<tr><td><b>"+esc(r.level)+"</b><br><span style='color:var(--muted);font-size:12px'>"+esc(fmtNum(r.staff))+" staff</span></td>"+
-    "<td class='num'>"+esc(fmtMs(r.loadMs))+"</td><td class='num'>"+esc(fmtMs(r.renderMs))+"</td><td class='num'>"+esc(fmtMs(r.exportMs))+"</td></tr>").join("");
-  const chain = key => sorted.map(r => r[key]).every(v => typeof v === "number") ? sorted.map(r => fmtMs(r[key])).join(" → ") : null;
-  const parts = [];
-  const l = chain("loadMs"); if(l) parts.push("Load: " + l);
-  const re = chain("renderMs"); if(re) parts.push("Render: " + re);
-  const ex = chain("exportMs"); if(ex) parts.push("Export: " + ex);
-  note.textContent = parts.length ? "Change as the test scales — " + parts.join(" · ") : "";
 }
-function renderProblems(d){
-  const probs = Array.isArray(d.problems) ? d.problems : [];
-  const wrap = $("problems-list");
-  if(!probs.length){
-    wrap.innerHTML = "<p class='empty'>No problems so far.</p>";
-    return;
+
+/* ---------------- boot: guard check + old results ---------------- */
+(async function init(){
+  var snap = await readGuardSnapshot();
+  if (snap) {
+    document.getElementById('restoreBanner').classList.add('show');
+    setControls(false);
   }
-  wrap.innerHTML = probs.map(p =>
-    "<div class='prob'><div><span class='logtime'>"+esc(p.time||"")+"</span><b>"+esc(p.message||"")+"</b></div>"+
-    (p.detail ? "<div class='prob-detail'>"+esc(p.detail)+"</div>" : "")+
-    "<div class='prob-fix'><b>Fix:</b> "+esc((p.fix && String(p.fix).trim()) ? p.fix : "No fix suggested yet.")+"</div></div>").join("");
-}
-function fmtMetricValue(v){
-  const s = String(v ?? "");
-  if(/^-?\d+(\.\d+)?$/.test(s.trim())){
-    const n = Number(s);
-    if(Number.isFinite(n)) return n.toLocaleString("en-ZA");
+  try {
+    var r = await fetch('results.json?t=' + Date.now(), { cache: 'no-store' });
+    var d = await r.json();
+    var host = document.getElementById('oldResults');
+    var html = '<p class="sub">' + (d.stage || '') + ' — status: ' + (d.status || '') + '</p>';
+    (d.metrics || []).forEach(function(m){
+      html += '<div class="metric"><span>' + m.label + '</span><span>' + m.value + '</span></div>';
+    });
+    host.innerHTML = html;
+  } catch (e) {
+    document.getElementById('oldResults').innerHTML = '<p class="sub">Could not load the old results file.</p>';
   }
-  return s;
-}
-function render(d){
-  const status = d.status || "waiting";
-  const banner = $("banner");
-  banner.className = "banner " + (status==="running"?"running":status==="done"?"done":"waiting");
-  banner.textContent = status==="running" ? "Running" : status==="done" ? "Done" : "Waiting";
-
-  $("stage").textContent = d.stage || "—";
-  const cur = d.progress ? (d.progress.current||0) : 0;
-  const tot = d.progress ? (d.progress.total||7) : 7;
-  const pct = tot>0 ? Math.round(cur/tot*100) : 0;
-  $("bigpct").textContent = pct + "%";
-  $("barfill").style.width = pct + "%";
-  $("barlabel").textContent = "Stage " + cur + " of " + tot + " — " + pct + "%";
-
-  const th = d.thresholds || {};
-  const set = (id, v) => { const el=$(id); el.textContent = v ? v : "—"; el.classList.toggle("found", !!v); };
-  set("thr-perfect", th.perfect);
-  set("thr-glitch", th.glitch);
-  set("thr-break", th.break);
-
-  const metrics = Array.isArray(d.metrics) ? d.metrics : [];
-  $("metrics-empty").style.display = metrics.length ? "none" : "block";
-  $("metrics-table").style.display = metrics.length ? "table" : "none";
-  $("metrics-body").innerHTML = metrics.map(m =>
-    "<tr><td>"+esc(m.label)+"</td><td>"+esc(fmtMetricValue(m.value))+"</td></tr>").join("");
-
-  renderTotals(d);
-  renderPerf(d);
-  renderStorage(d);
-  renderSpeed(d);
-  renderProblems(d);
-
-  const log = Array.isArray(d.log) ? d.log : [];
-  $("log").innerHTML = [...log].reverse().map(l =>
-    "<div class='logline'><span class='logtime'>"+esc(l.time)+"</span>"+esc(l.message)+"</div>").join("") || "<p class='empty'>No events yet.</p>";
-
-  $("updated").textContent = d.updatedAt ? "Last updated: " + new Date(d.updatedAt).toLocaleTimeString() : "";
-}
-
-async function poll(){
-  try{
-    const r = await fetch("results.json?t=" + Date.now(), {cache:"no-store"});
-    if(!r.ok) throw new Error("HTTP " + r.status);
-    render(await r.json());
-    $("livedot").className = "dot pulse";
-    $("live-label").textContent = "Live";
-  }catch(e){
-    $("livedot").className = "dot off";
-    $("live-label").textContent = "Offline — retrying…";
-  }
-}
-poll();
-setInterval(poll, 5000);
-
-/* ---- Test buttons: UI ONLY. No wiring, no API calls, no tokens/keys.
-   The trigger (GitHub Actions + a safe proxy) is a separate later build. ---- */
-function trigSoon(){
-  $("trigmsg").textContent = "Not connected — trigger coming soon";
-}
-$("btn-func").addEventListener("click", trigSoon);
-$("btn-stress").addEventListener("click", trigSoon);
+  try {
+    var rr = await fetch(APP_URL, { cache: 'no-store' });
+    var tt = await rr.text();
+    var mm = tt.match(/BUILD='([^']+)'/);
+    if (mm) { buildUnderTest = mm[1]; document.getElementById('buildLine').textContent = mm[1]; }
+  } catch (e) {}
+})();
 </script>
 </body>
 </html>
