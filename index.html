@@ -1608,6 +1608,12 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         <span class="ds">A spreadsheet you can edit, filter and print.</span></span>
         <span class="go">&#8250;</span><span class="spin"></span>
       </button>
+      <button class="fmt" data-fmt="csv">
+        <span class="dot" style="background:#dff0d8">CSV</span>
+        <span class="tx"><span class="nm">CSV spreadsheet (.csv)</span>
+        <span class="ds">The same roster as a plain spreadsheet file — opens in Excel, Sheets or any text app.</span></span>
+        <span class="go">&#8250;</span><span class="spin"></span>
+      </button>
       <button class="fmt" data-fmt="pdf">
         <span class="dot" style="background:#fde2e2">PDF</span>
         <span class="tx"><span class="nm">PDF document</span>
@@ -1657,7 +1663,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261019-2011';
+var BUILD='20261021-2012';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -13666,7 +13672,7 @@ function icsBuild(E){
 function expFname(E, mode, kind){
   if(kind==='ics') return E.slug+'.ics';
   var base=E.slug+(mode==='names'?'-names':'');
-  return base+(kind==='xlsx'?'.xlsx':kind==='pdf'?'.pdf':kind==='png'?'-whatsapp.png':'-whatsapp.txt');
+  return base+(kind==='xlsx'?'.xlsx':kind==='csv'?'.csv':kind==='pdf'?'.pdf':kind==='png'?'-whatsapp.png':'-whatsapp.txt');
 }
 async function expDeliver(blob, filename, mime, shareText){
   var file=new File([blob],filename,{type:mime||blob.type});
@@ -13682,6 +13688,7 @@ async function expDeliver(blob, filename, mime, shareText){
 }
 function expLibsReady(fmt){
   if(fmt==='xlsx') return typeof XLSX!=='undefined';
+  if(fmt==='csv') return typeof XLSX!=='undefined';
   if(fmt==='pdf') return typeof html2canvas!=='undefined'&&typeof jspdf!=='undefined';
   if(fmt==='image') return typeof html2canvas!=='undefined';
   return true;
@@ -13760,6 +13767,17 @@ async function expGenerateFormat(fmt){
         expFname(E,expMode,'xlsx'));
       expShowSuccess(r==='shared'?'Done \u2014 file shared.':'Done \u2014 file downloaded.',
         what+' spreadsheet (.xlsx) for '+MN[E.m]+' '+E.y+'.');
+    }else if(fmt==='csv'){
+      /* CSV = the SAME worksheet as the .xlsx (same grid, legend, leave
+         and footer), flattened to plain comma-separated text via the
+         bundled SheetJS. Colours/borders can't exist in CSV, so marked
+         shifts are carried by the sheet's legend lines, as in Excel. */
+      var wbCsv=expBuildWorkbook(E, expMode);
+      var csv=XLSX.utils.sheet_to_csv(wbCsv.Sheets[wbCsv.SheetNames[0]]);
+      var rc=await expDeliver(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),
+        expFname(E,expMode,'csv'),'text/csv');
+      expShowSuccess(rc==='shared'?'Done \u2014 file shared.':'Done \u2014 file downloaded.',
+        what+' spreadsheet (.csv) for '+MN[E.m]+' '+E.y+'.');
     }else if(fmt==='pdf'){
       var r2=await expDeliver(await expGeneratePDF(E,expMode),expFname(E,expMode,'pdf'),'application/pdf');
       expShowSuccess(r2==='shared'?'Done \u2014 file shared.':'Done \u2014 file downloaded.',
