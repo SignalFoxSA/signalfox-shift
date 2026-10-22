@@ -910,7 +910,7 @@ async function runFunc(){
       assert(n >= 8, 'only ' + n + ' staff after the demo build');
       assert((w.S.rosters || []).length >= 1, 'no roster was created');
       rosterId = w.S.rosters[0].id;
-      return n + ' staff, ' + w.S.rosters.length + ' roster(s) for this month';
+      return n + ' staff, ' + (w.S.rosters || []).filter(function(u){ return u.roster && u.roster.year === new Date().getFullYear() && u.roster.month === new Date().getMonth(); }).length + ' roster(s) for this month';
     });
     await check('home', async function(){
       w.switchTab('home');

@@ -1369,7 +1369,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     <p class="fine">SignalFox Shift &middot; V2 test build &middot; <span id="buildTag"></span></p>
     <div class="card">
       <h3>Testing</h3>
-      <p class="sub">Build a demo company: one fully-staffed ambulance, this month, with leave, replacements, an open shift and a swap.</p>
+      <p class="sub">Build a demo company: ten workplaces &mdash; ambulance, kitchen, security, restaurant, cleaning, pharmacy, gym, hotel, workshop and daycare &mdash; each with its own staff and six months of rosters, with leave, replacements and open shifts.</p>
       <button class="btn" onclick="genTestData()">Create demo data</button>
     </div>
   </div>
@@ -1663,7 +1663,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261022-2014';
+var BUILD='20261022-2015';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -8410,8 +8410,8 @@ function companyJoinWithCode(raw){
   if(!wp){ var snap=companySnapCurrent(); c.workplaces.push(snap); c.activeId=snap.id; wp=snap; }
   wp.joinedViaCode=true; wp.joinedAt=new Date().toISOString();
   companyPersist();
-  msg('This base is linked to the company.', true);
-  toast('Base linked to the company');
+  msg('This workplace is linked to the company.', true);
+  toast('Workplace linked to the company');
   renderCompany();
   return true;
 }
@@ -8642,7 +8642,7 @@ function companyHeatmapCell(wp, dateISO){
 function companyHeatmapHtml(){
   var wps=companyWorkplaces();
   var h='<div id="companyHeatmap"><h3 style="margin-top:14px;">Staffing Heatmap</h3>'
-    +'<p class="sub">Filled vs open slots per base, next 14 days. Green = fully staffed &middot; Yellow = some open (up to half) &middot; Red = more than half open &middot; Grey = no roster.</p>';
+    +'<p class="sub">Filled vs open slots per workplace, next 14 days. Green = fully staffed &middot; Yellow = some open (up to half) &middot; Red = more than half open &middot; Grey = no roster.</p>';
   if(!wps.length){ return h+'<p class="fine">No workplaces yet.</p></div>'; }
   var d0=parseISO(isoDate(new Date()));
   var dates=[];
@@ -8815,6 +8815,7 @@ function companyDashHtml(){
     +'<b>'+escapeHtml(fmtDayTitle(tISO))+'</b>'
     +'<button class="btn ghost" onclick="companyDashNav(1)" aria-label="Next day">›</button></div>'
     +'<button class="btn ghost" style="margin-top:6px;" onclick="companyDashToday()">Today</button>'
+    +companyHeatmapHtml()
     +'<div class="card" style="padding:10px;">'
     +'<div class="avail" onclick="companySetDrill({type:\'openTeams\'})"><span><span class="nm">Teams on today</span> <span class="meta">'+st.teams+' team'+(st.teams===1?'':'s')+'</span></span><span class="meta">View</span></div>'
     +'<div class="avail" onclick="companySetDrill({type:\'openTeams\'})"><span><span class="nm">Fully staffed</span> <span class="meta">'+st.full+' team'+(st.full===1?'':'s')+'</span></span><span class="meta">View</span></div>'
@@ -8824,7 +8825,6 @@ function companyDashHtml(){
     +'<div class="avail" onclick="companySetDrill({type:\'leave\'})"><span><span class="nm">On leave</span> <span class="meta">'+st.leave.length+' person'+(st.leave.length===1?'':'s')+'</span></span><span class="meta">View</span></div>'
     +'<div class="avail" onclick="companySetDrill({type:\'filled\'})"><span><span class="nm">Shifts filled vs open</span> <span class="meta">'+st.filled+' filled \u00b7 '+st.openSlots+' open</span></span><span class="meta">View</span></div>'
     +'</div>'
-    +companyHeatmapHtml()
     +companyPatternsHtml()
     +'<h3 style="margin-top:14px;">Workplaces</h3>'
     +companyWorkplaces().map(function(wp){
@@ -8834,18 +8834,18 @@ function companyDashHtml(){
       var bst=companyTodayStats(tISO, wp.id);
       return '<div class="avail" onclick="companySetDrill({type:\'base\', id:\''+wp.id+'\'})"><span><span class="nm">'+escapeHtml(wp.name||'Workplace')+(isActive?' \u00b7 active':'')+'</span> <span class="meta">'+teamN+' team'+(teamN===1?'':'s')+' \u00b7 '+staffN+' staff \u00b7 '+bst.teams+' on \u00b7 '+bst.full+' staffed \u00b7 '+bst.open+' open \u00b7 '+bst.sick.length+' sick \u00b7 '+bst.leave.length+' leave</span></span><span class="meta">View</span></div>';
     }).join('')
-    +'<div class="btnrow"><button class="btn" onclick="companySetTab(\'bases\')">Manage bases</button><button class="btn ghost" onclick="companySetTab(\'rules\')">Company rules</button></div>';
+    +'<div class="btnrow"><button class="btn" onclick="companySetTab(\'bases\')">Manage workplaces</button><button class="btn ghost" onclick="companySetTab(\'rules\')">Company rules</button></div>';
   return h;
 }
 function companyBasesHtml(){
   var h='<h3 style="margin-top:4px;">Workplaces</h3>'
-    +'<p class="sub">Each workplace keeps its own rosters, staff, qualifications and rules. Switch to a workplace to manage it.</p>'
+    +'<p class="sub">Each workplace keeps its own rosters, staff, qualifications and rules. Tap View to look at a workplace \u2014 this company view is read-only; managers build and edit in the manager view.</p>'
     +'<div class="card" style="padding:10px;"><h3>Company invite code</h3>'
-    +'<p class="sub">Share this code with a base to link it to this company. The base enters the code below and it links automatically.</p>'
+    +'<p class="sub">Share this code with a workplace to link it to this company. The workplace enters the code below and it links automatically.</p>'
     +'<div style="font-size:28px;font-weight:800;letter-spacing:4px;margin:6px 0;" id="coInviteCode">'+escapeHtml(companyInviteCode())+'</div>'
     +'<button class="btn ghost" onclick="companyRegenerateCode()">Generate new code</button></div>'
     +'<div class="card" style="padding:10px;"><h3>Join this company</h3>'
-    +'<p class="sub">Enter the company invite code to link this base to the company.</p>'
+    +'<p class="sub">Enter the company invite code to link this workplace to the company.</p>'
     +'<div style="display:flex;gap:6px;"><input type="text" id="coJoinCodeInp" placeholder="Invite code" maxlength="12" style="flex:1;min-width:0;text-transform:uppercase;">'
     +'<button class="btn" style="margin-top:0;width:auto;flex:none;padding:12px 16px;" onclick="companyJoinWithCode(document.getElementById(\'coJoinCodeInp\').value)">Join</button></div>'
     +'<p class="fine" id="coJoinMsg" style="margin:6px 0 0;"></p></div>'
@@ -8861,12 +8861,11 @@ function companyBasesHtml(){
         +'</div><p class="fine">'+teamN+' team'+(teamN===1?'':'s')+' \u00b7 '+staffN+' staff</p>'
         +'<p class="fine">Today: '+bst.teams+' on \u00b7 '+bst.full+' staffed \u00b7 '+bst.open+' open \u00b7 '+bst.filled+' filled \u00b7 '+bst.openSlots+' open slots \u00b7 '+bst.sick.length+' sick \u00b7 '+bst.leave.length+' leave'+(qualParts2?' \u00b7 '+qualParts2:'')+'</p>'
         +'<div class="btnrow"><button class="btn" onclick="companySetDrill({type:\'base\', id:\''+wp.id+'\'})">View</button>'
-        +(isActive?'':'<button class="btn" onclick="companySwitchWorkplace(\''+wp.id+'\'); switchTab(\'rosters\');">Open this base</button>')
         +'</div></div>';
     }).join('')
     +'<div class="card" style="padding:10px;"><h3>Add a workplace</h3>'
     +'<div style="display:flex;gap:6px;"><input type="text" id="coNewBaseInp" placeholder="New workplace name" style="flex:1;min-width:0;">'
-    +'<button class="btn" style="margin-top:0;width:auto;flex:none;padding:12px 16px;" onclick="companyAddBase()">Add base</button></div></div>';
+    +'<button class="btn" style="margin-top:0;width:auto;flex:none;padding:12px 16px;" onclick="companyAddBase()">Add workplace</button></div></div>';
   return h;
 }
 function companyAddBase(){
@@ -9026,9 +9025,9 @@ function companyOpenHtml(){
   });
   S._coOpenFiltered=list;
   var h='<h3 style="margin-top:4px;">Open shifts across the company</h3>'
-    +'<p class="sub">Tap one to open it — on another base, the app switches to that base first.</p>'
+    +'<p class="sub">Tap one to open it — at another workplace, the app switches to that workplace first.</p>'
     +'<div style="display:flex;gap:6px;margin-bottom:8px;">'
-    +'<select onchange="companyOpenSetBase(this.value)" style="flex:1;min-width:0;"><option value="all">All bases</option>'
+    +'<select onchange="companyOpenSetBase(this.value)" style="flex:1;min-width:0;"><option value="all">All workplaces</option>'
     +companyWorkplaces().map(function(wp){ return '<option value="'+wp.id+'"'+(baseF===wp.id?' selected':'')+'>'+escapeHtml(wp.name||'Workplace')+'</option>'; }).join('')
     +'</select>'
     +'<select onchange="companyOpenSetQual(this.value)" style="flex:1;min-width:0;"><option value="all">Any qualification</option>'
@@ -9042,7 +9041,7 @@ function companyOpenHtml(){
       +'<span class="meta">'+escapeHtml(o.workplaceName)+' \u00b7 '+escapeHtml(o.crewName)+(o.qual?' \u00b7 needs '+escapeHtml(o.qual):'')+' \u00b7 '+o.openN+' open</span></span><span class="meta">Open</span></div>';
   });
   if(S.company.crossBaseLog && S.company.crossBaseLog.length){
-    h+='<h3 style="margin-top:14px;">Cross-base log</h3><p class="sub">Staff who covered a shift at another base (once-off, counts as overtime).</p>'
+    h+='<h3 style="margin-top:14px;">Cover across workplaces</h3><p class="sub">Staff who covered a shift at another workplace (once-off, counts as overtime).</p>'
       +S.company.crossBaseLog.slice(-20).reverse().map(function(l){
         return '<div class="fine">'+escapeHtml(l.dateISO||'')+' \u00b7 '+escapeHtml(l.person||'')+' ('+escapeHtml(l.homeBase||'')+') covered '+escapeHtml(l.shiftName||'')+' at '+escapeHtml(l.baseName||'')+'</div>';
       }).join('');
@@ -9430,7 +9429,7 @@ function companyStatsHtml(){
     +'<div class="avail"><span><span class="nm">Open</span> <span class="meta">'+st.open+'</span></span></div>'
     +'<div class="avail"><span><span class="nm">Sick days</span> <span class="meta">'+st.sickDays+'</span></span></div>'
     +'<div class="avail"><span><span class="nm">Leave days</span> <span class="meta">'+st.leaveDays+'</span></span></div>'
-    +'<div class="avail"><span><span class="nm">Overtime shifts</span> <span class="meta">'+st.overtime+' \u00b7 '+st.crossBaseOT+' cross-base</span></span></div>'
+    +'<div class="avail"><span><span class="nm">Overtime shifts</span> <span class="meta">'+st.overtime+' \u00b7 '+st.crossBaseOT+' across workplaces</span></span></div>'
     +'<div class="avail" onclick="companySetDrill({type:\'statsViol\'})"><span><span class="nm">Rule violations</span> <span class="meta">'+violTotal+'</span></span><span class="meta">View</span></div>'
     +'</div>'
     +'<h3 style="margin-top:14px;">Filled vs open</h3><div class="card" style="padding:10px;">'+coDonut(st.filled, st.open)+'</div>';
@@ -9441,7 +9440,7 @@ function companyStatsHtml(){
       }).join('');
     h+='<h3 style="margin-top:14px;">Violations chart</h3><div class="card" style="padding:10px;">'+coBarChart(st.violations.map(function(v){ return {label:v.label, value:v.count, color:'#CC0000'}; }))+ '</div>';
   }
-  h+='<h3 style="margin-top:14px;">Per base</h3>';
+  h+='<h3 style="margin-top:14px;">Per workplace</h3>';
   st.perBase.forEach(function(b){
     h+='<div class="card" style="padding:10px;"><b>'+escapeHtml(b.name)+'</b>'
       +'<div class="fine" style="margin-top:4px;">'+b.total+' shifts \u00b7 '+b.filled+' filled \u00b7 '+b.open+' open \u00b7 '+b.sick+' sick days \u00b7 '+b.leave+' leave days \u00b7 '+b.ot+' overtime</div></div>';
@@ -9562,6 +9561,67 @@ function companyDraftReadOnlyHtml(drill){
   h+=companyDraftNeedsFillingHtml(wp, R, y, m);
   return h;
 }
+/* A workplace's LIVE roster, watched from the Company view
+   (Ian, 22 Oct 2026): read-only month grid — same markup as the
+   draft viewer, no tap actions anywhere. Rosters are built and
+   edited by the workplace's manager, never from here. */
+function companyRosterReadOnlyHtml(drill){
+  var wp=companyWorkplaceById(drill.workplaceId);
+  var u=wp?(wp.rosters||[]).find(function(x){ return x.id===drill.id; }):null;
+  if(!wp||!u) return '<h3 style="margin-top:4px;">Roster</h3><p class="fine">That roster is no longer available.</p>';
+  var R=u.roster, y=R.year, m=R.month;
+  var teamName=((wp.base.vehicles||[]).find(function(t){ return t.id===R.vehicleId; })||{}).name||'Team';
+  var nOpen=0;
+  for(var dd0=0; dd0<R.days; dd0++){
+    var dISO0=R.startISO?isoDate(addDays(parseISO(R.startISO), dd0)):null;
+    if(!dISO0) continue;
+    calSlotCrewsFor(wp.base, R, dd0).forEach(function(ps){
+      ps.list.forEach(function(x){
+        effShiftMembers(R, dISO0, ps.sl.id, x.c).forEach(function(nm){ if(nm===OPEN_MARK) nOpen++; });
+      });
+    });
+  }
+  var h='<h3 style="margin-top:4px;">'+escapeHtml(teamName)+' &middot; '+escapeHtml(MN[m]+' '+y)+'</h3>'
+    +'<p class="sub">'+escapeHtml(wp.name||'Workplace')+' &middot; Read only \u2014 this roster is built and edited by the workplace\u2019s manager.</p>'
+    +'<div class="draftopencount">'+(nOpen>0?'<span style="color:#CC0000;">'+nOpen+' open shift'+(nOpen===1?'':'s')+' in this roster</span>':'<span class="ok">All shifts filled</span>')+'</div>';
+  var dim=daysInMonth(y,m), lead=leadDays(y,m), weeks=Math.ceil((lead+dim)/7);
+  var dowL=['S','M','T','W','T','F','S'], ws=wsDow(), dowH='';
+  for(var wi=0;wi<7;wi++) dowH+='<span>'+dowL[(ws+wi)%7]+'</span>';
+  h+='<div class="dow">'+dowH+'</div><div class="grid">';
+  for(var k=0;k<lead;k++) h+='<div class="cell out"></div>';
+  for(var dd=1;dd<=dim;dd++){
+    var info=calRosterDay(R,y,m,dd);
+    if(!info){ h+='<div class="cell out"><div class="dnum">'+dd+'</div></div>'; continue; }
+    var dateISO=info.date?isoDate(info.date):null;
+    var blocksHtml='', dayHasOpen=false;
+    calSlotCrewsFor(wp.base, R, info.dayIdx).forEach(function(ps){
+      if(!ps.list.length) return;
+      var crews=ps.list.map(function(x){ return escapeHtml(x.c.name); }).join(' / ');
+      var memHtml=[], hasOpen=false;
+      ps.list.forEach(function(x){
+        var orig=x.c.members||[];
+        effShiftMembers(R, dateISO, ps.sl.id, x.c).forEach(function(nm){
+          if(nm===OPEN_MARK) hasOpen=true;
+          var mh=rosterMemberHtml(nm, orig);
+          if(memHtml.indexOf(mh)<0) memHtml.push(mh);
+        });
+      });
+      if(hasOpen) dayHasOpen=true;
+      var memLine=memHtml.length?'<span class="bm">'+memHtml.map(function(mh){ return '<span class="bmn">'+mh+'</span>'; }).join('')+'</span>':'';
+      var band=(ps.list[0]&&ps.list[0].c.color)||'#888888';
+      blocksHtml+='<span class="band" style="background:'+band+';color:'+textOnBand(band)+(hasOpen?';box-shadow:inset 0 0 0 2px #CC0000':'')+'">'
+        +'<span class="bs">'+escapeHtml(shiftBandShort(ps.sl.name))+'</span>'
+        +'<span class="bc">'+crews+'</span>'+memLine+'</span>';
+    });
+    var ed=R.crews.some(function(c,ci){ return R.overrides[info.dayIdx+':'+ci]; });
+    var med=info.date&&hasMemberEdits(R, isoDate(info.date));
+    var cellCls=dayHasOpen?' open':((ed||med)?' changed':'');
+    h+='<div class="cell'+(isToday(info.date)?' today':'')+cellCls+'"><div class="dnum">'+dd+'</div>'+blocksHtml+'</div>';
+  }
+  for(var t=lead+dim;t<weeks*7;t++) h+='<div class="cell out"></div>';
+  h+='</div>';
+  return h;
+}
 function companyDrillHtml(drill){
   var today=companyDashDateISO();
   var st=companyTodayStats(today);
@@ -9589,7 +9649,7 @@ function companyDrillHtml(drill){
     var sp=companyStatsYmGet().split('-');
     var st2=companyMonthStats(+sp[0], +sp[1]-1, true);
     h+='Rule violations — '+escapeHtml(st2.label)+'</h3>';
-    h+='<p class="sub">Violations found in this month\u2019s shifts (same 9-rule engine, company rules when set, else base rules).</p>';
+    h+='<p class="sub">Violations found in this month\u2019s shifts (same 9-rule engine, company rules when set, else the workplace\u2019s own rules).</p>';
     if(!st2.violItems.length) h+='<p class="fine">No violations in this month.</p>';
     st2.violItems.forEach(function(v){ h+='<div style="font-size:14px;color:#CC0000;margin-bottom:2px;">'+escapeHtml(v)+'</div>'; });
   } else if(drill.type==='open'){ h+='Open shifts — '+dateLbl+'</h3>';
@@ -9641,36 +9701,49 @@ function companyDrillHtml(drill){
           });
         });
       });
-      h+='<p class="sub">'+(wp.base.vehicles||[]).length+' team'+((wp.base.vehicles||[]).length===1?'':'s')+' \u00b7 '+(wp.base.staff||[]).length+' staff \u00b7 '+(wp.id===S.company.activeId?'active base':'')+'</p>';
+      h+='<p class="sub">'+(wp.base.vehicles||[]).length+' team'+((wp.base.vehicles||[]).length===1?'':'s')+' \u00b7 '+(wp.base.staff||[]).length+' staff \u00b7 '+(wp.id===S.company.activeId?'active workplace':'')+'</p>';
       var bst2=companyTodayStats(today, wp.id);
       var bQualParts2=Object.keys(bst2.quals).map(function(q){ return escapeHtml(q)+' '+bst2.quals[q]; }).join(' \u00b7 ');
       h+='<h3>On '+dateLbl+'</h3>'
         +'<div class="card" style="padding:10px;"><div class="fine">'+bst2.teams+' teams on \u00b7 '+bst2.full+' fully staffed \u00b7 '+bst2.open+' with open shifts \u00b7 '+bst2.filled+' filled \u00b7 '+bst2.openSlots+' open slots \u00b7 '+bst2.sick.length+' sick \u00b7 '+bst2.leave.length+' on leave'+(bQualParts2?' \u00b7 '+bQualParts2:'')+'</div></div>';
       h+='<h3>Open shifts on '+dateLbl+'</h3>';
-      if(!opens.length) h+='<p class="fine">No open shifts on this date at this base.</p>';
+      if(!opens.length) h+='<p class="fine">No open shifts on this date at this workplace.</p>';
       opens.forEach(function(o){
         var gi=companyOpenShifts().indexOf(o);
         h+='<div class="avail" onclick="companyOpenShiftGo('+gi+')"><span><span class="nm">'+escapeHtml(o.shiftName)+(o.teamName?' \u00b7 '+escapeHtml(o.teamName):'')+'</span> <span class="meta">'+escapeHtml(o.crewName)+(o.qual?' \u00b7 needs '+escapeHtml(o.qual):'')+' \u00b7 '+o.openN+' open</span></span><span class="meta">Open</span></div>';
       });
       h+='<h3>People on '+dateLbl+'</h3>';
-      if(!onToday.length) h+='<p class="fine">Nobody on on this date at this base.</p>';
+      if(!onToday.length) h+='<p class="fine">Nobody on on this date at this workplace.</p>';
       onToday.forEach(function(nm){
         h+='<div class="avail" onclick="companySetDrill({type:\'person\', name:\''+escapeHtml(nm).replace(/\'/g,"\\'")+'\'})"><span><span class="nm">'+escapeHtml(nm)+'</span> <span class="meta">'+escapeHtml(staffQualNameFor(wp.base, nm)||'')+'</span></span><span class="meta">View</span></div>';
       });
-      /* Drafts at this base (view-only from Company — tap to view, not edit) */
+      /* Rosters at this workplace (view-only from Company — tap to
+         watch the roster, never to build or edit: managers build) */
+      var wpRosters=(wp.rosters||[]).slice().sort(function(a,b){
+        var ra=a.roster||{}, rb=b.roster||{};
+        return ((rb.year||0)*12+(rb.month||0))-((ra.year||0)*12+(ra.month||0));
+      });
+      h+='<h3>Rosters</h3>';
+      if(!wpRosters.length) h+='<p class="fine">No rosters at this workplace.</p>';
+      wpRosters.forEach(function(u){
+        var R=u.roster||{};
+        var teamName=((wp.base.vehicles||[]).find(function(t){ return t.id===R.vehicleId; })||{}).name||'Team';
+        h+='<div class="avail" onclick="companySetDrill({type:\'roster\', id:\''+u.id+'\', workplaceId:\''+wp.id+'\', returnDrill:{type:\'base\', id:\''+wp.id+'\'}})"><span><span class="nm">'+escapeHtml(teamName)+' &middot; '+escapeHtml(MN[R.month||0]+' '+(R.year||''))+'</span> <span class="meta">'+escapeHtml(R.name||'')+'</span></span><span class="meta">View</span></div>';
+      });
+      /* Drafts at this workplace (view-only from Company — tap to view, not edit) */
       var wpDrafts=companyDraftsFor(wp);
       h+='<h3>Drafts</h3>';
-      if(!wpDrafts.length) h+='<p class="fine">No drafts at this base.</p>';
+      if(!wpDrafts.length) h+='<p class="fine">No drafts at this workplace.</p>';
       wpDrafts.forEach(function(d){
         var created=new Date(d.createdAt||Date.now()).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'});
         var nOpen=companyDraftOpenCount(wp, d);
         var teamName=((wp.base.vehicles||[]).find(function(t){ return t.id===d.teamId; })||{}).name||d.name||'Team';
         h+='<div class="avail" onclick="companySetDrill({type:\'draft\', id:\''+d.id+'\', workplaceId:\''+wp.id+'\', returnDrill:{type:\'base\', id:\''+wp.id+'\'}})"><span><span class="nm">'+escapeHtml(teamName)+' &middot; '+escapeHtml(MN[d.month]+' '+d.year)+'</span> <span class="meta">Created '+escapeHtml(created)+' &middot; '+nOpen+' open shift'+(nOpen===1?'':'s')+'</span></span><span class="meta">View</span></div>';
       });
-      if(wp.id!==S.company.activeId) h+='<div class="btnrow"><button class="btn" onclick="companySwitchWorkplace(\''+wp.id+'\'); switchTab(\'rosters\');">Open this base</button></div>';
     }
   } else if(drill.type==='draft'){ return companyDraftReadOnlyHtml(drill); }
   else if(drill.type==='person'){ return companyPersonDrillHtml(drill.name); }
+  else if(drill.type==='roster'){ return companyRosterReadOnlyHtml(drill); }
   return h;
 }
 
@@ -12702,13 +12775,13 @@ function setPills(elId, opts, cur, cb){
 }
 /* ---------- Test data generator ---------- */
 function genTestData(){
-  if(!confirm('Build a demo company? Ubuntu Care Group with three workplaces \u2014 an ambulance service, a kitchen and a security team \u2014 each with its own staff and this month\u2019s roster, with sick leave, replacements and open shifts, so you can see how the company pages pull it all together.')) return;
+  if(!confirm('Build a demo company? Ubuntu Care Group with ten workplaces \u2014 an ambulance service, a kitchen, security, a restaurant, cleaning, a pharmacy, a gym, a hotel, a workshop and a daycare \u2014 each with its own staff and six months of rosters, with sick leave, replacements and open shifts, so you can see how the company pages pull it all together.')) return;
   loadSaved();
   var now=new Date();
   var t=Date.now();
   if(!S.base) S.base={};
   if(!Array.isArray(S.base.staff)) S.base.staff=[];
-  if(!S.base.name) S.base.name='Demo Base';
+  if(!S.base.name) S.base.name='Riverside Ambulance';
   /* qualifications with Ladder ticks: ALS covers all, ILS covers BLS + First Aider,
      BLS covers First Aider, First Aider covers only itself */
   var qALS='q'+t+'1', qILS='q'+t+'2', qBLS='q'+t+'3', qFA='q'+t+'4';
@@ -12790,7 +12863,7 @@ function genTestData(){
   var exists=(S.rosters||[]).some(function(u){
     return u.roster&&u.roster.vehicleId===v0.id&&u.roster.year===y&&u.roster.month===m;
   });
-  if(exists){ var _more=demoEnsureCompanyExtras(t,y,m); persistBase(); persist(); toast(_more?'Demo company completed \u2014 Ubuntu Care Group now has three workplaces with rosters. Open the Company view to see it all together.':'Demo data already exists for this month.'); return; }
+  if(exists){ demoHistoryRosters(t,y,m); var _more=demoEnsureCompanyExtras(t,y,m); persistBase(); persist(); toast(_more?'Demo company completed \u2014 Ubuntu Care Group now has ten workplaces with six months of rosters. Open the Company view to see it all together.':'Demo data already exists for this month.'); return; }
   var dim=daysInMonth(y,m);
   var snapCrews=JSON.parse(JSON.stringify(v0.crews||[]));
   snapCrews.forEach(function(c,ci){
@@ -12905,9 +12978,69 @@ function genTestData(){
   if(thabo&&sarah) applySwap(thabo, sarah, 24, 31);
   if(!S.rosters) S.rosters=[];
   S.rosters.push({id:R.id, name:R.name, roster:R});
+  demoHistoryRosters(t,y,m);
   demoEnsureCompanyExtras(t,y,m);
   persistBase(); persist();
-  toast('Demo company built \u2014 Ubuntu Care Group: Riverside Ambulance, Hillcrest Kitchen and Northgate Security, each with staff and a roster. Open the Company view to see it all together.');
+  toast('Demo company built \u2014 Ubuntu Care Group: ten workplaces, each with staff and six months of rosters. Open the Company view to see it all together.');
+}
+/* One leave/sick edit on any roster object (used by the demo builders):
+   replaces the person on their working days in the window, with the
+   named cover when they are free, else an OPEN slot; logs the entry. */
+function demoRosterLeave(R, y, m, person, type, cover, fromDay, toDay, maxDays){
+  var dim=daysInMonth(y,m);
+  function namesOn(dateISO){
+    var dt=parseISO(dateISO), di=dayDiff(parseISO(R.startISO),dt); var set={};
+    try{ calSlotCrews(R,di).forEach(function(ps){ if(!ps.list.length) return;
+      effShiftMembers(R,dateISO,ps.sl.id,ps.list[0].c).forEach(function(n){ set[n]=1; }); }); }catch(e){}
+    return set;
+  }
+  var done=0;
+  for(var d=fromDay; d<=toDay&&done<maxDays; d++){
+    if(d<1||d>dim) continue;
+    var dateISO=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var dt=parseISO(dateISO), di=dayDiff(parseISO(R.startISO),dt);
+    try{ calSlotCrews(R,di).forEach(function(ps){
+      if(done>=maxDays) return;
+      if(!ps.list.length||(R.memberOverrides[dateISO]&&R.memberOverrides[dateISO][ps.sl.id])) return;
+      var mems=effShiftMembers(R,dateISO,ps.sl.id,ps.list[0].c);
+      if(mems.indexOf(person)<0) return;
+      var cov='OPEN';
+      if(cover&&cover!=='OPEN'&&!namesOn(dateISO)[cover]) cov=cover;
+      mems[mems.indexOf(person)]=(cov==='OPEN'?OPEN_MARK:cov);
+      if(!R.memberOverrides[dateISO]) R.memberOverrides[dateISO]={};
+      R.memberOverrides[dateISO][ps.sl.id]=mems;
+      R.leaveLog.push({date:dateISO, shift:ps.sl.id, person:person, type:type, cover:cov, ts:Date.now()});
+      done++;
+    }); }catch(e){}
+  }
+}
+/* Past-month rosters for the FIRST demo workplace (the ambulance), so
+   the demo company has history, not just this month: one roster per
+   month for the five months before the current one, each with a sick
+   day left open and a short covered leave. Staff/crews untouched. */
+function demoHistoryRosters(t, y, m){
+  var v0=(S.base.vehicles||[])[0]; if(!v0) return;
+  if(!Array.isArray(S.rosters)) S.rosters=[];
+  var allNames=(S.base.staff||[]).map(function(s){ return s.name; });
+  if(!allNames.length) return;
+  for(var k=1;k<=5;k++){
+    var yy=y, mm=m-k; while(mm<0){ mm+=12; yy--; }
+    var exists=S.rosters.some(function(u){ return u.roster&&u.roster.vehicleId===v0.id&&u.roster.year===yy&&u.roster.month===mm; });
+    if(exists) continue;
+    var dim=daysInMonth(yy,mm);
+    var snapCrews=JSON.parse(JSON.stringify(v0.crews||[]));
+    snapCrews.forEach(function(c,ci){
+      if(!(c.members||[]).length) c.members=[allNames[(ci*2)%allNames.length], allNames[(ci*2+1)%allNames.length]].filter(function(n){ return n; });
+    });
+    var R={ id:'r'+t+'_hist'+k, kind:'month', vehicleId:v0.id, _testGen:true,
+      name:(v0.name||'Team')+' \u00b7 '+MN[mm]+' '+yy, year:yy, month:mm, anchorAbs:0,
+      startISO:yy+'-'+String(mm+1).padStart(2,'0')+'-01', days:dim,
+      crews:snapCrews, rotation:v0.rotation||'224', shiftIds:teamShiftIds(v0),
+      overrides:{}, memberOverrides:{}, leaveLog:[] };
+    demoRosterLeave(R, yy, mm, allNames[k%allNames.length], 'Sick leave', 'OPEN', 8+k, 14+k, 1);
+    demoRosterLeave(R, yy, mm, allNames[(k+3)%allNames.length], 'Annual leave', allNames[(k+5)%allNames.length], 12+k, 20+k, 2);
+    S.rosters.push({id:R.id, name:R.name, roster:R});
+  }
 }
 /* ---------- Demo company extras (Ian, 22 Oct 2026) ----------
    Dummy data must show a whole COMPANY, not one workplace: after the
@@ -12933,7 +13066,35 @@ function demoEnsureCompanyExtras(t, y, m){
     { tag:'sec', wpName:'Northgate Security', team:'Patrol Team', color:'#4DABF7',
       quals:[['Supervisor',['Guard','Trainee']],['Guard',['Trainee']],['Trainee',[]]],
       staff:[['Pieter V','Supervisor'],['Kevin O','Guard'],['Musa D','Guard'],['Johan S','Guard'],['David L','Guard'],['Peter N','Trainee'],['Sam T','Trainee'],['Chris B','Trainee']],
-      leaves:[['Kevin O','Sick leave','OPEN',15,21,1],['Musa D','Annual leave','David L',18,25,2]] }
+      leaves:[['Kevin O','Sick leave','OPEN',15,21,1],['Musa D','Annual leave','David L',18,25,2]] },
+    { tag:'res', wpName:'Saffron Restaurant', team:'Front of House', color:'#FF8787',
+      quals:[['Manager',['Chef','Waiter','Runner']],['Chef',['Waiter','Runner']],['Waiter',['Runner']],['Runner',[]]],
+      staff:[['Lerato M','Manager'],['Johan P','Chef'],['Ethan R','Chef'],['Emma V','Waiter'],['Noah B','Waiter'],['Mia D','Waiter'],['Zoe K','Runner'],['Lucas F','Runner']],
+      leaves:[['Emma V','Annual leave','Mia D',13,19,2],['Zoe K','Sick leave','OPEN',17,23,1]] },
+    { tag:'cln', wpName:'BrightSpark Cleaning', team:'Cleaning Team A', color:'#4DABF7',
+      quals:[['Supervisor',['Cleaner','Trainee']],['Cleaner',['Trainee']],['Trainee',[]]],
+      staff:[['Brenda N','Supervisor'],['Carol J','Cleaner'],['Dennis K','Cleaner'],['Faith M','Cleaner'],['George P','Cleaner'],['Hannah S','Trainee'],['Ivan T','Trainee'],['Joyce L','Trainee']],
+      leaves:[['Carol J','Sick leave','OPEN',14,20,1],['Faith M','Annual leave','George P',16,24,2]] },
+    { tag:'pha', wpName:'CityMed Pharmacy', team:'Dispensary', color:'#51CF66',
+      quals:[['Pharmacist',['Pharmacy Assistant','Cashier']],['Pharmacy Assistant',['Cashier']],['Cashier',[]]],
+      staff:[['Rajesh P','Pharmacist'],['Sunita K','Pharmacy Assistant'],['Ahmed E','Pharmacy Assistant'],['Karin V','Cashier'],['Louis B','Cashier'],['Megan O','Pharmacy Assistant'],['Nadia F','Cashier'],['Oscar D','Cashier']],
+      leaves:[['Ahmed E','Annual leave','Sunita K',15,22,2],['Karin V','Sick leave','OPEN',18,24,1]] },
+    { tag:'gym', wpName:'FitLife Gym', team:'Floor Team', color:'#FFC13E',
+      quals:[['Gym Manager',['Personal Trainer','Receptionist']],['Personal Trainer',['Receptionist']],['Receptionist',[]]],
+      staff:[['Dylan R','Gym Manager'],['Jade C','Personal Trainer'],['Kyle M','Personal Trainer'],['Lauren B','Receptionist'],['Marco S','Personal Trainer'],['Nina P','Receptionist'],['Owen G','Receptionist'],['Paige W','Personal Trainer']],
+      leaves:[['Kyle M','Sick leave','OPEN',13,19,1],['Lauren B','Annual leave','Nina P',17,25,2]] },
+    { tag:'hot', wpName:'Harbour Hotel', team:'Housekeeping', color:'#9775FA',
+      quals:[['Housekeeping Manager',['Room Attendant','Laundry Hand']],['Room Attendant',['Laundry Hand']],['Laundry Hand',[]]],
+      staff:[['Ingrid H','Housekeeping Manager'],['Jacques D','Room Attendant'],['Katya N','Room Attendant'],['Liam O','Room Attendant'],['Monika S','Laundry Hand'],['Nils P','Laundry Hand'],['Olga R','Room Attendant'],['Petrus Z','Laundry Hand']],
+      leaves:[['Katya N','Annual leave','Olga R',14,21,2],['Nils P','Sick leave','OPEN',16,22,1]] },
+    { tag:'wrk', wpName:'AutoFix Workshop', team:'Workshop Floor', color:'#FFA94D',
+      quals:[['Workshop Foreman',['Mechanic','Apprentice']],['Mechanic',['Apprentice']],['Apprentice',[]]],
+      staff:[['Quintin A','Workshop Foreman'],['Riaan V','Mechanic'],['Stefan K','Mechanic'],['Trevor M','Mechanic'],['Umar F','Apprentice'],['Victor N','Apprentice'],['Wayne D','Mechanic'],['Xander P','Apprentice']],
+      leaves:[['Stefan K','Sick leave','OPEN',15,21,1],['Trevor M','Annual leave','Wayne D',18,25,2]] },
+    { tag:'day', wpName:'Little Sprouts Daycare', team:'Classroom Team', color:'#63E6BE',
+      quals:[['Principal',['Teacher','Assistant']],['Teacher',['Assistant']],['Assistant',[]]],
+      staff:[['Yolanda M','Principal'],['Zara K','Teacher'],['Alice B','Teacher'],['Bianca R','Assistant'],['Celeste D','Teacher'],['Desiree N','Assistant'],['Estelle V','Assistant'],['Fiona G','Teacher']],
+      leaves:[['Alice B','Annual leave','Fiona G',13,20,2],['Bianca R','Sick leave','OPEN',17,23,1]] }
   ];
   var built=false;
   specs.forEach(function(spec){
@@ -12941,7 +13102,13 @@ function demoEnsureCompanyExtras(t, y, m){
     var w=companyAddWorkplace(spec.wpName); if(!w) return;
     var keepBase=S.base, keepRosters=S.rosters;
     S.base=JSON.parse(JSON.stringify(w.base)); S.rosters=[];
-    demoFillCurrentBase(spec, t, y, m);
+    /* six months of rosters: the current month plus five months back,
+       so Stats shows history and a trend (Ian, 22 Oct 2026) */
+    var yy=y, mm=m;
+    for(var k=0;k<6;k++){
+      demoFillCurrentBase(spec, t, yy, mm, k);
+      mm--; if(mm<0){ mm=11; yy--; }
+    }
     w.base=S.base; w.rosters=S.rosters; w.name=spec.wpName;
     S.base=keepBase; S.rosters=keepRosters;
     built=true;
@@ -12952,7 +13119,7 @@ function demoEnsureCompanyExtras(t, y, m){
 /* Fill the CURRENT S.base/S.rosters with one demo workplace per spec
    (same shapes the main demo build uses). No persists, no renders —
    the caller writes the globals back into the workplace snapshot. */
-function demoFillCurrentBase(spec, t, y, m){
+function demoFillCurrentBase(spec, t, y, m, rot){
   var dim=daysInMonth(y,m);
   var quals=spec.quals.map(function(q,i){
     return {id:'q'+t+spec.tag+i, name:q[0], canCover:q[1].map(function(nm){
@@ -12987,39 +13154,15 @@ function demoFillCurrentBase(spec, t, y, m){
       cc.members=[allNames[(ci*2)%allNames.length], allNames[(ci*2+1)%allNames.length]].filter(function(n){ return n; });
     }
   });
-  var R={ id:'r'+t+'_'+spec.tag, kind:'month', vehicleId:v0.id, _testGen:true,
+  var R={ id:'r'+t+'_'+spec.tag+'_'+y+'_'+m, kind:'month', vehicleId:v0.id, _testGen:true,
     name:spec.team+' \u00b7 '+MN[m]+' '+y, year:y, month:m, anchorAbs:0,
     startISO:y+'-'+String(m+1).padStart(2,'0')+'-01', days:dim,
     crews:snapCrews, rotation:v0.rotation, shiftIds:teamShiftIds(v0),
     overrides:{}, memberOverrides:{}, leaveLog:[] };
-  function namesOn(dateISO){
-    var dt=parseISO(dateISO), di=dayDiff(parseISO(R.startISO),dt); var set={};
-    try{ calSlotCrews(R,di).forEach(function(ps){ if(!ps.list.length) return;
-      effShiftMembers(R,dateISO,ps.sl.id,ps.list[0].c).forEach(function(n){ set[n]=1; }); }); }catch(e){}
-    return set;
-  }
-  function dLeave(person, type, cover, fromDay, toDay, maxDays){
-    var done=0;
-    for(var d=fromDay; d<=toDay&&done<maxDays; d++){
-      if(d<1||d>dim) continue;
-      var dateISO=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-      var dt=parseISO(dateISO), di=dayDiff(parseISO(R.startISO),dt);
-      try{ calSlotCrews(R,di).forEach(function(ps){
-        if(done>=maxDays) return;
-        if(!ps.list.length||(R.memberOverrides[dateISO]&&R.memberOverrides[dateISO][ps.sl.id])) return;
-        var mems=effShiftMembers(R,dateISO,ps.sl.id,ps.list[0].c);
-        if(mems.indexOf(person)<0) return;
-        var cov='OPEN';
-        if(cover&&cover!=='OPEN'&&!namesOn(dateISO)[cover]) cov=cover;
-        mems[mems.indexOf(person)]=(cov==='OPEN'?OPEN_MARK:cov);
-        if(!R.memberOverrides[dateISO]) R.memberOverrides[dateISO]={};
-        R.memberOverrides[dateISO][ps.sl.id]=mems;
-        R.leaveLog.push({date:dateISO, shift:ps.sl.id, person:person, type:type, cover:cov, ts:Date.now()});
-        done++;
-      }); }catch(e){}
-    }
-  }
-  spec.leaves.forEach(function(L){ dLeave(L[0],L[1],L[2],L[3],L[4],L[5]); });
+  spec.leaves.forEach(function(L){
+    var rot2=rot||0;
+    demoRosterLeave(R, y, m, L[0], L[1], L[2], Math.min(28, L[3]+rot2*2), Math.min(28, L[4]+rot2*2), L[5]);
+  });
   S.rosters.push({id:R.id, name:R.name, roster:R});
 }
 /* ---------- Test data generator ---------- */
@@ -13062,23 +13205,36 @@ function importData(file){
   r.readAsText(file);
 }
 function clearData(){
-  if(!confirm('Delete ALL bases, rosters and staff \u2014 on this device and in your cloud account?')) return;
-  ['sfshift_base','sfshift_units','sfshift_rosters','sfshift_hero_logo','sfshift_profile_name','sfshift_mtime','sfshift_custom_rot','sfshift_company','sfshift_drafts','sfshift_apps','sfshift_notifications'].forEach(function(k){
-    DB.remove(k);
-  });
-  /* holiday cache keys (dynamic sfshift_hol_* names) come from the DB key index */
-  DB.keys().forEach(function(k){ if(k.indexOf('sfshift_hol_')===0) DB.remove(k); });
-  /* FIX D: archive keys (index + one body key per archived roster) */
-  DB.keys().forEach(function(k){ if(k.indexOf('sfshift_archive')===0) DB.remove(k); });
+  if(!confirm('Delete ALL workplaces, rosters and staff \u2014 everything, on this device and in your cloud account?')) return;
+  /* Full clean slate (Ian, 22 Oct 2026): sweep EVERY sfshift_ key, not
+     a hand-kept list, so nothing (company, archives, holiday caches,
+     future keys) survives. The two sb session hints stay — clearing
+     data must not sign you out. */
+  var keep={'sfshift_sb_uid':1,'sfshift_sb_email':1};
+  DB.keys().forEach(function(k){ if(k.indexOf('sfshift_')===0 && !keep[k]) DB.remove(k); });
+  try{ Object.keys(localStorage).forEach(function(k){ if(k.indexOf('sfshift_')===0 && !keep[k]) localStorage.removeItem(k); }); }catch(e){}
   HOL_MEM={};
   Object.keys(ROTATIONS).forEach(function(k){ if(ROTATIONS[k]&&ROTATIONS[k].custom) delete ROTATIONS[k]; });
-  if(sb && sbUser){ try{ sb.from('app_state').delete().eq('user_id', sbUser.id).then(function(){}).catch(function(){}); }catch(e){} }
+  /* Finish with a hard reload from the wiped store: reloading the
+     saved state in memory (the old way) could leave stale rosters
+     behind, and a company render could snapshot them into a fresh
+     company. The cloud row delete is awaited (max ~1.5s) so the
+     reload cannot abort it. */
+  var finish=function(){
+    loadBase();
+    DB.flush().then(function(){ location.reload(); });
+    setTimeout(function(){ location.reload(); }, 2500);
+  };
   S.company=null; S._rostersLoaded=false; S._archiveView=null;
   S.drafts=[]; S.shiftApps=[]; S.notifications=[]; S.draftId=null; S.draft=null; S.fromSaved=false; S.unitId=null;
-  loadBase(); loadSaved();
-  renderHome(); renderAllRosters(); renderStaffTab(); renderSettings();
-  updateBell(); /* inbox badge clears with the data */
+  S.rosters=[];
   toast('All data cleared');
+  if(sb && sbUser){
+    var done=false;
+    var go=function(){ if(!done){ done=true; finish(); } };
+    setTimeout(go, 1500);
+    try{ sb.from('app_state').delete().eq('user_id', sbUser.id).then(go).catch(go); }catch(e){ go(); }
+  } else finish();
 }
 
 /* ---------- share roster ---------- */
