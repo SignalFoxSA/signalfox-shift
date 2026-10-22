@@ -1663,7 +1663,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261021-2012';
+var BUILD='20261022-2013';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -8453,19 +8453,17 @@ function companyNameSave(){
   if(v){ c.name=v; companyPersist(); toast('Company name saved'); renderCompany(); }
 }
 /* ---------- Company landing hero (Dashboard tab) ----------
-   Manager Home pattern: logo circle + name + tagline. The logo is
-   stored on S.company.logo (data URL) and syncs with the company
-   (collectState includes S.company). Default is Dash. The logo URL
-   is applied via JS after render (never embedded in HTML). */
+   Display only (Ian, 22 Oct 2026 walkthrough): the picture is NOT
+   editable here — picture + company name are edited on the Profile
+   tab. The logo is stored on S.company.logo (data URL); default is
+   Dash. The logo URL is applied via JS after render. */
 function companyHeroHtml(){
   var c=S.company||{};
   var nm=c.name||'My Company';
   return '<div class="hero">'
-    +'<div class="herofox" id="coHeroLogo"><button class="hero-edit" title="Change logo" onclick="document.getElementById(\'coHeroFile\').click()">&#9998;</button></div>'
-    +'<input type="file" id="coHeroFile" accept="image/*" style="display:none" onchange="companyLogoPick(this)">'
-    +'<button class="hero-reset" id="coHeroReset" style="display:'+(c.logo?'block':'none')+';" onclick="companyLogoReset()">Reset to Dash</button>'
-    +'<h1>'+escapeHtml(nm)+'</h1>'
-    +'<p>All your workplaces, in one place.</p>'
+    +'<div class="herofox" id="coHeroLogo"></div>'
+    +'<p style="margin:10px 0 0;font-size:13px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);">Welcome</p>'
+    +'<h1 style="margin-top:2px;">'+escapeHtml(nm)+'</h1>'
     +'</div>';
 }
 function companyLogoPick(input){
@@ -8510,6 +8508,7 @@ function renderCompany(){
   else if(tab==='people') h+=companyPeopleHtml();
   else if(tab==='open') h+=companyOpenHtml();
   else if(tab==='stats') h+=companyStatsHtml();
+  else if(tab==='profile') h+=companyProfileHtml();
   else h+=companyDashHtml();
   el.innerHTML=h;
   /* Landing hero — Dashboard tab only (other tabs + drill-downs: no hero) */
@@ -8520,11 +8519,15 @@ function renderCompany(){
       if(lg){ lg.style.backgroundImage='url("'+c.logo+'")'; lg.style.backgroundSize='cover'; lg.style.backgroundPosition='50% 50%'; }
     }
   }
+  if(tab==='profile' && c.logo){
+    var pl=document.getElementById('coProfileLogo');
+    if(pl){ pl.style.backgroundImage='url("'+c.logo+'")'; pl.style.backgroundSize='cover'; pl.style.backgroundPosition='50% 50%'; }
+  }
   syncBackRow();
 }
 function companySetTab(t){
   if(t==='rules'){ switchTab('settings'); var card=document.getElementById('coRulesCard'); if(card) card.scrollIntoView(); return; }
-  var map={dash:'codash', stats:'costats', bases:'cobases', people:'copeople', open:'coopen'};
+  var map={dash:'codash', stats:'costats', bases:'cobases', people:'copeople', open:'coopen', profile:'coprofile'};
   switchTab(map[t]||'codash');
 }
 function companySetDrill(drill){
@@ -8780,15 +8783,34 @@ function companyPatternsHtml(){
   h+='</div>';
   return h;
 }
+/* Company Profile tab (Ian, 22 Oct 2026 walkthrough): the ONLY place
+   the company picture and company name are edited. The Dashboard hero
+   is display-only. */
+function companyProfileHtml(){
+  var c=S.company||{};
+  var h='<h3 style="margin-top:4px;">Company profile</h3>'
+    +'<div class="card" style="padding:14px;text-align:center;">'
+    +'<div class="herofox" id="coProfileLogo" style="margin:0 auto;"></div>'
+    +'<div class="btnrow" style="justify-content:center;margin-top:12px;">'
+    +'<button class="btn" onclick="document.getElementById(\'coHeroFile\').click()">Change picture</button>'
+    +(c.logo?'<button class="btn ghost" onclick="companyLogoReset()">Reset to Dash</button>':'')
+    +'</div>'
+    +'<input type="file" id="coHeroFile" accept="image/*" style="display:none" onchange="companyLogoPick(this)">'
+    +'<p class="fine" style="margin-bottom:0;">This picture appears on the company Dashboard. It is stored on this device and in your company data.</p>'
+    +'</div>'
+    +'<div class="card" style="padding:14px;"><h3>Company name</h3>'
+    +'<label class="f" for="coNameInp">Company name</label>'
+    +'<div style="display:flex;gap:6px;"><input type="text" id="coNameInp" value="'+escapeHtml(c.name||'')+'" placeholder="Company name" style="flex:1;min-width:0;">'
+    +'<button class="btn" style="margin-top:0;width:auto;flex:none;padding:12px 16px;" onclick="companyNameSave()">Save name</button></div>'
+    +'</div>';
+  return h;
+}
 function companyDashHtml(){
   var c=S.company;
   var tISO=companyDashDateISO();
   var st=companyTodayStats(tISO);
   var qualParts=Object.keys(st.quals).map(function(q){ return escapeHtml(q)+' '+st.quals[q]; }).join(' \u00b7 ');
-  var h='<h3 style="margin-top:4px;">'+escapeHtml(c.name||'My Company')+'</h3>'
-    +'<div style="display:flex;gap:6px;margin-bottom:8px;"><input type="text" id="coNameInp" value="'+escapeHtml(c.name||'')+'" placeholder="Company name" style="flex:1;min-width:0;">'
-    +'<button class="btn" style="margin-top:0;width:auto;flex:none;padding:12px 16px;" onclick="companyNameSave()">Save name</button></div>'
-    +'<div class="daynav">'
+  var h='<div class="daynav">' /* company name + editor moved to the Profile tab (Ian, 22 Oct) */
     +'<button class="btn ghost" onclick="companyDashNav(-1)" aria-label="Previous day">‹</button>'
     +'<b>'+escapeHtml(fmtDayTitle(tISO))+'</b>'
     +'<button class="btn ghost" onclick="companyDashNav(1)" aria-label="Next day">›</button></div>'
@@ -10625,7 +10647,7 @@ function enterApp(){
 /* ---------- navigation ---------- */
 var TAB_VIEWS={home:'v-home', rosters:'v-rosters', onduty:'v-base', staff:'v-staff', settings:'v-settings',
   myshifts:'v-myshifts', openshifts:'v-marketplace', profile:'v-profile', company:'v-company',
-  codash:'v-company', costats:'v-company', cobases:'v-company', copeople:'v-company', coopen:'v-company'};
+  codash:'v-company', costats:'v-company', cobases:'v-company', copeople:'v-company', coopen:'v-company', coprofile:'v-company'};
 var BACK_IDS=['v-newroster','v-anchor','v-cal','v-base','v-rotbuilder','v-ladder','v-shiftreq','v-rules','v-legal','v-inbox','v-bys','v-byspreview'];
 /* One small subtle back arrow (#backRow, just under the header) for every
    sub-view — plus Company drill-downs, which share the v-company view. */
@@ -10719,6 +10741,7 @@ function renderTabs(){
       {id:'cobases', icon:'\uD83C\uDFE2', label:'Bases'},
       {id:'copeople', icon:'\uD83D\uDC65', label:'People'},
       {id:'coopen', icon:'\uD83D\uDCB0', label:'Open'},
+      {id:'coprofile', icon:'\uD83D\uDC64', label:'Profile'},
       {id:'settings', icon:'\u2699\uFE0F', label:'Settings'}
     ];
   }else{
@@ -10747,8 +10770,8 @@ function switchTab(name){
   }
   if(name==='openshifts'){ renderMarketplace(); }
   if(name==='profile'){ renderStaffProfile(); }
-  if(name==='codash'||name==='costats'||name==='cobases'||name==='copeople'||name==='coopen'){
-    var sec={codash:'dash', costats:'stats', cobases:'bases', copeople:'people', coopen:'open'}[name];
+  if(name==='codash'||name==='costats'||name==='cobases'||name==='copeople'||name==='coopen'||name==='coprofile'){
+    var sec={codash:'dash', costats:'stats', cobases:'bases', copeople:'people', coopen:'open', coprofile:'profile'}[name];
     var _c=companyEnsure(); if(_c){ _c.tab=sec; _c.drill=null; companyPersist(); }
     renderCompany();
   }
