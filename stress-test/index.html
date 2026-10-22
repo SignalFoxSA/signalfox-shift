@@ -113,12 +113,20 @@
   </div>
 
   <div class="card">
-    <h3>Test size</h3>
-    <div class="seg" id="sizeSeg">
-      <button data-n="500">500<small>warm-up</small></button>
-      <button data-n="2000" class="sel">2,000<small>serious</small></button>
-      <button data-n="10000">10,000<small>Netcare scale</small></button>
+    <h3>Which test?</h3>
+    <div class="seg" id="modeSeg">
+      <button data-mode="func">✅ Functionality<small>does it work?</small></button>
+      <button data-mode="torture" class="sel">🧪 Torture<small>speed at scale</small></button>
     </div>
+    <div id="sizeWrap">
+      <h3 style="margin-top:14px;">Test size</h3>
+      <div class="seg" id="sizeSeg">
+        <button data-n="500">500<small>warm-up</small></button>
+        <button data-n="2000" class="sel">2,000<small>serious</small></button>
+        <button data-n="10000">10,000<small>Netcare scale</small></button>
+      </div>
+    </div>
+    <p id="funcNote" style="display:none;">Uses the app’s own demo company — 8 staff, leave with cover, one open shift, a swap — and checks the main features one by one: build, calendar, marketplace, applying, the manager’s inbox, the staff view, exports, the calendar file and the company view.</p>
     <button class="bigbtn" id="btnStart">▶ Start torture test</button>
     <button class="bigbtn" id="btnStop">■ STOP — halt &amp; restore my data</button>
   </div>
@@ -173,21 +181,26 @@ var stageDefs = [
   ['restore','Restore your real data']
 ];
 var running = false, stopWanted = false, size = 2000, report = [], buildUnderTest = '—';
+var METRIC_V = 3; /* staff metric: v1 = on-screen build+layout, v2 = full off-screen build, v3 = 500-slice probe — only same-version runs compare */
+var mode = 'torture';
 
 /* ---------------- stage UI ---------------- */
 var stageEls = {};
-(function buildStages(){
+var stageNames = {};
+function buildStages(defs){
+  stageEls = {}; stageNames = {};
   var host = document.getElementById('stages');
-  stageDefs.forEach(function(sd){
+  host.innerHTML = '';
+  defs.forEach(function(sd){
+    stageNames[sd[0]] = sd[1];
     var row = document.createElement('div'); row.className = 'stage'; row.id = 'st-' + sd[0];
     row.innerHTML = '<div class="ic">·</div><div class="tx"><div class="nm">' + sd[1] +
       '</div><div class="dt"></div></div><div class="ms"></div>';
     host.appendChild(row);
     stageEls[sd[0]] = { row: row, ic: row.querySelector('.ic'), dt: row.querySelector('.dt'), ms: row.querySelector('.ms') };
   });
-})();
-var stageNames = {};
-stageDefs.forEach(function(sd){ stageNames[sd[0]] = sd[1]; });
+}
+buildStages(stageDefs);
 function stSet(key, state, detail, msText){
   var s = stageEls[key]; if (!s) return;
   s.row.className = 'stage' + (state ? ' ' + state : '');
@@ -400,12 +413,28 @@ async function renderHistory(){
   var host = document.getElementById('historyBody');
   if (!host) return;
   var runs = await loadRuns();
+  var html = '';
+  /* functionality runs: their own little league table, no timing bars */
+  var funcRuns = runs.filter(function(r){ return r.kind === 'func'; });
+  if (funcRuns.length) {
+    var lf = funcRuns[funcRuns.length - 1];
+    html += '<p><b>Functionality:</b> last run ' +
+      new Date(lf.ts).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' }) +
+      ' — <b>' + (lf.passed || 0) + '/' + (lf.total || 0) + ' checks passed</b>' +
+      (lf.failedNames && lf.failedNames.length ? ' · failed: ' + lf.failedNames.join(', ') : ' · all green ✓') + '</p>';
+  }
+  runs = runs.filter(function(r){ return r.kind !== 'func'; });
   if (!runs.length) {
-    host.innerHTML = '<p>No runs saved yet. Your first run becomes the baseline — every run after it is compared against where you started.</p>';
+    host.innerHTML = html + '<p>No torture runs saved yet. Your first run becomes the baseline — every run after it is compared against where you started.</p>';
     return;
   }
-  var atSize = runs.filter(function(r){ return r.size === size; });
-  var html = '';
+  var atSizeAll = runs.filter(function(r){ return r.size === size; });
+  /* only compare like with like: runs measured the same way (mv) */
+  var atSize = atSizeAll;
+  if (atSizeAll.length) {
+    var mvLatest = atSizeAll[atSizeAll.length - 1].mv || 1;
+    atSize = atSizeAll.filter(function(r){ return (r.mv || 1) === mvLatest; });
+  }
   if (!atSize.length) {
     html += '<p>No runs at <b>' + size.toLocaleString('en-ZA') + ' staff</b> yet — pick this size and run a test to start its history.</p>';
   } else {
@@ -457,7 +486,7 @@ async function clearHistory(){
 }
 async function comparisonLines(forSize, thisTimes, thisTs){
   var runs = await loadRuns();
-  var atSize = runs.filter(function(r){ return r.size === forSize && r.ts < thisTs; });
+  var atSize = runs.filter(function(r){ return r.kind !== 'func' && r.size === forSize && r.ts < thisTs && (r.mv || 1) === METRIC_V; });
   if (!atSize.length) return [];
   var base = pickBaseline(atSize);
   if (!base || !base.times) return [];
@@ -570,6 +599,7 @@ async function seed(w, N){
 function setControls(canStart){
   document.getElementById('btnStart').disabled = !canStart;
   document.querySelectorAll('#sizeSeg button').forEach(function(b){ b.disabled = !canStart; });
+  document.querySelectorAll('#modeSeg button').forEach(function(b){ b.disabled = !canStart; });
 }
 document.querySelectorAll('#sizeSeg button').forEach(function(b){
   b.addEventListener('click', function(){
@@ -580,7 +610,37 @@ document.querySelectorAll('#sizeSeg button').forEach(function(b){
 });
 document.getElementById('btnStop').addEventListener('click', function(){ stopWanted = true; });
 document.getElementById('btnStop2').addEventListener('click', function(){ stopWanted = true; });
-document.getElementById('btnStart').addEventListener('click', function(){ run(); });
+document.getElementById('btnStart').addEventListener('click', function(){ if (mode === 'func') runFunc(); else run(); });
+
+/* ---------------- test mode ---------------- */
+var FUNC_DEFS = [
+  ['demo', 'Demo company builds'],
+  ['home', 'Home screen'],
+  ['cal', 'Calendar + roster'],
+  ['open', 'Open shift exists'],
+  ['market', 'Marketplace offers it'],
+  ['apply', 'Staff member applies'],
+  ['inbox', 'Manager inbox'],
+  ['portal', 'My Shifts (staff view)'],
+  ['exportf', 'Exports (Excel / CSV / text)'],
+  ['ics', 'Calendar file (.ics)'],
+  ['companyf', 'Company view'],
+  ['restore', 'Restore your real data']
+];
+function setMode(m){
+  if (running) return;
+  mode = m;
+  document.querySelectorAll('#modeSeg button').forEach(function(b){ b.classList.toggle('sel', b.getAttribute('data-mode') === m); });
+  document.getElementById('sizeWrap').style.display = m === 'torture' ? '' : 'none';
+  document.getElementById('funcNote').style.display = m === 'func' ? '' : 'none';
+  document.getElementById('btnStart').textContent = m === 'func' ? '▶ Start functionality test' : '▶ Start torture test';
+  document.querySelector('#stageCard h3').textContent = m === 'func' ? 'Checks' : 'Stages';
+  buildStages(m === 'func' ? FUNC_DEFS : stageDefs);
+  nowSay(m === 'func' ? 'Functionality test ready — it checks the app’s main features one by one, on the demo company.' : 'Torture test ready — pick a size and press Start.', false);
+}
+document.querySelectorAll('#modeSeg button').forEach(function(b){
+  b.addEventListener('click', function(){ setMode(b.getAttribute('data-mode')); });
+});
 
 async function run(){
   if (running) return;
@@ -656,14 +716,34 @@ async function run(){
     times.reload = Math.round(reloadMs);
     checkStop();
 
-    /* STAGE staff list */
-    stSet('staff', 'run', 'Opening the staff screen…');
-    t0 = performance.now();
-    w.switchTab('staff');
-    await new Promise(function(r){ w.requestAnimationFrame(function(){ w.requestAnimationFrame(r); }); });
-    var staffMs = performance.now() - t0;
-    stSet('staff', 'pass', size.toLocaleString('en-ZA') + ' staff on the staff screen', fmtMs(staffMs));
-    log('Staff list: ' + fmtMs(staffMs));
+    /* STAGE staff screen — measured on a PROBE, never the whole monster.
+       Building the full staff DOM at 2,000+ staff is what froze Ian's
+       phone (and crashed this test's tab): ~260k elements per 500 staff.
+       So: build for a slice of at most 500 staff (the full build when the
+       test size IS 500), in the never-shown staff view so no layout is
+       paid either. The slice number is comparable across runs; the stage
+       text says plainly that the full screen remains the known freeze. */
+    stSet('staff', 'run', 'Probing the staff screen build…');
+    var staffMs = 0, nodeCount = 0, probeN = Math.min(size, 500), staffErr = '';
+    try {
+      var fullStaff = w.S.base.staff;
+      if (fullStaff.length > probeN) w.S.base.staff = fullStaff.slice(0, probeN);
+      t0 = performance.now();
+      w.renderBaseSetup(); w.renderStaffQuals(); w.renderStaffTab(); w.renderShifts();
+      staffMs = performance.now() - t0;
+      try { nodeCount = w.document.querySelectorAll('#v-staff *').length; } catch (e) {}
+      if (w.S.base.staff !== fullStaff) w.S.base.staff = fullStaff;
+    } catch (e) { staffErr = (e && e.message) || 'error'; }
+    if (staffErr) {
+      stSet('staff', 'fail', 'Staff screen build error: ' + staffErr, '');
+      log('Staff screen build FAILED: ' + staffErr);
+    } else if (probeN === size) {
+      stSet('staff', 'pass', 'Staff screen for ' + size.toLocaleString('en-ZA') + ' staff built off-screen: ' + nodeCount.toLocaleString('en-ZA') + ' elements', fmtMs(staffMs));
+      log('Staff screen build (off-screen, full ' + size + '): ' + fmtMs(staffMs) + ', ' + nodeCount + ' elements');
+    } else {
+      stSet('staff', 'pass', 'Probe: staff screen built for a 500-staff slice in ' + fmtMs(staffMs) + ' (' + nodeCount.toLocaleString('en-ZA') + ' elements). The full screen at ' + size.toLocaleString('en-ZA') + ' staff is the known freeze — the test no longer builds it whole', fmtMs(staffMs));
+      log('Staff screen probe (500-staff slice): ' + fmtMs(staffMs) + ', ' + nodeCount + ' elements');
+    }
     times.staff = Math.round(staffMs);
     checkStop();
 
@@ -746,7 +826,7 @@ async function run(){
     /* save this run to the vault, then compare it with the baseline */
     var runTs = Date.now();
     try {
-      await saveRun({ ts: runTs, size: size, build: buildUnderTest,
+      await saveRun({ ts: runTs, size: size, build: buildUnderTest, kind: 'torture', mv: METRIC_V,
         status: stoppedEarly ? 'stopped' : (failedFlag ? 'failed' : 'complete'),
         times: times, restored: restored });
     } catch (e3) {}
@@ -765,6 +845,220 @@ async function run(){
       var a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = 'torture-test-report.txt';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); }, 8000);
+    };
+  }
+}
+
+/* ---------------- the functionality run ---------------- */
+async function runFunc(){
+  if (running) return;
+  var existing = await readGuardSnapshot();
+  if (existing) { document.getElementById('restoreBanner').classList.add('show'); return; }
+  running = true; stopWanted = false; report = [];
+  FUNC_DEFS.forEach(function(sd){ stSet(sd[0], '', '', ''); });
+  setControls(false);
+  document.getElementById('btnStop').classList.add('show');
+  document.getElementById('btnStop2').classList.add('show');
+  document.getElementById('reportCard').classList.remove('show');
+  var snap = null, restored = false, results = [];
+  var w = null, rosterId = null, E = null;
+  function settle(ms){ return new Promise(function(r){ setTimeout(r, ms || 300); }); }
+  function assert(cond, msg){ if (!cond) throw new Error(msg); }
+  async function check(key, fn){
+    if (stopWanted) throw new Error('__STOPPED__');
+    stSet(key, 'run', 'Checking…');
+    var t0 = performance.now();
+    try {
+      var detail = await fn();
+      stSet(key, 'pass', detail || '', fmtMs(performance.now() - t0));
+      results.push({ key: key, name: stageNames[key] || key, pass: true, detail: detail || '' });
+      log('✓ ' + (stageNames[key] || key) + (detail ? ' — ' + detail : ''));
+      return true;
+    } catch (e) {
+      if (e && e.message === '__STOPPED__') throw e;
+      stSet(key, 'fail', (e && e.message) || 'failed', '');
+      results.push({ key: key, name: stageNames[key] || key, pass: false, detail: (e && e.message) || 'failed' });
+      log('✗ ' + (stageNames[key] || key) + ' — ' + ((e && e.message) || 'failed'));
+      return false;
+    }
+  }
+  try {
+    snap = await takeSnapshot();
+    downloadBackup(snap);
+    log('Snapshot taken: ' + Object.keys(snap.ls).length + ' device keys, ' + snap.kv.length + ' stored records. Safety backup file downloaded.');
+    await wipeSlate();
+    mountFrame();
+    nowSay('Starting the functionality test — loading the app…', true);
+    setTimeout(function(){ var fc = document.getElementById('frameCard'); if (fc) fc.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 350);
+    frame.src = APP_URL;
+    await waitFrameLoad();
+    w = await waitAppReady();
+    try { buildUnderTest = w.BUILD || '—'; } catch (e) {}
+    document.getElementById('buildLine').textContent = buildUnderTest;
+    /* the demo-data builder asks for confirmation — the test says yes */
+    w.confirm = function(){ return true; };
+    w.alert = function(){};
+    w.enterApp();
+    await settle(350);
+
+    await check('demo', async function(){
+      w.genTestData();
+      await settle(300);
+      var n = (w.S.base.staff || []).length;
+      assert(n >= 8, 'only ' + n + ' staff after the demo build');
+      assert((w.S.rosters || []).length >= 1, 'no roster was created');
+      rosterId = w.S.rosters[0].id;
+      return n + ' staff, ' + w.S.rosters.length + ' roster(s) for this month';
+    });
+    await check('home', async function(){
+      w.switchTab('home');
+      await settle(250);
+      var v = w.document.getElementById('v-home');
+      assert(v && v.classList.contains('active'), 'home view is not showing');
+      return 'home renders as manager';
+    });
+    await check('cal', async function(){
+      assert(rosterId, 'no roster to open');
+      w.openRoster(rosterId);
+      await settle(300);
+      var v = w.document.getElementById('v-cal');
+      assert(v && v.classList.contains('active'), 'calendar is not showing');
+      assert((v.textContent || '').length > 200, 'calendar looks empty');
+      return 'month calendar open with the demo roster';
+    });
+    await check('open', async function(){
+      var u = (w.S.rosters || [])[0];
+      var blob = JSON.stringify((u && u.roster && u.roster.memberOverrides) || {}) + JSON.stringify((u && u.roster && u.roster.overrides) || {});
+      assert(blob.indexOf('OPEN') >= 0, 'no OPEN slot in the demo roster');
+      return 'the demo roster has an open shift';
+    });
+    await check('market', async function(){
+      w.switchTab('settings');
+      w.setRole('staff');
+      await settle(300);
+      var sel = w.document.getElementById('roleStaffSel');
+      assert(sel, 'the staff picker did not appear');
+      sel.value = 'Sarah K';
+      w.confirmStaffRole();
+      await settle(300);
+      w.switchTab('openshifts');
+      await settle(350);
+      var v = w.document.getElementById('v-marketplace');
+      var btns = v ? Array.prototype.slice.call(v.querySelectorAll('button')) : [];
+      assert(btns.some(function(b){ return (b.textContent || '').indexOf('Apply') >= 0; }), 'no Apply button offered to Sarah K');
+      return 'open shift offered to Sarah K (ILS)';
+    });
+    await check('apply', async function(){
+      var v = w.document.getElementById('v-marketplace');
+      var btns = v ? Array.prototype.slice.call(v.querySelectorAll('button')) : [];
+      var btn = btns.find(function(b){ return (b.textContent || '').indexOf('Apply') >= 0; });
+      assert(btn, 'the Apply button is gone');
+      btn.click();
+      await settle(450);
+      var mine = (w.S.shiftApps || []).filter(function(a){ return a.applicant === 'Sarah K' && a.status === 'pending'; });
+      assert(mine.length >= 1, 'no pending application was recorded');
+      return 'application recorded as pending';
+    });
+    await check('inbox', async function(){
+      w.setRole('manager');
+      await settle(300);
+      w.renderInbox();
+      w.show('v-inbox');
+      await settle(300);
+      var v = w.document.getElementById('v-inbox');
+      assert(v && (v.textContent || '').indexOf('Sarah K') >= 0, 'the inbox does not mention Sarah K');
+      return 'manager inbox shows the application';
+    });
+    await check('portal', async function(){
+      w.switchTab('settings');
+      w.setRole('staff');
+      await settle(300);
+      var sel = w.document.getElementById('roleStaffSel');
+      if (sel) { sel.value = 'Sarah K'; w.confirmStaffRole(); await settle(300); }
+      w.switchTab('myshifts');
+      await settle(350);
+      var v = w.document.getElementById('v-myshifts');
+      assert(v && (v.textContent || '').length > 60, 'My Shifts looks empty for Sarah K');
+      return "Sarah's My Shifts renders";
+    });
+    await check('exportf', async function(){
+      w.setRole('manager');
+      await settle(250);
+      w.openRoster(rosterId);
+      await settle(250);
+      E = w.expData();
+      var wb = w.expBuildWorkbook(E, 'shifts');
+      assert(wb && wb.SheetNames && wb.SheetNames.length >= 1, 'the workbook has no sheets');
+      var csv = w.XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
+      assert(csv && csv.length > 200, 'the CSV looks empty');
+      var txt = w.rosterText(w.S.rosters[0].roster);
+      assert(txt && txt.length > 100, 'the roster text looks empty');
+      return 'Excel + CSV (' + Math.round(csv.length / 1024) + ' KB) + text all build';
+    });
+    await check('ics', async function(){
+      assert(E, 'no export context from the previous check');
+      var r = w.icsBuild(E);
+      var s = r && r.text;
+      assert(typeof s === 'string' && s.indexOf('BEGIN:VCALENDAR') === 0, 'not a calendar file');
+      assert(r.count > 0, 'the calendar file has no events');
+      return r.count + ' shift events in the .ics file';
+    });
+    await check('companyf', async function(){
+      w.S.role = 'company';
+      w.enterApp();
+      await settle(450);
+      var v = w.document.getElementById('v-company');
+      assert(v && v.classList.contains('active'), 'the company view is not showing');
+      assert((v.textContent || '').length > 80, 'the company view looks empty');
+      w.S.role = 'manager';
+      return 'company dashboard renders';
+    });
+  } catch (e) {
+    if (e && e.message === '__STOPPED__') log('Stopped by you. Partial results above.');
+    else log('Setup failed: ' + (e && e.message ? e.message : String(e)));
+  } finally {
+    if (snap) {
+      stSet('restore', 'run', 'Putting your real data back…');
+      try {
+        var ok = await restoreSnapshot(snap);
+        restored = ok;
+        await clearGuardSnapshot();
+        stSet('restore', ok ? 'pass' : 'fail',
+          ok ? 'Snapshot restored and read-back verified' : 'Restored, but the read-back differed — check Shift, or restore the safety backup file from the red banner', '');
+        log('Restore: ' + (ok ? 'done, verified' : 'done, verification differed'));
+        if (!ok) document.getElementById('restoreBanner').classList.add('show');
+      } catch (e2) {
+        stSet('restore', 'fail', 'Restore error: ' + (e2 && e2.message) + ' — use the red banner above', '');
+        log('Restore FAILED: ' + (e2 && e2.message));
+        document.getElementById('restoreBanner').classList.add('show');
+      }
+    }
+    document.getElementById('btnStop').classList.remove('show');
+    document.getElementById('btnStop2').classList.remove('show');
+    nowSay('Functionality test over — your real data is back.', false);
+    running = false;
+    setControls(true);
+    var passed = results.filter(function(r){ return r.pass; }).length;
+    var total = results.length;
+    var failedNames = results.filter(function(r){ return !r.pass; }).map(function(r){ return r.name; });
+    try {
+      await saveRun({ ts: Date.now(), kind: 'func', build: buildUnderTest,
+        status: passed === total && total > 0 ? 'complete' : 'failed',
+        passed: passed, total: total, failedNames: failedNames, restored: restored });
+    } catch (e3) {}
+    renderHistory();
+    var text = 'FUNCTIONALITY TEST — ' + passed + '/' + total + ' CHECKS PASSED\nDevice: this phone/browser · Build: ' +
+      buildUnderTest + '\n' + new Date().toLocaleString('en-ZA') + '\n\n' + report.join('\n') +
+      '\n\nReal data restored: ' + (restored ? 'yes, verified' : 'see notes');
+    document.getElementById('reportText').textContent = text;
+    document.getElementById('reportCard').classList.add('show');
+    document.getElementById('btnReport').onclick = function(){
+      var blob = new Blob([text], { type: 'text/plain' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'functionality-test-report.txt';
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(function(){ URL.revokeObjectURL(a.href); }, 8000);
     };
