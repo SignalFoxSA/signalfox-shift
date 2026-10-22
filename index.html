@@ -1663,7 +1663,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
 <script>
 /* Build tag — set to UTC date-time at deploy time so the running version is visible in Settings → About. */
-var BUILD='20261022-2013';
+var BUILD='20261022-2014';
 /* APP_URL — the live app link shared alongside exports (WhatsApp image + link).
    Plain text in the export sheet + copied by "Copy link" + attached as share
    text when the PNG is shared. The image itself is unchanged. */
@@ -12702,7 +12702,7 @@ function setPills(elId, opts, cur, cb){
 }
 /* ---------- Test data generator ---------- */
 function genTestData(){
-  if(!confirm('Build a demo company? One ambulance (Ambulance 1), fully staffed, this month, with sick leave, replacements, an open shift and a swap \u2014 so you can see how everything works.')) return;
+  if(!confirm('Build a demo company? Ubuntu Care Group with three workplaces \u2014 an ambulance service, a kitchen and a security team \u2014 each with its own staff and this month\u2019s roster, with sick leave, replacements and open shifts, so you can see how the company pages pull it all together.')) return;
   loadSaved();
   var now=new Date();
   var t=Date.now();
@@ -12790,7 +12790,7 @@ function genTestData(){
   var exists=(S.rosters||[]).some(function(u){
     return u.roster&&u.roster.vehicleId===v0.id&&u.roster.year===y&&u.roster.month===m;
   });
-  if(exists){ persistBase(); persist(); toast('Demo data already exists for this month.'); return; }
+  if(exists){ var _more=demoEnsureCompanyExtras(t,y,m); persistBase(); persist(); toast(_more?'Demo company completed \u2014 Ubuntu Care Group now has three workplaces with rosters. Open the Company view to see it all together.':'Demo data already exists for this month.'); return; }
   var dim=daysInMonth(y,m);
   var snapCrews=JSON.parse(JSON.stringify(v0.crews||[]));
   snapCrews.forEach(function(c,ci){
@@ -12905,8 +12905,122 @@ function genTestData(){
   if(thabo&&sarah) applySwap(thabo, sarah, 24, 31);
   if(!S.rosters) S.rosters=[];
   S.rosters.push({id:R.id, name:R.name, roster:R});
+  demoEnsureCompanyExtras(t,y,m);
   persistBase(); persist();
-  toast('Demo company built \u2014 Ambulance 1, this month, fully staffed with leave, replacements, an open shift and a swap.');
+  toast('Demo company built \u2014 Ubuntu Care Group: Riverside Ambulance, Hillcrest Kitchen and Northgate Security, each with staff and a roster. Open the Company view to see it all together.');
+}
+/* ---------- Demo company extras (Ian, 22 Oct 2026) ----------
+   Dummy data must show a whole COMPANY, not one workplace: after the
+   ambulance build above (workplace 1), make sure the company carries
+   two more workplaces — a kitchen and a security team — each with its
+   own qualifications, staff, crews and a current-month roster with
+   leave / sick / open edits, so the company Dashboard, Stats, People,
+   Open and heatmap all have real data feeding through. One person
+   (Pieter V) works at two workplaces so cross-base views light up.
+   Idempotent: workplaces that already exist (by name) are skipped. */
+function demoEnsureCompanyExtras(t, y, m){
+  var c=companyEnsure(); if(!c) return false;
+  companySyncActive();
+  var defNames={'My Company':1,'Demo Base':1,'My Workplace':1,'My Base':1};
+  if(defNames[c.name]||(S.base&&c.name===S.base.name)) c.name='Ubuntu Care Group';
+  var wp1=companyWorkplaceById(c.activeId);
+  if(wp1&&defNames[wp1.name]){ wp1.name='Riverside Ambulance'; if(S.base&&defNames[S.base.name]) S.base.name='Riverside Ambulance'; }
+  var specs=[
+    { tag:'kit', wpName:'Hillcrest Kitchen', team:'Main Kitchen', color:'#51CF66',
+      quals:[['Head Chef',['Chef','Cook','Kitchen Hand']],['Chef',['Cook','Kitchen Hand']],['Cook',['Kitchen Hand']],['Kitchen Hand',[]]],
+      staff:[['Bongani T','Head Chef'],['Maria S','Chef'],['Johan P','Chef'],['Aisha K','Cook'],['Sipho N','Cook'],['Grace M','Kitchen Hand'],['Yusuf A','Kitchen Hand'],['Elna R','Kitchen Hand']],
+      leaves:[['Maria S','Annual leave','Aisha K',14,20,2],['Yusuf A','Sick leave','OPEN',16,22,1]] },
+    { tag:'sec', wpName:'Northgate Security', team:'Patrol Team', color:'#4DABF7',
+      quals:[['Supervisor',['Guard','Trainee']],['Guard',['Trainee']],['Trainee',[]]],
+      staff:[['Pieter V','Supervisor'],['Kevin O','Guard'],['Musa D','Guard'],['Johan S','Guard'],['David L','Guard'],['Peter N','Trainee'],['Sam T','Trainee'],['Chris B','Trainee']],
+      leaves:[['Kevin O','Sick leave','OPEN',15,21,1],['Musa D','Annual leave','David L',18,25,2]] }
+  ];
+  var built=false;
+  specs.forEach(function(spec){
+    if(companyWorkplaces().some(function(w){ return w.name===spec.wpName; })) return;
+    var w=companyAddWorkplace(spec.wpName); if(!w) return;
+    var keepBase=S.base, keepRosters=S.rosters;
+    S.base=JSON.parse(JSON.stringify(w.base)); S.rosters=[];
+    demoFillCurrentBase(spec, t, y, m);
+    w.base=S.base; w.rosters=S.rosters; w.name=spec.wpName;
+    S.base=keepBase; S.rosters=keepRosters;
+    built=true;
+  });
+  companyPersist();
+  return built;
+}
+/* Fill the CURRENT S.base/S.rosters with one demo workplace per spec
+   (same shapes the main demo build uses). No persists, no renders —
+   the caller writes the globals back into the workplace snapshot. */
+function demoFillCurrentBase(spec, t, y, m){
+  var dim=daysInMonth(y,m);
+  var quals=spec.quals.map(function(q,i){
+    return {id:'q'+t+spec.tag+i, name:q[0], canCover:q[1].map(function(nm){
+      var j=spec.quals.findIndex(function(x){ return x[0]===nm; });
+      return 'q'+t+spec.tag+j;
+    })};
+  });
+  S.base.quals=quals;
+  function qualIdByName(nm){ var q=quals.find(function(x){ return x.name===nm; }); return q?q.id:''; }
+  var v0={id:'v'+t+spec.tag, name:spec.team, rotation:'224', coverage:24, color:spec.color, shiftIds:['D','N'], crews:[]};
+  S.base.vehicles=[v0];
+  if(!Array.isArray(S.base.crews)) S.base.crews=[];
+  var crewColors=['#FFC13E','#4DABF7','#51CF66','#FF8787'];
+  ['A','B','C','D'].forEach(function(cn,ci){
+    var crew={id:'c'+t+spec.tag+cn, vehicleId:v0.id, name:cn, color:crewColors[ci%4], members:[], memberIds:[]};
+    v0.crews.push(crew); S.base.crews.push(crew);
+  });
+  S.base.staff=spec.staff.map(function(s,i){
+    return {id:'s'+t+spec.tag+i, name:s[0], empNo:'E'+(2001+i), qual:qualIdByName(s[1])||quals[0].id};
+  });
+  S.base.staff.forEach(function(s,i){
+    var crew=v0.crews[i%v0.crews.length];
+    assignStaffToCrew(s.id, crew.id);
+    if(crew.members.indexOf(s.name)<0) crew.members.push(s.name);
+  });
+  var lowId=quals[quals.length-1].id;
+  wpShifts().forEach(function(sh){ if(!sh.reqs) sh.reqs=[{qid:lowId, count:1, mode:'min'}]; });
+  var snapCrews=JSON.parse(JSON.stringify(v0.crews));
+  snapCrews.forEach(function(cc,ci){
+    if(!(cc.members||[]).length){
+      var allNames=S.base.staff.map(function(s){ return s.name; });
+      cc.members=[allNames[(ci*2)%allNames.length], allNames[(ci*2+1)%allNames.length]].filter(function(n){ return n; });
+    }
+  });
+  var R={ id:'r'+t+'_'+spec.tag, kind:'month', vehicleId:v0.id, _testGen:true,
+    name:spec.team+' \u00b7 '+MN[m]+' '+y, year:y, month:m, anchorAbs:0,
+    startISO:y+'-'+String(m+1).padStart(2,'0')+'-01', days:dim,
+    crews:snapCrews, rotation:v0.rotation, shiftIds:teamShiftIds(v0),
+    overrides:{}, memberOverrides:{}, leaveLog:[] };
+  function namesOn(dateISO){
+    var dt=parseISO(dateISO), di=dayDiff(parseISO(R.startISO),dt); var set={};
+    try{ calSlotCrews(R,di).forEach(function(ps){ if(!ps.list.length) return;
+      effShiftMembers(R,dateISO,ps.sl.id,ps.list[0].c).forEach(function(n){ set[n]=1; }); }); }catch(e){}
+    return set;
+  }
+  function dLeave(person, type, cover, fromDay, toDay, maxDays){
+    var done=0;
+    for(var d=fromDay; d<=toDay&&done<maxDays; d++){
+      if(d<1||d>dim) continue;
+      var dateISO=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      var dt=parseISO(dateISO), di=dayDiff(parseISO(R.startISO),dt);
+      try{ calSlotCrews(R,di).forEach(function(ps){
+        if(done>=maxDays) return;
+        if(!ps.list.length||(R.memberOverrides[dateISO]&&R.memberOverrides[dateISO][ps.sl.id])) return;
+        var mems=effShiftMembers(R,dateISO,ps.sl.id,ps.list[0].c);
+        if(mems.indexOf(person)<0) return;
+        var cov='OPEN';
+        if(cover&&cover!=='OPEN'&&!namesOn(dateISO)[cover]) cov=cover;
+        mems[mems.indexOf(person)]=(cov==='OPEN'?OPEN_MARK:cov);
+        if(!R.memberOverrides[dateISO]) R.memberOverrides[dateISO]={};
+        R.memberOverrides[dateISO][ps.sl.id]=mems;
+        R.leaveLog.push({date:dateISO, shift:ps.sl.id, person:person, type:type, cover:cov, ts:Date.now()});
+        done++;
+      }); }catch(e){}
+    }
+  }
+  spec.leaves.forEach(function(L){ dLeave(L[0],L[1],L[2],L[3],L[4],L[5]); });
+  S.rosters.push({id:R.id, name:R.name, roster:R});
 }
 /* ---------- Test data generator ---------- */
 function saveSettingsProfile(){
